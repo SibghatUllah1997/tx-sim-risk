@@ -1,0 +1,33 @@
+### 30-day Roadmap
+
+- Day 1: Repo scaffolding, CI, initial EVM approve decoder + tests
+- Day 2: CLI scaffold to load hex tx input and print analysis
+- Day 3: Add ERC-20 transfer decoder and basic risk checks
+- Day 4: Add support for increaseAllowance/decreaseAllowance detection
+- Day 5: Introduce simple JSON report format
+- Day 6: Add address checksum validation utilities
+- Day 7: Implement gas/fee parsing from raw tx (EIP-1559)
+- Day 8: Support Trezor/Ledger-style raw tx input parsing
+- Day 9: Integrate chainId handling (EIP-155)
+- Day 10: Add ERC-721 approveAll detection
+- Day 11: Add ERC-1155 setApprovalForAll detection
+- Day 12: Risk rule: approvals to known phishing addresses list
+- Day 13: Risk rule: approvals to EOAs vs contract addresses
+- Day 14: Add human-readable reason strings for each risk
+- Day 15: Implement basic simulation stub (balance/allowance deltas)
+- Day 16: Add viem-based ABI decoding for common ERC ABIs
+- Day 17: Add config-driven allow/block lists
+- Day 18: Add output severities (info/warn/high)
+- Day 19: Add HTML report renderer
+- Day 20: Add GitHub Pages publishing for sample reports
+- Day 21: Wire simple Solana tx skeleton parsing (web3.js)
+- Day 22: Add Solana associated token account detection
+- Day 23: Risk rule: Solana CPI to suspicious program IDs
+- Day 24: Add plugin interface for new chain decoders
+- Day 25: Add E2E tests for CLI flows
+- Day 26: Add example dataset and fixtures
+- Day 27: Add JSON schema for report output
+- Day 28: Add README examples and screenshots
+- Day 29: Polish docs, comments, and code quality
+- Day 30: Tag v0.1.0 and write release notes
+

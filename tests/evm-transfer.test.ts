@@ -1,0 +1,35 @@
+import { describe, it, expect } from 'vitest';
+import { decodeErc20Transfer } from '../src';
+
+function pad32Bytes(hexNoPrefix: string): string {
+  return hexNoPrefix.padStart(64, '0');
+}
+
+describe('ERC-20 transfer decoder', () => {
+  it('decodes transfer correctly', () => {
+    const selector = 'a9059cbb';
+    const to = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    const toWord = pad32Bytes(`000000000000000000000000${to}`);
+    const amount = 1234567890123456789n;
+    const amountWord = pad32Bytes(amount.toString(16));
+    const data = `0x${selector}${toWord}${amountWord}`;
+
+    const decoded = decodeErc20Transfer(data)!;
+    expect(decoded.method).toBe('erc20_transfer');
+    expect(decoded.to).toBe(`0x${to}`);
+    expect(decoded.amount).toBe(amount);
+  });
+
+  it('returns null for non-transfer selector', () => {
+    const selector = '095ea7b3'; // approve(address,uint256)
+    const dummyWord = '0'.repeat(64);
+    const data = `0x${selector}${dummyWord}${dummyWord}`;
+    const decoded = decodeErc20Transfer(data);
+    expect(decoded).toBeNull();
+  });
+
+  it('throws on invalid hex', () => {
+    expect(() => decodeErc20Transfer('0xzzzz')).toThrowError(/invalid hex/i);
+  });
+});
+

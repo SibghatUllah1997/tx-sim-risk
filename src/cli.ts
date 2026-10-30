@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { decodeErc20Approve } from './index';
+import { decodeErc20Approve, decodeErc20Transfer } from './index';
 
 function printUsage(): void {
   console.error('Usage: tx-sim-risk <hexData> | --data <hexData>');
@@ -71,6 +71,15 @@ async function main() {
       console.log(
         `Unlimited approval: ${approve.isUnlimitedApproval ? 'yes' : 'no'}`
       );
+      process.exit(0);
+      return;
+    }
+
+    const transfer = decodeErc20Transfer(data);
+    if (transfer) {
+      console.log('Detected: ERC-20 transfer(address,uint256)');
+      console.log(`To: ${transfer.to}`);
+      console.log(`Amount: ${transfer.amount.toString()}`);
       process.exit(0);
       return;
     }

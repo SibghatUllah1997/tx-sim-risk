@@ -1,8 +1,8 @@
 ### 30-day Roadmap
 
 - Day 1: Repo scaffolding, CI, initial EVM approve decoder + tests
-- Day 2: CLI scaffold to load hex tx input and print analysis
-- Day 3: Add ERC-20 transfer decoder and basic risk checks
+- [x] Day 2: CLI scaffold to load hex tx input and print analysis
+- [x] Day 3: Add ERC-20 transfer decoder and basic risk checks
 - Day 4: Add support for increaseAllowance/decreaseAllowance detection
 - Day 5: Introduce simple JSON report format
 - Day 6: Add address checksum validation utilities

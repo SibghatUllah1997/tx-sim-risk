@@ -80,6 +80,9 @@ async function main() {
       console.log('Detected: ERC-20 transfer(address,uint256)');
       console.log(`To: ${transfer.to}`);
       console.log(`Amount: ${transfer.amount.toString()}`);
+      console.log(
+        `Burn address: ${transfer.isToZeroAddress ? 'yes' : 'no'}`
+      );
       process.exit(0);
       return;
     }

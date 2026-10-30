@@ -18,6 +18,7 @@ describe('ERC-20 transfer decoder', () => {
     expect(decoded.method).toBe('erc20_transfer');
     expect(decoded.to).toBe(`0x${to}`);
     expect(decoded.amount).toBe(amount);
+    expect(decoded.isToZeroAddress).toBe(false);
   });
 
   it('returns null for non-transfer selector', () => {
@@ -30,6 +31,18 @@ describe('ERC-20 transfer decoder', () => {
 
   it('throws on invalid hex', () => {
     expect(() => decodeErc20Transfer('0xzzzz')).toThrowError(/invalid hex/i);
+  });
+
+  it('flags transfer to zero address as a burn risk', () => {
+    const selector = 'a9059cbb';
+    const zero = '0'.repeat(40);
+    const toWord = pad32Bytes(`000000000000000000000000${zero}`);
+    const amount = 1n;
+    const amountWord = pad32Bytes(amount.toString(16));
+    const data = `0x${selector}${toWord}${amountWord}`;
+
+    const decoded = decodeErc20Transfer(data)!;
+    expect(decoded.isToZeroAddress).toBe(true);
   });
 });
 

@@ -2,6 +2,7 @@ export type Erc20TransferDecoded = {
   method: 'erc20_transfer';
   to: string;
   amount: bigint;
+  isToZeroAddress: boolean;
 };
 
 const TRANSFER_SELECTOR = 'a9059cbb'; // keccak256('transfer(address,uint256)')[0..4]
@@ -48,6 +49,7 @@ export function decodeErc20Transfer(data: string): Erc20TransferDecoded | null {
     method: 'erc20_transfer',
     to,
     amount,
+    isToZeroAddress: to.toLowerCase() === '0x' + '0'.repeat(40),
   };
 }
 

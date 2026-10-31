@@ -25,6 +25,10 @@ async function readStdin(): Promise<string> {
   });
 }
 
+function hasJsonFlag(argv: string[]): boolean {
+  return argv.includes('--json');
+}
+
 async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
   let dataArg: string | undefined;
   for (let i = 0; i < argv.length; i++) {
@@ -37,6 +41,7 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
       dataArg = arg.slice('--data='.length);
       break;
     }
+    if (arg === '--json') continue; // ignore flag when scanning for data
     if (isHexStringLike(arg)) {
       dataArg = arg;
       break;
@@ -60,6 +65,7 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
 async function main() {
   const argv = process.argv.slice(2);
   const data = await getHexFromArgsOrStdin(argv);
+  const wantJson = hasJsonFlag(argv);
   if (!isHexStringLike(data)) {
     printUsage();
     process.exit(1);
@@ -67,6 +73,18 @@ async function main() {
   }
 
   try {
+    if (wantJson) {
+      const { generateJsonReport } = await import('./report');
+      const report = generateJsonReport(data);
+      if (report) {
+        console.log(JSON.stringify(report, null, 2));
+      } else {
+        console.log(JSON.stringify({ type: 'unknown', risks: [], payload: {} }, null, 2));
+      }
+      process.exit(0);
+      return;
+    }
+
     const approve = decodeErc20Approve(data);
     if (approve) {
       // Plain-text analysis output (JSON report arrives later in roadmap)

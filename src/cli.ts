@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
-import { decodeErc20Approve, decodeErc20Transfer } from './index';
+import {
+  decodeErc20Approve,
+  decodeErc20Transfer,
+  decodeErc20IncreaseAllowance,
+  decodeErc20DecreaseAllowance,
+} from './index';
 
 function printUsage(): void {
   console.error('Usage: tx-sim-risk <hexData> | --data <hexData>');
@@ -83,6 +88,24 @@ async function main() {
       console.log(
         `Burn address: ${transfer.isToZeroAddress ? 'yes' : 'no'}`
       );
+      process.exit(0);
+      return;
+    }
+
+    const inc = decodeErc20IncreaseAllowance(data);
+    if (inc) {
+      console.log('Detected: ERC-20 increaseAllowance(address,uint256)');
+      console.log(`Spender: ${inc.spender}`);
+      console.log(`Delta: +${inc.amountDelta.toString()}`);
+      process.exit(0);
+      return;
+    }
+
+    const dec = decodeErc20DecreaseAllowance(data);
+    if (dec) {
+      console.log('Detected: ERC-20 decreaseAllowance(address,uint256)');
+      console.log(`Spender: ${dec.spender}`);
+      console.log(`Delta: -${dec.amountDelta.toString()}`);
       process.exit(0);
       return;
     }

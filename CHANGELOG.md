@@ -1,3 +1,8 @@
+## 2026-10-31
+
+- Added ERC-20 increaseAllowance/decreaseAllowance decoders with tests, and integrated them into the CLI.
+- Introduced a simple JSON report generator with a new `--json` CLI flag.
+
 ### 2026-10-30
 
 - Added a simple CLI to load hex EVM tx input and print analysis.

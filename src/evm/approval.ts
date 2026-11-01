@@ -8,30 +8,12 @@ export type Erc20ApproveDecoded = {
 const APPROVE_SELECTOR = '095ea7b3'; // keccak256('approve(address,uint256)')[0..4]
 const MAX_UINT256 = (1n << 256n) - 1n;
 
-function ensureHexPrefix(hex: string): string {
-  return hex.startsWith('0x') ? hex : `0x${hex}`;
-}
-
-function stripHexPrefix(hex: string): string {
-  return hex.startsWith('0x') ? hex.slice(2) : hex;
-}
-
-function isHexString(hex: string): boolean {
-  const h = stripHexPrefix(hex);
-  return h.length % 2 === 0 && /^[0-9a-fA-F]*$/.test(h);
-}
-
-function parseAddressFromWord(word: string): string {
-  // word is a 32-byte hex string without 0x. Address is the last 20 bytes.
-  const clean = stripHexPrefix(word).padStart(64, '0').slice(-64);
-  const address = clean.slice(-40); // last 20 bytes => last 40 hex chars
-  return `0x${address.toLowerCase()}`;
-}
-
-function parseUint256FromWord(word: string): bigint {
-  const clean = stripHexPrefix(word).padStart(64, '0').slice(-64);
-  return BigInt(`0x${clean}`);
-}
+import {
+  stripHexPrefix,
+  isHexString,
+  parseAddressFromWord,
+  parseUint256FromWord,
+} from './hex';
 
 export function decodeErc20Approve(data: string): Erc20ApproveDecoded | null {
   if (!isHexString(data)) {

@@ -6,6 +6,7 @@ import {
   decodeErc20IncreaseAllowance,
   decodeErc20DecreaseAllowance,
 } from './index';
+import { parseEip1559Fees } from './evm/eip1559';
 
 function printUsage(): void {
   console.error('Usage: tx-sim-risk <hexData> | --data <hexData>');
@@ -27,6 +28,10 @@ async function readStdin(): Promise<string> {
 
 function hasJsonFlag(argv: string[]): boolean {
   return argv.includes('--json');
+}
+
+function hasFeesFlag(argv: string[]): boolean {
+  return argv.includes('--fees');
 }
 
 async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
@@ -66,6 +71,7 @@ async function main() {
   const argv = process.argv.slice(2);
   const data = await getHexFromArgsOrStdin(argv);
   const wantJson = hasJsonFlag(argv);
+  const wantFees = hasFeesFlag(argv);
   if (!isHexStringLike(data)) {
     printUsage();
     process.exit(1);
@@ -73,6 +79,22 @@ async function main() {
   }
 
   try {
+    if (wantFees) {
+      const fees = parseEip1559Fees(data);
+      if (fees) {
+        console.log('Detected: EIP-1559 raw transaction');
+        console.log(`Gas limit: ${fees.gasLimit.toString()}`);
+        console.log(
+          `Max priority fee per gas: ${fees.maxPriorityFeePerGas.toString()} wei`
+        );
+        console.log(`Max fee per gas: ${fees.maxFeePerGas.toString()} wei`);
+      } else {
+        console.log('No EIP-1559 fee fields found in input.');
+      }
+      process.exit(0);
+      return;
+    }
+
     if (wantJson) {
       const { generateJsonReport } = await import('./report');
       const report = generateJsonReport(data);

@@ -5,8 +5,8 @@
 - [x] Day 3: Add ERC-20 transfer decoder and basic risk checks
 - [x] Day 4: Add support for increaseAllowance/decreaseAllowance detection
 - [x] Day 5: Introduce simple JSON report format
-- Day 6: Add address checksum validation utilities
-- Day 7: Implement gas/fee parsing from raw tx (EIP-1559)
+- [x] Day 6: Add address checksum validation utilities
+- [x] Day 7: Implement gas/fee parsing from raw tx (EIP-1559)
 - Day 8: Support Trezor/Ledger-style raw tx input parsing
 - Day 9: Integrate chainId handling (EIP-155)
 - Day 10: Add ERC-721 approveAll detection

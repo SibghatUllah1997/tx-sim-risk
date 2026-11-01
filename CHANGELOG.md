@@ -1,3 +1,8 @@
+## 2026-11-01
+
+- Added EIP-55 address checksum utilities with unit tests, plus refactored shared hex/address helpers.
+- Implemented EIP-1559 (type-2) gas/fee parsing and a new `--fees` CLI flag to print limits and max fees from raw transactions.
+
 ## 2026-10-31
 
 - Added ERC-20 increaseAllowance/decreaseAllowance decoders with tests, and integrated them into the CLI.

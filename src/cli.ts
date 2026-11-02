@@ -7,6 +7,7 @@ import {
   decodeErc20DecreaseAllowance,
 } from './index';
 import { parseEip1559Fees } from './evm/eip1559';
+import { generateJsonReport } from './report';
 import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
 
 function printUsage(): void {
@@ -14,7 +15,7 @@ function printUsage(): void {
   console.error('Example: tx-sim-risk 0x095ea7b3....');
 }
 
-function isHexStringLike(input: string | undefined): input is string {
+function isHexStringLike(input: string | null | undefined): input is string {
   return !!input && input.trim().toLowerCase().startsWith('0x');
 }
 
@@ -122,7 +123,6 @@ async function main() {
     const effectiveData = unwrapped ? unwrapped.data : data;
 
     if (wantJson) {
-      const { generateJsonReport } = await import('./report');
       const report = generateJsonReport(effectiveData);
       if (report) {
         console.log(JSON.stringify(report, null, 2));

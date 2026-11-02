@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "CommonJS",
+    "module": "Node16",
     "declaration": true,
     "outDir": "dist",
     "rootDir": "src",
@@ -9,9 +9,10 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true
+    "moduleResolution": "node16",
+    "resolveJsonModule": true,
+    "types": ["node"]
   },
-  "include": ["src", "vitest.config.ts"],
+  "include": ["src"],
   "exclude": ["dist", "node_modules"]
 }

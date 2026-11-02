@@ -1,27 +1,66 @@
-### tx-sim-risk — Solana/EVM transaction simulator and risk checker
+### tx-sim-risk — Explain what an Ethereum transaction will do, fast
 
-A TypeScript project exploring simple transaction decoding and risk checks on EVM and Solana. Day 1 ships a tiny EVM module that decodes ERC-20 `approve(address,uint256)` calls and flags unlimited approvals.
+[![CI](https://github.com/SibghatUllah1997/tx-sim-risk/actions/workflows/ci.yml/badge.svg)](https://github.com/SibghatUllah1997/tx-sim-risk/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Educational note: This project is for educational purposes only. It does not constitute financial advice. Always verify results independently before acting on them.
+One-liner: A tiny CLI and TypeScript library that decodes common ERC-20 calls and surfaces simple risk hints (like unlimited approvals) from raw calldata or full raw transactions.
 
-### Quickstart
+Why it matters:
+- Wallets often show hex data. It’s easy to miss risky approvals or burns.
+- Quick, deterministic decoding helps reviewers, infra, and bots build guardrails before signing.
 
+Features:
+- Decode ERC-20 approve, transfer, increaseAllowance, decreaseAllowance
+- Flag unlimited approvals and burns to the zero address
+- JSON report mode for downstream tooling
+- Parse EIP-1559 fee fields and chainId from raw transactions (legacy and type-2)
+- Address checksum utilities
+- Batteries-included tests and GitHub Actions CI
+
+Install
 - Requirements: Node.js 18+ and npm
-- Install:
-  - `npm install`
-- Run tests:
-  - `npm test`
-- Build:
-  - `npm run build`
+- Setup: `npm ci`
+- Build (for CLI binary in dist): `npm run build`
 
-### What’s here on Day 1
+Quick CLI demo
+```bash
+# JSON report for an unlimited ERC-20 approval (risk: unlimited_approval)
+node dist/cli.js --json 0x095ea7b30000000000000000000000000000000000000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+```
 
-- Minimal EVM decoder for ERC-20 `approve`
-- Risk flag for “unlimited” approvals (`uint256` max)
-- Vitest tests and GitHub Actions CI
-- MIT license and a 30-day roadmap
+Example output:
+```json
+{
+  "type": "erc20_approve",
+  "payload": {
+    "spender": "0x0000000000000000000000000000000000000000",
+    "amount": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+    "isUnlimitedApproval": true
+  },
+  "risks": ["unlimited_approval"]
+}
+```
 
-### License
+Architecture
+```mermaid
+flowchart TD
+    A[CLI input\nhex calldata or raw tx] --> B{Raw tx?}
+    B -- yes --> C[unwrap data + chainId]
+    B -- no --> D[use calldata as-is]
+    C --> E[ERC-20 decoders]
+    D --> E[ERC-20 decoders]
+    E --> F[Risk rules\n(unlimited approval,\nzero-address burn)]
+    F --> G[Plain text stdout]
+    F --> H[JSON report (--json)]
+```
 
-MIT © HM Sibghat Ullah
+Testing
+- `npm test` runs unit tests with Vitest
+- CI: see the badge above for the latest status
+
+Roadmap
+- See `ROADMAP.md`
+
+License
+- MIT — see `LICENSE`
 

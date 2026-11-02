@@ -4,6 +4,7 @@ import {
   decodeErc20IncreaseAllowance,
   decodeErc20DecreaseAllowance,
 } from './evm/allowance';
+import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
 
 export type JsonReport =
   | {
@@ -97,5 +98,15 @@ export function generateJsonReport(data: string): JsonReport | null {
   }
 
   return null;
+}
+
+/**
+ * Accepts either ERC-20 calldata (0x...) or a full raw transaction hex (legacy or typed-2).
+ * When a raw transaction is provided, unwraps its `data` field before generating the report.
+ */
+export function generateJsonReportFromAny(input: string): JsonReport | null {
+  const unwrapped = extractDataAndChainIdFromRawTx(input);
+  const data = unwrapped ? unwrapped.data : input;
+  return generateJsonReport(data);
 }
 

@@ -7,8 +7,8 @@
 - [x] Day 5: Introduce simple JSON report format
 - [x] Day 6: Add address checksum validation utilities
 - [x] Day 7: Implement gas/fee parsing from raw tx (EIP-1559)
-- Day 8: Support Trezor/Ledger-style raw tx input parsing
-- Day 9: Integrate chainId handling (EIP-155)
+- [x] Day 8: Support Trezor/Ledger-style raw tx input parsing
+- [x] Day 9: Integrate chainId handling (EIP-155)
 - Day 10: Add ERC-721 approveAll detection
 - Day 11: Add ERC-1155 setApprovalForAll detection
 - Day 12: Risk rule: approvals to known phishing addresses list

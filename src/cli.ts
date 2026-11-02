@@ -7,6 +7,7 @@ import {
   decodeErc20DecreaseAllowance,
 } from './index';
 import { parseEip1559Fees } from './evm/eip1559';
+import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
 
 function printUsage(): void {
   console.error('Usage: tx-sim-risk <hexData> | --data <hexData>');
@@ -32,6 +33,10 @@ function hasJsonFlag(argv: string[]): boolean {
 
 function hasFeesFlag(argv: string[]): boolean {
   return argv.includes('--fees');
+}
+
+function hasChainIdFlag(argv: string[]): boolean {
+  return argv.includes('--chainId') || argv.includes('--chainid');
 }
 
 async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
@@ -72,6 +77,7 @@ async function main() {
   const data = await getHexFromArgsOrStdin(argv);
   const wantJson = hasJsonFlag(argv);
   const wantFees = hasFeesFlag(argv);
+  const wantChainId = hasChainIdFlag(argv);
   if (!isHexStringLike(data)) {
     printUsage();
     process.exit(1);
@@ -88,16 +94,36 @@ async function main() {
           `Max priority fee per gas: ${fees.maxPriorityFeePerGas.toString()} wei`
         );
         console.log(`Max fee per gas: ${fees.maxFeePerGas.toString()} wei`);
+        if (wantChainId) {
+          const parsed = extractDataAndChainIdFromRawTx(data);
+          if (parsed && parsed.txType === 'eip1559') {
+            console.log(`Chain ID: ${parsed.chainId.toString()}`);
+          } else {
+            console.log('Chain ID: unknown');
+          }
+        }
       } else {
         console.log('No EIP-1559 fee fields found in input.');
+        if (wantChainId) {
+          const parsed = extractDataAndChainIdFromRawTx(data);
+          if (parsed && parsed.chainId != null) {
+            console.log(`Chain ID: ${parsed.chainId.toString()}`);
+          } else {
+            console.log('Chain ID: unknown');
+          }
+        }
       }
       process.exit(0);
       return;
     }
 
+    // Unwrap hardware-wallet style raw tx to extract calldata for decoding
+    const unwrapped = extractDataAndChainIdFromRawTx(data);
+    const effectiveData = unwrapped ? unwrapped.data : data;
+
     if (wantJson) {
       const { generateJsonReport } = await import('./report');
-      const report = generateJsonReport(data);
+      const report = generateJsonReport(effectiveData);
       if (report) {
         console.log(JSON.stringify(report, null, 2));
       } else {
@@ -107,7 +133,16 @@ async function main() {
       return;
     }
 
-    const approve = decodeErc20Approve(data);
+    if (wantChainId) {
+      const parsed = extractDataAndChainIdFromRawTx(data);
+      if (parsed && parsed.chainId != null) {
+        console.log(`Chain ID: ${parsed.chainId.toString()}`);
+      } else {
+        console.log('Chain ID: unknown');
+      }
+    }
+
+    const approve = decodeErc20Approve(effectiveData);
     if (approve) {
       // Plain-text analysis output (JSON report arrives later in roadmap)
       console.log('Detected: ERC-20 approve(address,uint256)');
@@ -120,7 +155,7 @@ async function main() {
       return;
     }
 
-    const transfer = decodeErc20Transfer(data);
+    const transfer = decodeErc20Transfer(effectiveData);
     if (transfer) {
       console.log('Detected: ERC-20 transfer(address,uint256)');
       console.log(`To: ${transfer.to}`);
@@ -132,7 +167,7 @@ async function main() {
       return;
     }
 
-    const inc = decodeErc20IncreaseAllowance(data);
+    const inc = decodeErc20IncreaseAllowance(effectiveData);
     if (inc) {
       console.log('Detected: ERC-20 increaseAllowance(address,uint256)');
       console.log(`Spender: ${inc.spender}`);
@@ -141,7 +176,7 @@ async function main() {
       return;
     }
 
-    const dec = decodeErc20DecreaseAllowance(data);
+    const dec = decodeErc20DecreaseAllowance(effectiveData);
     if (dec) {
       console.log('Detected: ERC-20 decreaseAllowance(address,uint256)');
       console.log(`Spender: ${dec.spender}`);

@@ -1,3 +1,9 @@
+## 2026-11-02
+
+- Added support for parsing full hardware-wallet raw transactions (EIP-1559 and legacy), unwrapping calldata for analysis.
+- Integrated chainId handling (EIP-155) and exposed it via a new `--chainId` CLI flag.
+- JSON reports can now be generated directly from raw tx hex via an unwrapping helper.
+
 ## 2026-11-01
 
 - Added EIP-55 address checksum utilities with unit tests, plus refactored shared hex/address helpers.

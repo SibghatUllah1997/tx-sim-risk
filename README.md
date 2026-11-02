@@ -7,7 +7,7 @@ One-liner: A tiny CLI and TypeScript library that decodes common ERC-20 calls an
 
 Why it matters:
 - Wallets often show hex data. It’s easy to miss risky approvals or burns.
-- Quick, deterministic decoding helps reviewers, infra, and bots build guardrails before signing.
+- Quick, deterministic decoding helps reviewers and infra build guardrails before signing.
 
 Features:
 - Decode ERC-20 approve, transfer, increaseAllowance, decreaseAllowance

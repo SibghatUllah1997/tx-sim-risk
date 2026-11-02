@@ -1,5 +1,13 @@
 ## 2026-11-02
 
+- Hardening pass for public release:
+  - Strict TypeScript config and type fixes
+  - ESLint + Prettier with CI enforcement
+  - Property-based tests (fast-check) and coverage targets (lines ≥ 90%)
+  - GitHub Actions: Node 18/20/22 matrix; coverage upload
+  - Real-world examples (mainnet) and CLI demo SVG
+  - Package metadata/exports for publish-ready npm package
+
 - Added support for parsing full hardware-wallet raw transactions (EIP-1559 and legacy), unwrapping calldata for analysis.
 - Integrated chainId handling (EIP-155) and exposed it via a new `--chainId` CLI flag.
 - JSON reports can now be generated directly from raw tx hex via an unwrapping helper.

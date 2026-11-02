@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="420" viewBox="0 0 900 420">
+  <style>
+    .bg { fill: #0b1220; }
+    .box { fill: #0f1a2b; stroke: #2a3a55; stroke-width: 2; rx: 10; }
+    .arrow { stroke: #6aa9ff; stroke-width: 2; marker-end: url(#arrowhead); }
+    .title { fill: #e2e8f0; font: 600 16px Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    .mono { fill: #cbd5e1; font: 14px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+      <polygon points="0 0, 8 4, 0 8" fill="#6aa9ff"/>
+    </marker>
+  </defs>
+  <rect class="bg" x="0" y="0" width="900" height="420" rx="12"/>
+  <!-- Boxes -->
+  <rect class="box" x="30" y="60" width="230" height="120"/>
+  <rect class="box" x="335" y="40" width="240" height="80"/>
+  <rect class="box" x="335" y="150" width="240" height="100"/>
+  <rect class="box" x="650" y="60" width="220" height="120"/>
+  <!-- Titles -->
+  <text class="title" x="60" y="92">CLI / Library API</text>
+  <text class="mono" x="60" y="118">tx-sim-risk (bin)</text>
+  <text class="mono" x="60" y="140">generateJsonReport(..)</text>
+  <text class="title" x="360" y="72">Raw Tx Unwrapper</text>
+  <text class="mono" x="360" y="98">EIP-1559 & legacy RLP</text>
+  <text class="title" x="360" y="182">ERC-20 Decoders</text>
+  <text class="mono" x="360" y="208">approve / transfer</text>
+  <text class="mono" x="360" y="230">inc/dec allowance</text>
+  <text class="title" x="675" y="92">Risk Reporter</text>
+  <text class="mono" x="675" y="118">Flags: unlimited_approval,</text>
+  <text class="mono" x="675" y="138">burn_to_zero_address, ...</text>
+  <!-- Arrows -->
+  <line class="arrow" x1="260" y1="120" x2="335" y2="80"/>
+  <line class="arrow" x1="260" y1="120" x2="335" y2="200"/>
+  <line class="arrow" x1="575" y1="80" x2="650" y2="120"/>
+  <line class="arrow" x1="575" y1="200" x2="650" y2="120"/>
+</svg>
+

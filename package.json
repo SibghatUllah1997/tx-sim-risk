@@ -1,21 +1,54 @@
 {
   "name": "tx-sim-risk",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Fast, zero-RPC EVM raw transaction unwrapping and ERC-20 risk checks (approvals, transfers).",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "vitest run --reporter=dot",
-    "build": "tsc -p tsconfig.json"
+    "test:coverage": "vitest run --coverage --reporter=dot",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint . --ext .ts --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepublishOnly": "npm run build"
   },
   "bin": {
     "tx-sim-risk": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js"
+    },
+    "./cli": "./dist/cli.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SibghatUllah1997/tx-sim-risk.git"
   },
-  "keywords": [],
-  "author": "",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "ethereum",
+    "evm",
+    "erc20",
+    "decoder",
+    "rlp",
+    "risk",
+    "security",
+    "cli"
+  ],
+  "author": "HM Sibghat Ullah <h.m.sibghatullah1997@gmail.com>",
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/SibghatUllah1997/tx-sim-risk/issues"
@@ -23,8 +56,18 @@
   "homepage": "https://github.com/SibghatUllah1997/tx-sim-risk#readme",
   "devDependencies": {
     "@types/node": "^26.6.6",
+    "@typescript-eslint/eslint-plugin": "^8.13.0",
+    "@typescript-eslint/parser": "^8.13.0",
+    "@vitest/coverage-v8": "^5.0.5",
+    "eslint": "^9.13.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-n": "^17.10.3",
+    "eslint-plugin-promise": "^7.1.0",
+    "fast-check": "^3.16.0",
+    "prettier": "^3.3.3",
     "ts-node": "^10.9.2",
-    "typescript": "^7.0.2",
+    "typescript": "^5.4.5",
     "vitest": "^5.0.5"
   },
   "dependencies": {

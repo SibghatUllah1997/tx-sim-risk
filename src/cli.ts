@@ -43,6 +43,7 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
   let dataArg: string | undefined;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
+    if (arg == null) continue;
     if (arg === '--data' && argv[i + 1]) {
       dataArg = argv[i + 1];
       break;
@@ -72,21 +73,22 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
   return null;
 }
 
-async function main() {
+async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const data = await getHexFromArgsOrStdin(argv);
   const wantJson = hasJsonFlag(argv);
   const wantFees = hasFeesFlag(argv);
   const wantChainId = hasChainIdFlag(argv);
-  if (!isHexStringLike(data)) {
+  if (!isHexStringLike(data ?? undefined)) {
     printUsage();
     process.exit(1);
     return;
   }
+  const inputData = data as string;
 
   try {
     if (wantFees) {
-      const fees = parseEip1559Fees(data);
+      const fees = parseEip1559Fees(inputData);
       if (fees) {
         console.log('Detected: EIP-1559 raw transaction');
         console.log(`Gas limit: ${fees.gasLimit.toString()}`);
@@ -95,7 +97,7 @@ async function main() {
         );
         console.log(`Max fee per gas: ${fees.maxFeePerGas.toString()} wei`);
         if (wantChainId) {
-          const parsed = extractDataAndChainIdFromRawTx(data);
+          const parsed = extractDataAndChainIdFromRawTx(inputData);
           if (parsed && parsed.txType === 'eip1559') {
             console.log(`Chain ID: ${parsed.chainId.toString()}`);
           } else {
@@ -105,7 +107,7 @@ async function main() {
       } else {
         console.log('No EIP-1559 fee fields found in input.');
         if (wantChainId) {
-          const parsed = extractDataAndChainIdFromRawTx(data);
+          const parsed = extractDataAndChainIdFromRawTx(inputData);
           if (parsed && parsed.chainId != null) {
             console.log(`Chain ID: ${parsed.chainId.toString()}`);
           } else {
@@ -118,8 +120,8 @@ async function main() {
     }
 
     // Unwrap hardware-wallet style raw tx to extract calldata for decoding
-    const unwrapped = extractDataAndChainIdFromRawTx(data);
-    const effectiveData = unwrapped ? unwrapped.data : data;
+    const unwrapped = extractDataAndChainIdFromRawTx(inputData);
+    const effectiveData = unwrapped ? unwrapped.data : inputData;
 
     if (wantJson) {
       const { generateJsonReport } = await import('./report');
@@ -134,7 +136,7 @@ async function main() {
     }
 
     if (wantChainId) {
-      const parsed = extractDataAndChainIdFromRawTx(data);
+      const parsed = extractDataAndChainIdFromRawTx(inputData);
       if (parsed && parsed.chainId != null) {
         console.log(`Chain ID: ${parsed.chainId.toString()}`);
       } else {

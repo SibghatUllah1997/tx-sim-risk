@@ -9,8 +9,8 @@
 - [x] Day 7: Implement gas/fee parsing from raw tx (EIP-1559)
 - [x] Day 8: Support Trezor/Ledger-style raw tx input parsing
 - [x] Day 9: Integrate chainId handling (EIP-155)
-- Day 10: Add ERC-721 approveAll detection
-- Day 11: Add ERC-1155 setApprovalForAll detection
+- [x] Day 10: Add ERC-721 approveAll detection
+- [x] Day 11: Add ERC-1155 setApprovalForAll detection
 - Day 12: Risk rule: approvals to known phishing addresses list
 - Day 13: Risk rule: approvals to EOAs vs contract addresses
 - Day 14: Add human-readable reason strings for each risk

@@ -1,3 +1,9 @@
+## 2026-11-03
+
+- Added ERC-721 setApprovalForAll decoding and an approve-all risk flag when an operator grant is enabled.
+- Added ERC-1155 setApprovalForAll detection (same ABI selector) with a matching approve-all risk flag.
+- CLI text output and JSON reports now surface NFT operator approvals for both standards.
+
 ## 2026-11-02
 
 - Added support for parsing full hardware-wallet raw transactions (EIP-1559 and legacy), unwrapping calldata for analysis.

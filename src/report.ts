@@ -4,6 +4,11 @@ import {
   decodeErc20IncreaseAllowance,
   decodeErc20DecreaseAllowance,
 } from './evm/allowance';
+import {
+  decodeErc721SetApprovalForAll,
+  erc721ApproveAllRisks,
+} from './evm/erc721';
+import { erc1155ApproveAllRisks } from './evm/erc1155';
 import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
 
 export type JsonReport =
@@ -38,6 +43,16 @@ export type JsonReport =
       payload: {
         spender: string;
         amountDelta: string;
+      };
+      risks: string[];
+    }
+  | {
+      type: 'nft_setApprovalForAll';
+      payload: {
+        operator: string;
+        approved: boolean;
+        isApproveAll: boolean;
+        standards: ['erc721', 'erc1155'];
       };
       risks: string[];
     };
@@ -94,6 +109,21 @@ export function generateJsonReport(data: string): JsonReport | null {
         amountDelta: dec.amountDelta.toString(),
       },
       risks: [],
+    };
+  }
+
+  const nft = decodeErc721SetApprovalForAll(data);
+  if (nft) {
+    // Same ABI selector as ERC-1155; report both possible standards.
+    return {
+      type: 'nft_setApprovalForAll',
+      payload: {
+        operator: nft.operator,
+        approved: nft.approved,
+        isApproveAll: nft.isApproveAll,
+        standards: ['erc721', 'erc1155'],
+      },
+      risks: [...erc721ApproveAllRisks(data), ...erc1155ApproveAllRisks(data)],
     };
   }
 

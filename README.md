@@ -11,6 +11,7 @@ Why it matters:
 
 Features:
 - Decode ERC-20 approve, transfer, increaseAllowance, decreaseAllowance
+- Decode ERC-721 / ERC-1155 setApprovalForAll and flag operator grants
 - Flag unlimited approvals and burns to the zero address
 - JSON report mode for downstream tooling
 - Parse EIP-1559 fee fields and chainId from raw transactions (legacy and type-2)
@@ -47,9 +48,9 @@ flowchart TD
     A[CLI input\nhex calldata or raw tx] --> B{Raw tx?}
     B -- yes --> C[unwrap data + chainId]
     B -- no --> D[use calldata as-is]
-    C --> E[ERC-20 decoders]
-    D --> E[ERC-20 decoders]
-    E --> F[Risk rules\n(unlimited approval,\nzero-address burn)]
+    C --> E[ERC-20 / NFT decoders]
+    D --> E[ERC-20 / NFT decoders]
+    E --> F[Risk rules\n(unlimited approval,\nzero-address burn,\nNFT approve-all)]
     F --> G[Plain text stdout]
     F --> H[JSON report (--json)]
 ```

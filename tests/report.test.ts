@@ -56,5 +56,35 @@ describe('JSON report generator', () => {
     expect(report.type).toBe('erc20_decreaseAllowance');
     expect(report.payload.spender).toBe(`0x${spender}`);
   });
+
+  it('reports NFT setApprovalForAll grants as approve-all for both standards', () => {
+    const selector = 'a22cb465'; // setApprovalForAll
+    const operator = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const operatorWord = pad32Bytes(`000000000000000000000000${operator}`);
+    const approvedWord = pad32Bytes('1');
+    const data = `0x${selector}${operatorWord}${approvedWord}`;
+
+    const report = generateJsonReport(data)!;
+    expect(report.type).toBe('nft_setApprovalForAll');
+    expect(report.payload.operator).toBe(`0x${operator}`);
+    expect(report.payload.approved).toBe(true);
+    expect(report.payload.isApproveAll).toBe(true);
+    expect(report.payload.standards).toEqual(['erc721', 'erc1155']);
+    expect(report.risks).toEqual(['erc721_approve_all', 'erc1155_approve_all']);
+  });
+
+  it('reports NFT setApprovalForAll revocations without approve-all risk', () => {
+    const selector = 'a22cb465';
+    const operator = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    const operatorWord = pad32Bytes(`000000000000000000000000${operator}`);
+    const approvedWord = pad32Bytes('0');
+    const data = `0x${selector}${operatorWord}${approvedWord}`;
+
+    const report = generateJsonReport(data)!;
+    expect(report.type).toBe('nft_setApprovalForAll');
+    expect(report.payload.approved).toBe(false);
+    expect(report.payload.isApproveAll).toBe(false);
+    expect(report.risks).toEqual([]);
+  });
 });
 

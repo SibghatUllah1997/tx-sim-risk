@@ -5,6 +5,8 @@ import {
   decodeErc20Transfer,
   decodeErc20IncreaseAllowance,
   decodeErc20DecreaseAllowance,
+  decodeErc721SetApprovalForAll,
+  decodeErc1155SetApprovalForAll,
 } from './index';
 import { parseEip1559Fees } from './evm/eip1559';
 import { generateJsonReport } from './report';
@@ -181,6 +183,24 @@ async function main() {
       console.log('Detected: ERC-20 decreaseAllowance(address,uint256)');
       console.log(`Spender: ${dec.spender}`);
       console.log(`Delta: -${dec.amountDelta.toString()}`);
+      process.exit(0);
+      return;
+    }
+
+    const nft721 = decodeErc721SetApprovalForAll(effectiveData);
+    if (nft721) {
+      const nft1155 = decodeErc1155SetApprovalForAll(effectiveData);
+      console.log(
+        'Detected: setApprovalForAll(address,bool) [ERC-721 / ERC-1155]'
+      );
+      console.log(`Operator: ${nft721.operator}`);
+      console.log(`Approved: ${nft721.approved ? 'yes' : 'no'}`);
+      console.log(
+        `ERC-721 approve-all: ${nft721.isApproveAll ? 'yes' : 'no'}`
+      );
+      console.log(
+        `ERC-1155 approve-all: ${nft1155?.isApproveAll ? 'yes' : 'no'}`
+      );
       process.exit(0);
       return;
     }

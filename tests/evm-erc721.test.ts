@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   decodeErc721SetApprovalForAll,
   decodeSetApprovalForAll,
+  isErc721ApproveAll,
+  erc721ApproveAllRisks,
+  ERC721_APPROVE_ALL_RISK,
 } from '../src';
 
 function pad32Bytes(hexNoPrefix: string): string {
@@ -30,6 +33,7 @@ describe('ERC-721 setApprovalForAll decoder', () => {
     expect(decoded.method).toBe('erc721_setApprovalForAll');
     expect(decoded.operator).toBe(`0x${operator}`);
     expect(decoded.approved).toBe(true);
+    expect(decoded.isApproveAll).toBe(true);
 
     const shared = decodeSetApprovalForAll(data)!;
     expect(shared.operator).toBe(`0x${operator}`);
@@ -43,6 +47,7 @@ describe('ERC-721 setApprovalForAll decoder', () => {
     const decoded = decodeErc721SetApprovalForAll(data)!;
     expect(decoded.operator).toBe(`0x${operator}`);
     expect(decoded.approved).toBe(false);
+    expect(decoded.isApproveAll).toBe(false);
   });
 
   it('returns null for a non-matching selector', () => {
@@ -79,5 +84,29 @@ describe('ERC-721 setApprovalForAll decoder', () => {
     const decoded = decodeErc721SetApprovalForAll(data)!;
     expect(decoded.operator).toBe(`0x${operator}`);
     expect(decoded.approved).toBe(true);
+  });
+});
+
+describe('ERC-721 approve-all risk', () => {
+  it('flags an operator grant as approve-all', () => {
+    const operator = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const data = encodeSetApprovalForAll(operator, true);
+    expect(isErc721ApproveAll(data)).toBe(true);
+    expect(erc721ApproveAllRisks(data)).toEqual([ERC721_APPROVE_ALL_RISK]);
+  });
+
+  it('does not flag a revocation as approve-all', () => {
+    const operator = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    const data = encodeSetApprovalForAll(operator, false);
+    expect(isErc721ApproveAll(data)).toBe(false);
+    expect(erc721ApproveAllRisks(data)).toEqual([]);
+  });
+
+  it('returns no risk for unrelated calldata', () => {
+    const selector = 'a9059cbb'; // transfer(address,uint256)
+    const dummyWord = '0'.repeat(64);
+    const data = `0x${selector}${dummyWord}${dummyWord}`;
+    expect(isErc721ApproveAll(data)).toBe(false);
+    expect(erc721ApproveAllRisks(data)).toEqual([]);
   });
 });

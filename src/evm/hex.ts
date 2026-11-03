@@ -19,3 +19,13 @@ export function parseUint256FromWord(word: string): bigint {
   return BigInt(`0x${clean}`);
 }
 
+/**
+ * Decode an ABI-encoded bool (32-byte word). Only 0 and 1 are valid.
+ */
+export function parseBoolFromWord(word: string): boolean {
+  const value = parseUint256FromWord(word);
+  if (value === 0n) return false;
+  if (value === 1n) return true;
+  throw new Error('Invalid bool ABI word');
+}
+

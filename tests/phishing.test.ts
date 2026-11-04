@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_PHISHING_LIST,
+  PHISHING_SPENDER_RISK,
   createPhishingIndex,
   isKnownPhishingAddress,
   lookupPhishingEntry,
   mergePhishingEntries,
   normalizeAddressKey,
+  phishingSpenderRisks,
 } from '../src';
 
 const SEED_DRAINER = '0xbad0000000000000000000000000000000000001';
@@ -88,5 +90,11 @@ describe('phishing address list', () => {
     expect(isKnownPhishingAddress(SEED_SUPPORT, index)).toBe(true);
     expect(DEFAULT_PHISHING_LIST.find((e) => e.address === SEED_DRAINER)?.label)
       .toBe('seed_drainer_primary');
+  });
+
+  it('returns the phishing_spender risk id only for listed addresses', () => {
+    expect(phishingSpenderRisks(SEED_DRAINER)).toEqual([PHISHING_SPENDER_RISK]);
+    expect(phishingSpenderRisks(CLEAN)).toEqual([]);
+    expect(phishingSpenderRisks('nope')).toEqual([]);
   });
 });

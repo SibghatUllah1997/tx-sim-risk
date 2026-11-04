@@ -105,6 +105,20 @@ export function isKnownPhishingAddress(
   return lookupPhishingEntry(address, index) !== undefined;
 }
 
+/** Risk id emitted when an approval grant targets a known phishing address. */
+export const PHISHING_SPENDER_RISK = 'phishing_spender';
+
+/**
+ * Risk ids for an approval-style grant to `address`. Empty when the address
+ * is not on the phishing index (or is not a valid address).
+ */
+export function phishingSpenderRisks(
+  address: string,
+  index: ReadonlyMap<string, PhishingEntry> = DEFAULT_INDEX
+): string[] {
+  return isKnownPhishingAddress(address, index) ? [PHISHING_SPENDER_RISK] : [];
+}
+
 /**
  * Return a new list with `extra` merged onto `base`. Extra entries with the
  * same address replace the base entry.

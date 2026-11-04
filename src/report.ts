@@ -10,6 +10,28 @@ import {
 } from './evm/erc721';
 import { erc1155ApproveAllRisks } from './evm/erc1155';
 import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
+import {
+  phishingSpenderRisks,
+  type PhishingEntry,
+} from './evm/phishing';
+
+export type ReportOptions = {
+  /** Override the built-in phishing index. */
+  phishingIndex?: ReadonlyMap<string, PhishingEntry>;
+};
+
+/**
+ * Phishing-spender risks for an allowance/operator *grant*.
+ * Revocations (zero amount, false approved) are not flagged.
+ */
+function phishingGrantRisks(
+  spender: string,
+  granted: boolean,
+  options?: ReportOptions
+): string[] {
+  if (!granted) return [];
+  return phishingSpenderRisks(spender, options?.phishingIndex);
+}
 
 export type JsonReport =
   | {
@@ -57,11 +79,17 @@ export type JsonReport =
       risks: string[];
     };
 
-export function generateJsonReport(data: string): JsonReport | null {
+export function generateJsonReport(
+  data: string,
+  options?: ReportOptions
+): JsonReport | null {
   const approve = decodeErc20Approve(data);
   if (approve) {
     const risks: string[] = [];
     if (approve.isUnlimitedApproval) risks.push('unlimited_approval');
+    risks.push(
+      ...phishingGrantRisks(approve.spender, approve.amount > 0n, options)
+    );
     return {
       type: 'erc20_approve',
       payload: {
@@ -96,7 +124,7 @@ export function generateJsonReport(data: string): JsonReport | null {
         spender: inc.spender,
         amountDelta: inc.amountDelta.toString(),
       },
-      risks: [],
+      risks: phishingGrantRisks(inc.spender, inc.amountDelta > 0n, options),
     };
   }
 
@@ -123,7 +151,11 @@ export function generateJsonReport(data: string): JsonReport | null {
         isApproveAll: nft.isApproveAll,
         standards: ['erc721', 'erc1155'],
       },
-      risks: [...erc721ApproveAllRisks(data), ...erc1155ApproveAllRisks(data)],
+      risks: [
+        ...erc721ApproveAllRisks(data),
+        ...erc1155ApproveAllRisks(data),
+        ...phishingGrantRisks(nft.operator, nft.approved, options),
+      ],
     };
   }
 
@@ -134,9 +166,12 @@ export function generateJsonReport(data: string): JsonReport | null {
  * Accepts either ERC-20 calldata (0x...) or a full raw transaction hex (legacy or typed-2).
  * When a raw transaction is provided, unwraps its `data` field before generating the report.
  */
-export function generateJsonReportFromAny(input: string): JsonReport | null {
+export function generateJsonReportFromAny(
+  input: string,
+  options?: ReportOptions
+): JsonReport | null {
   const unwrapped = extractDataAndChainIdFromRawTx(input);
   const data = unwrapped ? unwrapped.data : input;
-  return generateJsonReport(data);
+  return generateJsonReport(data, options);
 }
 

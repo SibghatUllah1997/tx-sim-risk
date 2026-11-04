@@ -6,4 +6,5 @@ export * from './evm/approvalForAll';
 export * from './evm/erc721';
 export * from './evm/erc1155';
 export * from './evm/phishing';
+export * from './evm/addressKind';
 

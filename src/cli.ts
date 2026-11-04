@@ -9,8 +9,16 @@ import {
   decodeErc1155SetApprovalForAll,
 } from './index';
 import { parseEip1559Fees } from './evm/eip1559';
-import { generateJsonReport } from './report';
+import { formatReportFooter, generateJsonReport } from './report';
 import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
+
+function printReportFooter(data: string): void {
+  const report = generateJsonReport(data);
+  if (!report) return;
+  for (const line of formatReportFooter(report)) {
+    console.log(line);
+  }
+}
 
 function printUsage(): void {
   console.error('Usage: tx-sim-risk <hexData> | --data <hexData>');
@@ -153,6 +161,7 @@ async function main() {
       console.log(
         `Unlimited approval: ${approve.isUnlimitedApproval ? 'yes' : 'no'}`
       );
+      printReportFooter(effectiveData);
       process.exit(0);
       return;
     }
@@ -165,6 +174,7 @@ async function main() {
       console.log(
         `Burn address: ${transfer.isToZeroAddress ? 'yes' : 'no'}`
       );
+      printReportFooter(effectiveData);
       process.exit(0);
       return;
     }
@@ -174,6 +184,7 @@ async function main() {
       console.log('Detected: ERC-20 increaseAllowance(address,uint256)');
       console.log(`Spender: ${inc.spender}`);
       console.log(`Delta: +${inc.amountDelta.toString()}`);
+      printReportFooter(effectiveData);
       process.exit(0);
       return;
     }
@@ -183,6 +194,7 @@ async function main() {
       console.log('Detected: ERC-20 decreaseAllowance(address,uint256)');
       console.log(`Spender: ${dec.spender}`);
       console.log(`Delta: -${dec.amountDelta.toString()}`);
+      printReportFooter(effectiveData);
       process.exit(0);
       return;
     }
@@ -201,6 +213,7 @@ async function main() {
       console.log(
         `ERC-1155 approve-all: ${nft1155?.isApproveAll ? 'yes' : 'no'}`
       );
+      printReportFooter(effectiveData);
       process.exit(0);
       return;
     }

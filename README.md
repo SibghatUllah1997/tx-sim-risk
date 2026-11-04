@@ -12,7 +12,8 @@ Why it matters:
 Features:
 - Decode ERC-20 approve, transfer, increaseAllowance, decreaseAllowance
 - Decode ERC-721 / ERC-1155 setApprovalForAll and flag operator grants
-- Flag unlimited approvals and burns to the zero address
+- Flag unlimited approvals, burns to the zero address, phishing spenders, and grants to EOAs
+- Classify spenders/operators as EOA, contract, or unknown (bytecode or known-contract map)
 - JSON report mode for downstream tooling
 - Parse EIP-1559 fee fields and chainId from raw transactions (legacy and type-2)
 - Address checksum utilities
@@ -36,7 +37,8 @@ Example output:
   "payload": {
     "spender": "0x0000000000000000000000000000000000000000",
     "amount": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-    "isUnlimitedApproval": true
+    "isUnlimitedApproval": true,
+    "spenderKind": "unknown"
   },
   "risks": ["unlimited_approval"]
 }
@@ -50,7 +52,7 @@ flowchart TD
     B -- no --> D[use calldata as-is]
     C --> E[ERC-20 / NFT decoders]
     D --> E[ERC-20 / NFT decoders]
-    E --> F[Risk rules\n(unlimited approval,\nzero-address burn,\nNFT approve-all)]
+    E --> F[Risk rules\n(unlimited approval,\nzero-address burn,\nNFT approve-all,\nphishing spender,\napproval to EOA)]
     F --> G[Plain text stdout]
     F --> H[JSON report (--json)]
 ```

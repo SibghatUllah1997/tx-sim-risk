@@ -208,6 +208,30 @@ export function generateJsonReport(
 }
 
 /**
+ * Extra plain-text lines for CLI output: spender/operator kind and any
+ * collected risk ids. Empty when there is nothing extra to print.
+ */
+export function formatReportFooter(report: JsonReport): string[] {
+  const lines: string[] = [];
+  switch (report.type) {
+    case 'erc20_approve':
+    case 'erc20_increaseAllowance':
+    case 'erc20_decreaseAllowance':
+      lines.push(`Spender kind: ${report.payload.spenderKind}`);
+      break;
+    case 'nft_setApprovalForAll':
+      lines.push(`Operator kind: ${report.payload.operatorKind}`);
+      break;
+    default:
+      break;
+  }
+  if (report.risks.length > 0) {
+    lines.push(`Risks: ${report.risks.join(', ')}`);
+  }
+  return lines;
+}
+
+/**
  * Accepts either ERC-20 calldata (0x...) or a full raw transaction hex (legacy or typed-2).
  * When a raw transaction is provided, unwraps its `data` field before generating the report.
  */

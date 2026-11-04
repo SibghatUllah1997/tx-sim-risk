@@ -1,3 +1,9 @@
+## 2026-11-04
+
+- Flag token and NFT approval grants whose spender or operator is on the built-in phishing address list.
+- Classify spenders as EOA, contract, or unknown, and flag grants that target an EOA.
+- CLI text output now prints spender/operator kind and the collected risk ids.
+
 ## 2026-11-03
 
 - Added ERC-721 setApprovalForAll decoding and an approve-all risk flag when an operator grant is enabled.

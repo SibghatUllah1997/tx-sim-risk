@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
+  APPROVAL_TO_EOA_RISK,
   DEFAULT_KNOWN_CONTRACTS,
   classifyAddressKind,
   createAddressKindMap,
+  eoaApprovalRisks,
   kindFromBytecode,
 } from '../src';
 
@@ -70,5 +72,16 @@ describe('classifyAddressKind', () => {
     expect(() => createAddressKindMap([], ['zzz'])).toThrowError(
       /invalid eoa address/i
     );
+  });
+});
+
+describe('eoaApprovalRisks', () => {
+  it('flags only addresses that classify as EOA', () => {
+    expect(eoaApprovalRisks(RANDOM, { bytecode: '0x' })).toEqual([
+      APPROVAL_TO_EOA_RISK,
+    ]);
+    expect(eoaApprovalRisks(RANDOM, { bytecode: '0x6080' })).toEqual([]);
+    expect(eoaApprovalRisks(ROUTER)).toEqual([]);
+    expect(eoaApprovalRisks(RANDOM)).toEqual([]);
   });
 });

@@ -95,3 +95,19 @@ export function classifyAddressKind(
   const known = hints?.known ?? DEFAULT_KIND_MAP;
   return known.get(key) ?? 'unknown';
 }
+
+/** Risk id emitted when an approval grant targets an EOA. */
+export const APPROVAL_TO_EOA_RISK = 'approval_to_eoa';
+
+/**
+ * Risk ids for an approval-style grant to `address`. Empty unless the
+ * spender classifies as an EOA from bytecode or the known map.
+ */
+export function eoaApprovalRisks(
+  address: string,
+  hints?: AddressKindHints
+): string[] {
+  return classifyAddressKind(address, hints) === 'eoa'
+    ? [APPROVAL_TO_EOA_RISK]
+    : [];
+}

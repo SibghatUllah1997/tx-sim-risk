@@ -1,3 +1,9 @@
+## 2026-11-05
+
+- Added a human-readable reason string for every risk id, shown in JSON reports and the CLI footer.
+- Added an offline simulation stub that estimates token-balance and allowance deltas from decoded calldata.
+- JSON reports and CLI output now include those deltas; pass `--from` to name the sender instead of `caller`.
+
 ## 2026-11-04
 
 - Flag token and NFT approval grants whose spender or operator is on the built-in phishing address list.

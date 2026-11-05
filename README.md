@@ -14,6 +14,8 @@ Features:
 - Decode ERC-721 / ERC-1155 setApprovalForAll and flag operator grants
 - Flag unlimited approvals, burns to the zero address, phishing spenders, and grants to EOAs
 - Classify spenders/operators as EOA, contract, or unknown (bytecode or known-contract map)
+- Human-readable reason strings for each risk id (JSON `riskDetails` and CLI footer)
+- Offline simulation stub for token-balance and allowance deltas (`--from` names the sender)
 - JSON report mode for downstream tooling
 - Parse EIP-1559 fee fields and chainId from raw transactions (legacy and type-2)
 - Address checksum utilities
@@ -40,7 +42,28 @@ Example output:
     "isUnlimitedApproval": true,
     "spenderKind": "unknown"
   },
-  "risks": ["unlimited_approval"]
+  "risks": ["unlimited_approval"],
+  "riskDetails": [
+    {
+      "id": "unlimited_approval",
+      "reason": "The spender is approved for the maximum uint256 amount, so it can move the holder's entire token balance until the allowance is revoked."
+    }
+  ],
+  "simulation": {
+    "balances": [],
+    "allowances": [
+      {
+        "owner": "caller",
+        "spender": "0x0000000000000000000000000000000000000000",
+        "mode": "set",
+        "delta": null,
+        "newValue": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+        "wouldRevert": false
+      }
+    ],
+    "operators": [],
+    "notes": []
+  }
 }
 ```
 
@@ -53,8 +76,12 @@ flowchart TD
     C --> E[ERC-20 / NFT decoders]
     D --> E[ERC-20 / NFT decoders]
     E --> F[Risk rules\n(unlimited approval,\nzero-address burn,\nNFT approve-all,\nphishing spender,\napproval to EOA)]
-    F --> G[Plain text stdout]
-    F --> H[JSON report (--json)]
+    F --> R[Reason strings]
+    E --> S[Simulation stub\n(balance / allowance deltas)]
+    R --> G[Plain text stdout]
+    R --> H[JSON report (--json)]
+    S --> G
+    S --> H
 ```
 
 Testing

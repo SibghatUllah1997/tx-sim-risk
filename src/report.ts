@@ -21,6 +21,12 @@ import {
   type AddressKind,
   type AddressKindHints,
 } from './evm/addressKind';
+import {
+  BURN_TO_ZERO_ADDRESS_RISK,
+  UNLIMITED_APPROVAL_RISK,
+  describeRisks,
+  type RiskDetail,
+} from './risks';
 
 export type ReportOptions = {
   /** Override the built-in phishing index. */
@@ -70,8 +76,13 @@ function approvalGrantRisks(
   ];
 }
 
+type ReportMeta = {
+  risks: string[];
+  riskDetails: RiskDetail[];
+};
+
 export type JsonReport =
-  | {
+  | (ReportMeta & {
       type: 'erc20_approve';
       payload: {
         spender: string;
@@ -79,36 +90,32 @@ export type JsonReport =
         isUnlimitedApproval: boolean;
         spenderKind: AddressKind;
       };
-      risks: string[];
-    }
-  | {
+    })
+  | (ReportMeta & {
       type: 'erc20_transfer';
       payload: {
         to: string;
         amount: string;
         isToZeroAddress: boolean;
       };
-      risks: string[];
-    }
-  | {
+    })
+  | (ReportMeta & {
       type: 'erc20_increaseAllowance';
       payload: {
         spender: string;
         amountDelta: string;
         spenderKind: AddressKind;
       };
-      risks: string[];
-    }
-  | {
+    })
+  | (ReportMeta & {
       type: 'erc20_decreaseAllowance';
       payload: {
         spender: string;
         amountDelta: string;
         spenderKind: AddressKind;
       };
-      risks: string[];
-    }
-  | {
+    })
+  | (ReportMeta & {
       type: 'nft_setApprovalForAll';
       payload: {
         operator: string;
@@ -117,8 +124,13 @@ export type JsonReport =
         standards: ['erc721', 'erc1155'];
         operatorKind: AddressKind;
       };
-      risks: string[];
-    };
+    });
+
+function withRiskDetails<T extends { risks: string[] }>(
+  report: T
+): T & { riskDetails: RiskDetail[] } {
+  return { ...report, riskDetails: describeRisks(report.risks) };
+}
 
 export function generateJsonReport(
   data: string,
@@ -127,11 +139,11 @@ export function generateJsonReport(
   const approve = decodeErc20Approve(data);
   if (approve) {
     const risks: string[] = [];
-    if (approve.isUnlimitedApproval) risks.push('unlimited_approval');
+    if (approve.isUnlimitedApproval) risks.push(UNLIMITED_APPROVAL_RISK);
     risks.push(
       ...approvalGrantRisks(approve.spender, approve.amount > 0n, options)
     );
-    return {
+    return withRiskDetails({
       type: 'erc20_approve',
       payload: {
         spender: approve.spender,
@@ -140,14 +152,14 @@ export function generateJsonReport(
         spenderKind: spenderKindFor(approve.spender, options),
       },
       risks,
-    };
+    });
   }
 
   const transfer = decodeErc20Transfer(data);
   if (transfer) {
     const risks: string[] = [];
-    if (transfer.isToZeroAddress) risks.push('burn_to_zero_address');
-    return {
+    if (transfer.isToZeroAddress) risks.push(BURN_TO_ZERO_ADDRESS_RISK);
+    return withRiskDetails({
       type: 'erc20_transfer',
       payload: {
         to: transfer.to,
@@ -155,12 +167,12 @@ export function generateJsonReport(
         isToZeroAddress: transfer.isToZeroAddress,
       },
       risks,
-    };
+    });
   }
 
   const inc = decodeErc20IncreaseAllowance(data);
   if (inc) {
-    return {
+    return withRiskDetails({
       type: 'erc20_increaseAllowance',
       payload: {
         spender: inc.spender,
@@ -168,12 +180,12 @@ export function generateJsonReport(
         spenderKind: spenderKindFor(inc.spender, options),
       },
       risks: approvalGrantRisks(inc.spender, inc.amountDelta > 0n, options),
-    };
+    });
   }
 
   const dec = decodeErc20DecreaseAllowance(data);
   if (dec) {
-    return {
+    return withRiskDetails({
       type: 'erc20_decreaseAllowance',
       payload: {
         spender: dec.spender,
@@ -181,13 +193,13 @@ export function generateJsonReport(
         spenderKind: spenderKindFor(dec.spender, options),
       },
       risks: [],
-    };
+    });
   }
 
   const nft = decodeErc721SetApprovalForAll(data);
   if (nft) {
     // Same ABI selector as ERC-1155; report both possible standards.
-    return {
+    return withRiskDetails({
       type: 'nft_setApprovalForAll',
       payload: {
         operator: nft.operator,
@@ -201,15 +213,16 @@ export function generateJsonReport(
         ...erc1155ApproveAllRisks(data),
         ...approvalGrantRisks(nft.operator, nft.approved, options),
       ],
-    };
+    });
   }
 
   return null;
 }
 
 /**
- * Extra plain-text lines for CLI output: spender/operator kind and any
- * collected risk ids. Empty when there is nothing extra to print.
+ * Extra plain-text lines for CLI output: spender/operator kind, collected
+ * risk ids, and a human-readable reason for each risk. Empty when there is
+ * nothing extra to print.
  */
 export function formatReportFooter(report: JsonReport): string[] {
   const lines: string[] = [];
@@ -227,6 +240,9 @@ export function formatReportFooter(report: JsonReport): string[] {
   }
   if (report.risks.length > 0) {
     lines.push(`Risks: ${report.risks.join(', ')}`);
+    for (const detail of report.riskDetails) {
+      lines.push(`Reason: ${detail.id}: ${detail.reason}`);
+    }
   }
   return lines;
 }

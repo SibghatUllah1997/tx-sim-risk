@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   APPROVAL_TO_EOA_RISK,
+  BURN_TO_ZERO_ADDRESS_RISK,
   PHISHING_SPENDER_RISK,
+  RISK_REASONS,
+  UNLIMITED_APPROVAL_RISK,
 } from '../src';
 import {
   formatReportFooter,
@@ -36,7 +39,8 @@ describe('plain-text report footer', () => {
     const report = generateJsonReport(encodeApprove(ROUTER, 'f'.repeat(64)))!;
     expect(formatReportFooter(report)).toEqual([
       'Spender kind: contract',
-      'Risks: unlimited_approval',
+      `Risks: ${UNLIMITED_APPROVAL_RISK}`,
+      `Reason: ${UNLIMITED_APPROVAL_RISK}: ${RISK_REASONS[UNLIMITED_APPROVAL_RISK]}`,
     ]);
   });
 
@@ -47,6 +51,8 @@ describe('plain-text report footer', () => {
     expect(formatReportFooter(report)).toEqual([
       'Spender kind: eoa',
       `Risks: ${PHISHING_SPENDER_RISK}, ${APPROVAL_TO_EOA_RISK}`,
+      `Reason: ${PHISHING_SPENDER_RISK}: ${RISK_REASONS[PHISHING_SPENDER_RISK]}`,
+      `Reason: ${APPROVAL_TO_EOA_RISK}: ${RISK_REASONS[APPROVAL_TO_EOA_RISK]}`,
     ]);
   });
 
@@ -61,7 +67,10 @@ describe('plain-text report footer', () => {
 
   it('prints only a Risks line for a burn transfer (no spender kind)', () => {
     const report = generateJsonReport(encodeTransfer('0'.repeat(40), '1'))!;
-    expect(formatReportFooter(report)).toEqual(['Risks: burn_to_zero_address']);
+    expect(formatReportFooter(report)).toEqual([
+      `Risks: ${BURN_TO_ZERO_ADDRESS_RISK}`,
+      `Reason: ${BURN_TO_ZERO_ADDRESS_RISK}: ${RISK_REASONS[BURN_TO_ZERO_ADDRESS_RISK]}`,
+    ]);
   });
 
   it('omits the Risks line when there are none', () => {

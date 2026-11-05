@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   APPROVAL_TO_EOA_RISK,
   BURN_TO_ZERO_ADDRESS_RISK,
+  CALLER_ACCOUNT,
   PHISHING_SPENDER_RISK,
   RISK_REASONS,
   UNLIMITED_APPROVAL_RISK,
@@ -41,6 +42,7 @@ describe('plain-text report footer', () => {
       'Spender kind: contract',
       `Risks: ${UNLIMITED_APPROVAL_RISK}`,
       `Reason: ${UNLIMITED_APPROVAL_RISK}: ${RISK_REASONS[UNLIMITED_APPROVAL_RISK]}`,
+      `Allowance (0x${ROUTER}): set to ${((1n << 256n) - 1n).toString()}`,
     ]);
   });
 
@@ -53,6 +55,7 @@ describe('plain-text report footer', () => {
       `Risks: ${PHISHING_SPENDER_RISK}, ${APPROVAL_TO_EOA_RISK}`,
       `Reason: ${PHISHING_SPENDER_RISK}: ${RISK_REASONS[PHISHING_SPENDER_RISK]}`,
       `Reason: ${APPROVAL_TO_EOA_RISK}: ${RISK_REASONS[APPROVAL_TO_EOA_RISK]}`,
+      `Allowance (0x${PHISH}): set to 100`,
     ]);
   });
 
@@ -63,6 +66,7 @@ describe('plain-text report footer', () => {
     const lines = formatReportFooter(report);
     expect(lines[0]).toBe('Operator kind: eoa');
     expect(lines[1]).toMatch(new RegExp(`^Risks: .*${APPROVAL_TO_EOA_RISK}`));
+    expect(lines).toContain(`Operator (0x${EOA}): granted`);
   });
 
   it('prints only a Risks line for a burn transfer (no spender kind)', () => {
@@ -70,11 +74,16 @@ describe('plain-text report footer', () => {
     expect(formatReportFooter(report)).toEqual([
       `Risks: ${BURN_TO_ZERO_ADDRESS_RISK}`,
       `Reason: ${BURN_TO_ZERO_ADDRESS_RISK}: ${RISK_REASONS[BURN_TO_ZERO_ADDRESS_RISK]}`,
+      `Balance delta (${CALLER_ACCOUNT}): -1`,
+      `Balance delta (0x${'0'.repeat(40)}): +1`,
     ]);
   });
 
   it('omits the Risks line when there are none', () => {
     const report = generateJsonReport(encodeApprove(ROUTER, '1'))!;
-    expect(formatReportFooter(report)).toEqual(['Spender kind: contract']);
+    expect(formatReportFooter(report)).toEqual([
+      'Spender kind: contract',
+      `Allowance (0x${ROUTER}): set to 1`,
+    ]);
   });
 });

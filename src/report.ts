@@ -27,8 +27,15 @@ import {
   describeRisks,
   type RiskDetail,
 } from './risks';
+import {
+  emptySimulation,
+  simulateCalldata,
+  type AllowanceDelta,
+  type SimOptions,
+  type SimulationSnapshot,
+} from './sim';
 
-export type ReportOptions = {
+export type ReportOptions = SimOptions & {
   /** Override the built-in phishing index. */
   phishingIndex?: ReadonlyMap<string, PhishingEntry>;
   /** Override the default known-contract map used for spender classification. */
@@ -79,6 +86,7 @@ function approvalGrantRisks(
 type ReportMeta = {
   risks: string[];
   riskDetails: RiskDetail[];
+  simulation: SimulationSnapshot;
 };
 
 export type JsonReport =
@@ -126,10 +134,20 @@ export type JsonReport =
       };
     });
 
-function withRiskDetails<T extends { risks: string[] }>(
-  report: T
-): T & { riskDetails: RiskDetail[] } {
-  return { ...report, riskDetails: describeRisks(report.risks) };
+function reportMeta(
+  risks: string[],
+  data: string,
+  options?: ReportOptions
+): ReportMeta {
+  return {
+    risks,
+    riskDetails: describeRisks(risks),
+    simulation:
+      simulateCalldata(data, {
+        from: options?.from,
+        currentAllowance: options?.currentAllowance,
+      }) ?? emptySimulation(),
+  };
 }
 
 export function generateJsonReport(
@@ -143,7 +161,7 @@ export function generateJsonReport(
     risks.push(
       ...approvalGrantRisks(approve.spender, approve.amount > 0n, options)
     );
-    return withRiskDetails({
+    return {
       type: 'erc20_approve',
       payload: {
         spender: approve.spender,
@@ -151,55 +169,59 @@ export function generateJsonReport(
         isUnlimitedApproval: approve.isUnlimitedApproval,
         spenderKind: spenderKindFor(approve.spender, options),
       },
-      risks,
-    });
+      ...reportMeta(risks, data, options),
+    };
   }
 
   const transfer = decodeErc20Transfer(data);
   if (transfer) {
     const risks: string[] = [];
     if (transfer.isToZeroAddress) risks.push(BURN_TO_ZERO_ADDRESS_RISK);
-    return withRiskDetails({
+    return {
       type: 'erc20_transfer',
       payload: {
         to: transfer.to,
         amount: transfer.amount.toString(),
         isToZeroAddress: transfer.isToZeroAddress,
       },
-      risks,
-    });
+      ...reportMeta(risks, data, options),
+    };
   }
 
   const inc = decodeErc20IncreaseAllowance(data);
   if (inc) {
-    return withRiskDetails({
+    return {
       type: 'erc20_increaseAllowance',
       payload: {
         spender: inc.spender,
         amountDelta: inc.amountDelta.toString(),
         spenderKind: spenderKindFor(inc.spender, options),
       },
-      risks: approvalGrantRisks(inc.spender, inc.amountDelta > 0n, options),
-    });
+      ...reportMeta(
+        approvalGrantRisks(inc.spender, inc.amountDelta > 0n, options),
+        data,
+        options
+      ),
+    };
   }
 
   const dec = decodeErc20DecreaseAllowance(data);
   if (dec) {
-    return withRiskDetails({
+    return {
       type: 'erc20_decreaseAllowance',
       payload: {
         spender: dec.spender,
         amountDelta: dec.amountDelta.toString(),
         spenderKind: spenderKindFor(dec.spender, options),
       },
-      risks: [],
-    });
+      ...reportMeta([], data, options),
+    };
   }
 
   const nft = decodeErc721SetApprovalForAll(data);
   if (nft) {
     // Same ABI selector as ERC-1155; report both possible standards.
-    return withRiskDetails({
+    return {
       type: 'nft_setApprovalForAll',
       payload: {
         operator: nft.operator,
@@ -208,21 +230,44 @@ export function generateJsonReport(
         standards: ['erc721', 'erc1155'],
         operatorKind: spenderKindFor(nft.operator, options),
       },
-      risks: [
-        ...erc721ApproveAllRisks(data),
-        ...erc1155ApproveAllRisks(data),
-        ...approvalGrantRisks(nft.operator, nft.approved, options),
-      ],
-    });
+      ...reportMeta(
+        [
+          ...erc721ApproveAllRisks(data),
+          ...erc1155ApproveAllRisks(data),
+          ...approvalGrantRisks(nft.operator, nft.approved, options),
+        ],
+        data,
+        options
+      ),
+    };
   }
 
   return null;
 }
 
+function formatSignedDelta(delta: string): string {
+  if (delta === '0' || delta.startsWith('-')) return delta;
+  return `+${delta}`;
+}
+
+function formatAllowanceFooter(change: AllowanceDelta): string {
+  const who = change.spender;
+  if (change.wouldRevert) {
+    return `Allowance (${who}): ${change.mode} would revert`;
+  }
+  if (change.mode === 'set') {
+    return `Allowance (${who}): set to ${change.newValue}`;
+  }
+  if (change.mode === 'increase') {
+    return `Allowance (${who}): +${change.delta}`;
+  }
+  return `Allowance (${who}): ${change.delta}`;
+}
+
 /**
  * Extra plain-text lines for CLI output: spender/operator kind, collected
- * risk ids, and a human-readable reason for each risk. Empty when there is
- * nothing extra to print.
+ * risk ids with reasons, and stub balance/allowance deltas. Empty when
+ * there is nothing extra to print.
  */
 export function formatReportFooter(report: JsonReport): string[] {
   const lines: string[] = [];
@@ -243,6 +288,22 @@ export function formatReportFooter(report: JsonReport): string[] {
     for (const detail of report.riskDetails) {
       lines.push(`Reason: ${detail.id}: ${detail.reason}`);
     }
+  }
+  for (const balance of report.simulation.balances) {
+    lines.push(
+      `Balance delta (${balance.account}): ${formatSignedDelta(balance.delta)}`
+    );
+  }
+  for (const allowance of report.simulation.allowances) {
+    lines.push(formatAllowanceFooter(allowance));
+  }
+  for (const operator of report.simulation.operators) {
+    lines.push(
+      `Operator (${operator.operator}): ${operator.approved ? 'granted' : 'revoked'}`
+    );
+  }
+  for (const note of report.simulation.notes) {
+    lines.push(`Sim note: ${note}`);
   }
   return lines;
 }

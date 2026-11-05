@@ -9,11 +9,15 @@ import {
   decodeErc1155SetApprovalForAll,
 } from './index';
 import { parseEip1559Fees } from './evm/eip1559';
-import { formatReportFooter, generateJsonReport } from './report';
+import {
+  formatReportFooter,
+  generateJsonReport,
+  type ReportOptions,
+} from './report';
 import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
 
-function printReportFooter(data: string): void {
-  const report = generateJsonReport(data);
+function printReportFooter(data: string, options?: ReportOptions): void {
+  const report = generateJsonReport(data, options);
   if (!report) return;
   for (const line of formatReportFooter(report)) {
     console.log(line);
@@ -50,6 +54,22 @@ function hasChainIdFlag(argv: string[]): boolean {
   return argv.includes('--chainId') || argv.includes('--chainid');
 }
 
+function flagValue(argv: string[], names: readonly string[]): string | undefined {
+  const exact = new Set(names);
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]!;
+    for (const name of names) {
+      if (arg.startsWith(`${name}=`)) {
+        return arg.slice(name.length + 1);
+      }
+    }
+    if (exact.has(arg) && argv[i + 1]) {
+      return argv[i + 1];
+    }
+  }
+  return undefined;
+}
+
 async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
   let dataArg: string | undefined;
   for (let i = 0; i < argv.length; i++) {
@@ -62,7 +82,13 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
       dataArg = arg.slice('--data='.length);
       break;
     }
-    if (arg === '--json') continue; // ignore flag when scanning for data
+    if (arg === '--json' || arg === '--fees') continue;
+    if (arg === '--chainId' || arg === '--chainid') continue;
+    if (arg === '--from') {
+      i++; // skip the address value so it is not treated as calldata
+      continue;
+    }
+    if (arg.startsWith('--from=')) continue;
     if (isHexStringLike(arg)) {
       dataArg = arg;
       break;
@@ -89,6 +115,10 @@ async function main() {
   const wantJson = hasJsonFlag(argv);
   const wantFees = hasFeesFlag(argv);
   const wantChainId = hasChainIdFlag(argv);
+  const from = flagValue(argv, ['--from']);
+  const reportOptions: ReportOptions | undefined = from
+    ? { from }
+    : undefined;
   if (!isHexStringLike(data)) {
     printUsage();
     process.exit(1);
@@ -133,7 +163,7 @@ async function main() {
     const effectiveData = unwrapped ? unwrapped.data : data;
 
     if (wantJson) {
-      const report = generateJsonReport(effectiveData);
+      const report = generateJsonReport(effectiveData, reportOptions);
       if (report) {
         console.log(JSON.stringify(report, null, 2));
       } else {
@@ -161,7 +191,7 @@ async function main() {
       console.log(
         `Unlimited approval: ${approve.isUnlimitedApproval ? 'yes' : 'no'}`
       );
-      printReportFooter(effectiveData);
+      printReportFooter(effectiveData, reportOptions);
       process.exit(0);
       return;
     }
@@ -174,7 +204,7 @@ async function main() {
       console.log(
         `Burn address: ${transfer.isToZeroAddress ? 'yes' : 'no'}`
       );
-      printReportFooter(effectiveData);
+      printReportFooter(effectiveData, reportOptions);
       process.exit(0);
       return;
     }
@@ -184,7 +214,7 @@ async function main() {
       console.log('Detected: ERC-20 increaseAllowance(address,uint256)');
       console.log(`Spender: ${inc.spender}`);
       console.log(`Delta: +${inc.amountDelta.toString()}`);
-      printReportFooter(effectiveData);
+      printReportFooter(effectiveData, reportOptions);
       process.exit(0);
       return;
     }
@@ -194,7 +224,7 @@ async function main() {
       console.log('Detected: ERC-20 decreaseAllowance(address,uint256)');
       console.log(`Spender: ${dec.spender}`);
       console.log(`Delta: -${dec.amountDelta.toString()}`);
-      printReportFooter(effectiveData);
+      printReportFooter(effectiveData, reportOptions);
       process.exit(0);
       return;
     }
@@ -213,7 +243,7 @@ async function main() {
       console.log(
         `ERC-1155 approve-all: ${nft1155?.isApproveAll ? 'yes' : 'no'}`
       );
-      printReportFooter(effectiveData);
+      printReportFooter(effectiveData, reportOptions);
       process.exit(0);
       return;
     }

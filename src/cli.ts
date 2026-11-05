@@ -7,6 +7,8 @@ import {
   decodeErc20DecreaseAllowance,
   decodeErc721SetApprovalForAll,
   decodeErc1155SetApprovalForAll,
+  decodeCommonAbi,
+  type AbiArgValue,
 } from './index';
 import { parseEip1559Fees } from './evm/eip1559';
 import {
@@ -22,6 +24,12 @@ function printReportFooter(data: string, options?: ReportOptions): void {
   for (const line of formatReportFooter(report)) {
     console.log(line);
   }
+}
+
+function formatAbiValue(value: AbiArgValue): string {
+  return Array.isArray(value)
+    ? `[${value.map(formatAbiValue).join(', ')}]`
+    : String(value);
 }
 
 function printUsage(): void {
@@ -243,6 +251,17 @@ async function main() {
       console.log(
         `ERC-1155 approve-all: ${nft1155?.isApproveAll ? 'yes' : 'no'}`
       );
+      printReportFooter(effectiveData, reportOptions);
+      process.exit(0);
+      return;
+    }
+
+    const generic = decodeCommonAbi(effectiveData);
+    if (generic) {
+      console.log(`Detected: ${generic.signature} [via ABI]`);
+      for (const arg of generic.args) {
+        console.log(`${arg.name} (${arg.type}): ${formatAbiValue(arg.value)}`);
+      }
       printReportFooter(effectiveData, reportOptions);
       process.exit(0);
       return;

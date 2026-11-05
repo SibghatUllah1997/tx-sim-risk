@@ -9,6 +9,7 @@ import {
   erc721ApproveAllRisks,
 } from './evm/erc721';
 import { erc1155ApproveAllRisks } from './evm/erc1155';
+import { decodeCommonAbi, type AbiDecodedArg, type AbiStandard } from './evm/abi';
 import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
 import {
   normalizeAddressKey,
@@ -132,6 +133,16 @@ export type JsonReport =
         standards: ['erc721', 'erc1155'];
         operatorKind: AddressKind;
       };
+    })
+  | (ReportMeta & {
+      type: 'abi_call';
+      payload: {
+        functionName: string;
+        signature: string;
+        selector: string;
+        standards: AbiStandard[];
+        args: AbiDecodedArg[];
+      };
     });
 
 function reportMeta(
@@ -242,6 +253,23 @@ export function generateJsonReport(
     };
   }
 
+  // Calls without a dedicated risk rule (transferFrom, safeTransferFrom,
+  // batch transfers, ...) still get decoded through the generic ABI path.
+  const generic = decodeCommonAbi(data);
+  if (generic) {
+    return {
+      type: 'abi_call',
+      payload: {
+        functionName: generic.functionName,
+        signature: generic.signature,
+        selector: generic.selector,
+        standards: generic.standards,
+        args: generic.args,
+      },
+      ...reportMeta([], data, options),
+    };
+  }
+
   return null;
 }
 
@@ -279,6 +307,9 @@ export function formatReportFooter(report: JsonReport): string[] {
       break;
     case 'nft_setApprovalForAll':
       lines.push(`Operator kind: ${report.payload.operatorKind}`);
+      break;
+    case 'abi_call':
+      lines.push(`Standards: ${report.payload.standards.join(', ')}`);
       break;
     default:
       break;

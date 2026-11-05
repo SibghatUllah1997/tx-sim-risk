@@ -3,6 +3,7 @@
 - Added a human-readable reason string for every risk id, shown in JSON reports and the CLI footer.
 - Added an offline simulation stub that estimates token-balance and allowance deltas from decoded calldata.
 - JSON reports and CLI output now include those deltas; pass `--from` to name the sender instead of `caller`.
+- Added viem-based ABI decoding for common ERC-20/721/1155 calls (transferFrom, safeTransferFrom, batch transfers, ...). They now appear as `abi_call` in JSON reports and in CLI output.
 
 ## 2026-11-04
 

@@ -8,6 +8,7 @@ export * from './evm/erc1155';
 export * from './evm/phishing';
 export * from './evm/addressKind';
 export * from './risks';
+export * from './config';
 export * from './sim';
 
 export * from './evm/abi';

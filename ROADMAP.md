@@ -16,7 +16,7 @@
 - [x] Day 14: Add human-readable reason strings for each risk
 - [x] Day 15: Implement basic simulation stub (balance/allowance deltas)
 - [x] Day 16: Add viem-based ABI decoding for common ERC ABIs
-- Day 17: Add config-driven allow/block lists
+- [x] Day 17: Add config-driven allow/block lists
 - Day 18: Add output severities (info/warn/high)
 - Day 19: Add HTML report renderer
 - Day 20: Add GitHub Pages publishing for sample reports

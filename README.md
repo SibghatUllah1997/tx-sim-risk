@@ -15,6 +15,7 @@ Features:
 - Flag unlimited approvals, burns to the zero address, phishing spenders, and grants to EOAs
 - Classify spenders/operators as EOA, contract, or unknown (bytecode or known-contract map)
 - Human-readable reason strings for each risk id (JSON `riskDetails` and CLI footer)
+- Config-driven allow/block lists for spenders and operators (`--config lists.json`)
 - Offline simulation stub for token-balance and allowance deltas (`--from` names the sender)
 - JSON report mode for downstream tooling
 - Parse EIP-1559 fee fields and chainId from raw transactions (legacy and type-2)
@@ -67,6 +68,20 @@ Example output:
 }
 ```
 
+Allow/block lists
+```bash
+node dist/cli.js 0x095ea7b3… --config examples/risk-lists.json
+```
+```json
+{
+  "allow": ["0x7a250d5630b4cf539739df2c5dacb4c659f2488d"],
+  "block": [{ "address": "0xdead00000000000000000000000000000000beef", "label": "example-drainer" }]
+}
+```
+- `block`: a grant (approve, increaseAllowance, setApprovalForAll) to a listed address adds the `blocklisted_spender` risk. Revocations are not flagged.
+- `allow`: skips only the `approval_to_eoa` heuristic. It never hides `unlimited_approval`, a block-list hit, or a built-in phishing hit.
+- An address on both lists is treated as blocked. Unknown fields or malformed addresses fail loudly instead of being ignored.
+
 Architecture
 ```mermaid
 flowchart TD
@@ -75,7 +90,7 @@ flowchart TD
     B -- no --> D[use calldata as-is]
     C --> E[ERC-20 / NFT decoders]
     D --> E[ERC-20 / NFT decoders]
-    E --> F[Risk rules\n(unlimited approval,\nzero-address burn,\nNFT approve-all,\nphishing spender,\napproval to EOA)]
+    E --> F[Risk rules\n(unlimited approval,\nzero-address burn,\nNFT approve-all,\nphishing spender,\napproval to EOA,\nblock-listed spender)]
     F --> R[Reason strings]
     E --> S[Simulation stub\n(balance / allowance deltas)]
     R --> G[Plain text stdout]

@@ -1,3 +1,9 @@
+## 2026-11-06
+
+- Added config-driven allow/block lists (`--config lists.json`). Grants to a block-listed spender or operator raise a new `blocklisted_spender` risk.
+- The allow list only skips the EOA heuristic; it never hides unlimited approvals, block-list hits, or built-in phishing hits. Block wins over allow.
+- Invalid config files (bad JSON, unknown fields, malformed addresses) now fail with the exact field path.
+
 ## 2026-11-05
 
 - Added a human-readable reason string for every risk id, shown in JSON reports and the CLI footer.

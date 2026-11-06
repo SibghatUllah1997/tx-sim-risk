@@ -17,6 +17,7 @@ import {
   type ReportOptions,
 } from './report';
 import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
+import { loadRiskListConfig } from './config';
 
 function printReportFooter(data: string, options?: ReportOptions): void {
   const report = generateJsonReport(data, options);
@@ -33,7 +34,9 @@ function formatAbiValue(value: AbiArgValue): string {
 }
 
 function printUsage(): void {
-  console.error('Usage: tx-sim-risk <hexData> | --data <hexData>');
+  console.error(
+    'Usage: tx-sim-risk <hexData> | --data <hexData> [--json] [--from <addr>] [--config <lists.json>]'
+  );
   console.error('Example: tx-sim-risk 0x095ea7b3....');
 }
 
@@ -97,6 +100,11 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
       continue;
     }
     if (arg.startsWith('--from=')) continue;
+    if (arg === '--config') {
+      i++; // skip the path value
+      continue;
+    }
+    if (arg.startsWith('--config=')) continue;
     if (isHexStringLike(arg)) {
       dataArg = arg;
       break;
@@ -124,11 +132,19 @@ async function main() {
   const wantFees = hasFeesFlag(argv);
   const wantChainId = hasChainIdFlag(argv);
   const from = flagValue(argv, ['--from']);
-  const reportOptions: ReportOptions | undefined = from
-    ? { from }
-    : undefined;
+  const configPath = flagValue(argv, ['--config']);
   if (!isHexStringLike(data)) {
     printUsage();
+    process.exit(1);
+    return;
+  }
+
+  let reportOptions: ReportOptions | undefined;
+  try {
+    const lists = configPath ? loadRiskListConfig(configPath) : undefined;
+    if (from || lists) reportOptions = { from, lists };
+  } catch (err) {
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
     return;
   }

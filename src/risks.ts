@@ -2,6 +2,7 @@ import { APPROVAL_TO_EOA_RISK } from './evm/addressKind';
 import { ERC1155_APPROVE_ALL_RISK } from './evm/erc1155';
 import { ERC721_APPROVE_ALL_RISK } from './evm/erc721';
 import { PHISHING_SPENDER_RISK } from './evm/phishing';
+import { BLOCKLISTED_SPENDER_RISK } from './config';
 
 /** Risk id emitted when an ERC-20 approve uses the maximum uint256 amount. */
 export const UNLIMITED_APPROVAL_RISK = 'unlimited_approval';
@@ -16,6 +17,7 @@ export const KNOWN_RISK_IDS = [
   ERC1155_APPROVE_ALL_RISK,
   PHISHING_SPENDER_RISK,
   APPROVAL_TO_EOA_RISK,
+  BLOCKLISTED_SPENDER_RISK,
 ] as const;
 
 export type KnownRiskId = (typeof KNOWN_RISK_IDS)[number];
@@ -42,6 +44,8 @@ export const RISK_REASONS: Readonly<Record<KnownRiskId, string>> = Object.freeze
     'The spender or operator is on the built-in list of known phishing addresses.',
   [APPROVAL_TO_EOA_RISK]:
     'The spender or operator is an externally owned account rather than a contract, which is a common pattern in approval-phishing scams.',
+  [BLOCKLISTED_SPENDER_RISK]:
+    'The spender or operator is on your configured block list.',
 });
 
 export function isKnownRiskId(id: string): id is KnownRiskId {

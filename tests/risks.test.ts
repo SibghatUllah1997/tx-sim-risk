@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   APPROVAL_TO_EOA_RISK,
+  BLOCKLISTED_SPENDER_RISK,
   BURN_TO_ZERO_ADDRESS_RISK,
   ERC1155_APPROVE_ALL_RISK,
   ERC721_APPROVE_ALL_RISK,
@@ -23,6 +24,7 @@ describe('risk reason catalog', () => {
         ERC1155_APPROVE_ALL_RISK,
         PHISHING_SPENDER_RISK,
         APPROVAL_TO_EOA_RISK,
+        BLOCKLISTED_SPENDER_RISK,
       ].sort()
     );
     expect(new Set(KNOWN_RISK_IDS).size).toBe(KNOWN_RISK_IDS.length);

@@ -23,6 +23,11 @@ import {
   type AddressKindHints,
 } from './evm/addressKind';
 import {
+  blocklistedSpenderRisks,
+  isAllowlisted,
+  type AddressLists,
+} from './config';
+import {
   BURN_TO_ZERO_ADDRESS_RISK,
   UNLIMITED_APPROVAL_RISK,
   describeRisks,
@@ -43,6 +48,8 @@ export type ReportOptions = SimOptions & {
   addressKinds?: ReadonlyMap<string, AddressKind>;
   /** `eth_getCode` results keyed by address; empty/`0x` marks an EOA. */
   bytecodeByAddress?: ReadonlyMap<string, string>;
+  /** User allow/block lists (see `loadAddressLists`). */
+  lists?: AddressLists;
 };
 
 function kindHintsFor(
@@ -78,9 +85,15 @@ function approvalGrantRisks(
   options?: ReportOptions
 ): string[] {
   if (!granted) return [];
+  // The allow list only skips the EOA heuristic. Block-list and phishing
+  // hits are always reported, even for an allow-listed address.
+  const trusted = isAllowlisted(spender, options?.lists);
   return [
+    ...blocklistedSpenderRisks(spender, options?.lists),
     ...phishingSpenderRisks(spender, options?.phishingIndex),
-    ...eoaApprovalRisks(spender, kindHintsFor(spender, options)),
+    ...(trusted
+      ? []
+      : eoaApprovalRisks(spender, kindHintsFor(spender, options))),
   ];
 }
 

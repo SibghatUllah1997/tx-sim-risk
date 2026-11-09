@@ -16,6 +16,7 @@ import {
   generateJsonReport,
   type ReportOptions,
 } from './report';
+import { renderHtmlReport } from './html';
 import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
 import { reportOptionsFromArgv } from './cliOptions';
 
@@ -35,7 +36,7 @@ function formatAbiValue(value: AbiArgValue): string {
 
 function printUsage(): void {
   console.error(
-    'Usage: tx-sim-risk <hexData> | --data <hexData> [--json] [--from <addr>] [--config <lists.json>]'
+    'Usage: tx-sim-risk <hexData> | --data <hexData> [--json | --html] [--from <addr>] [--config <lists.json>]'
   );
   console.error('Example: tx-sim-risk 0x095ea7b3....');
 }
@@ -55,6 +56,10 @@ async function readStdin(): Promise<string> {
 
 function hasJsonFlag(argv: string[]): boolean {
   return argv.includes('--json');
+}
+
+function hasHtmlFlag(argv: string[]): boolean {
+  return argv.includes('--html');
 }
 
 function hasFeesFlag(argv: string[]): boolean {
@@ -77,7 +82,7 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
       dataArg = arg.slice('--data='.length);
       break;
     }
-    if (arg === '--json' || arg === '--fees') continue;
+    if (arg === '--json' || arg === '--html' || arg === '--fees') continue;
     if (arg === '--chainId' || arg === '--chainid') continue;
     if (arg === '--from') {
       i++; // skip the address value so it is not treated as calldata
@@ -113,6 +118,7 @@ async function main() {
   const argv = process.argv.slice(2);
   const data = await getHexFromArgsOrStdin(argv);
   const wantJson = hasJsonFlag(argv);
+  const wantHtml = hasHtmlFlag(argv);
   const wantFees = hasFeesFlag(argv);
   const wantChainId = hasChainIdFlag(argv);
   if (!isHexStringLike(data)) {
@@ -166,6 +172,18 @@ async function main() {
     // Unwrap hardware-wallet style raw tx to extract calldata for decoding
     const unwrapped = extractDataAndChainIdFromRawTx(data);
     const effectiveData = unwrapped ? unwrapped.data : data;
+
+    if (wantHtml) {
+      const report = generateJsonReport(effectiveData, reportOptions);
+      if (!report) {
+        console.error('Error: no supported call found; cannot build an HTML report.');
+        process.exit(1);
+        return;
+      }
+      process.stdout.write(renderHtmlReport(report));
+      process.exit(0);
+      return;
+    }
 
     if (wantJson) {
       const report = generateJsonReport(effectiveData, reportOptions);

@@ -2,6 +2,7 @@
 
 - Added config-driven allow and block lists (`--config`) so grants to blocked spenders are flagged and trusted EOAs skip the approval-to-EOA heuristic.
 - Reports now carry an info/warn/high severity for each risk and for the report as a whole, in JSON and in the CLI footer.
+- Added an HTML report renderer and a `--html` CLI flag that prints a standalone, script-free page with every value escaped.
 
 ## 2026-11-05
 

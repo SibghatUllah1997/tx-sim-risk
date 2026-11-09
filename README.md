@@ -35,6 +35,9 @@ node dist/cli.js --json 0x095ea7b30000000000000000000000000000000000000000000000
 
 # Same call with a custom allow/block list (see examples/risk-lists.json)
 node dist/cli.js --config examples/risk-lists.json --json 0x095ea7b3...
+
+# Standalone HTML report you can open in a browser
+node dist/cli.js --html 0x095ea7b3... > report.html
 ```
 
 Example output:
@@ -91,6 +94,8 @@ flowchart TD
     R --> H[JSON report (--json)]
     S --> G
     S --> H
+    R --> W[HTML report (--html)]
+    S --> W
 ```
 
 Testing

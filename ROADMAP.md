@@ -18,7 +18,7 @@
 - [x] Day 16: Add viem-based ABI decoding for common ERC ABIs
 - [x] Day 17: Add config-driven allow/block lists
 - [x] Day 18: Add output severities (info/warn/high)
-- Day 19: Add HTML report renderer
+- [x] Day 19: Add HTML report renderer
 - Day 20: Add GitHub Pages publishing for sample reports
 - Day 21: Wire simple Solana tx skeleton parsing (web3.js)
 - Day 22: Add Solana associated token account detection

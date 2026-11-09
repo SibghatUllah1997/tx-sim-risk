@@ -12,3 +12,4 @@ export * from './config';
 export * from './sim';
 
 export * from './evm/abi';
+export * from './html';

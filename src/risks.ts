@@ -22,11 +22,6 @@ export const KNOWN_RISK_IDS = [
 
 export type KnownRiskId = (typeof KNOWN_RISK_IDS)[number];
 
-export type RiskDetail = {
-  id: string;
-  reason: string;
-};
-
 /**
  * Output severity for a finding. `info` is reserved for reports with no
  * risks (and for future informational notes). `warn` is a heuristic or
@@ -34,6 +29,12 @@ export type RiskDetail = {
  * assets or targets an explicitly untrusted party.
  */
 export type RiskSeverity = 'info' | 'warn' | 'high';
+
+export type RiskDetail = {
+  id: string;
+  reason: string;
+  severity: RiskSeverity;
+};
 
 export const RISK_SEVERITY_RANK: Readonly<Record<RiskSeverity, number>> =
   Object.freeze({
@@ -114,7 +115,11 @@ export function reasonForRisk(id: string): string {
   return `No reason is recorded for risk id ${id}.`;
 }
 
-/** Pair each risk id with its reason, preserving input order. */
+/** Pair each risk id with its reason and severity, preserving input order. */
 export function describeRisks(ids: readonly string[]): RiskDetail[] {
-  return ids.map((id) => ({ id, reason: reasonForRisk(id) }));
+  return ids.map((id) => ({
+    id,
+    reason: reasonForRisk(id),
+    severity: severityForRisk(id),
+  }));
 }

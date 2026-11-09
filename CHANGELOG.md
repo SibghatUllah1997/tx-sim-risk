@@ -1,3 +1,8 @@
+## 2026-11-09
+
+- Added config-driven allow and block lists (`--config`) so grants to blocked spenders are flagged and trusted EOAs skip the approval-to-EOA heuristic.
+- Reports now carry an info/warn/high severity for each risk and for the report as a whole, in JSON and in the CLI footer.
+
 ## 2026-11-05
 
 - Added a human-readable reason string for every risk id, shown in JSON reports and the CLI footer.

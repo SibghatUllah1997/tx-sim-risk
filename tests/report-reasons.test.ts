@@ -32,6 +32,7 @@ describe('JSON report risk reason strings', () => {
     expect(report.riskDetails[0]).toEqual({
       id: UNLIMITED_APPROVAL_RISK,
       reason: RISK_REASONS[UNLIMITED_APPROVAL_RISK],
+      severity: 'high',
     });
   });
 

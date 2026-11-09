@@ -61,9 +61,21 @@ describe('risk reason catalog', () => {
       PHISHING_SPENDER_RISK,
     ];
     expect(describeRisks(ids)).toEqual([
-      { id: PHISHING_SPENDER_RISK, reason: RISK_REASONS[PHISHING_SPENDER_RISK] },
-      { id: APPROVAL_TO_EOA_RISK, reason: RISK_REASONS[APPROVAL_TO_EOA_RISK] },
-      { id: PHISHING_SPENDER_RISK, reason: RISK_REASONS[PHISHING_SPENDER_RISK] },
+      {
+        id: PHISHING_SPENDER_RISK,
+        reason: RISK_REASONS[PHISHING_SPENDER_RISK],
+        severity: 'high',
+      },
+      {
+        id: APPROVAL_TO_EOA_RISK,
+        reason: RISK_REASONS[APPROVAL_TO_EOA_RISK],
+        severity: 'warn',
+      },
+      {
+        id: PHISHING_SPENDER_RISK,
+        reason: RISK_REASONS[PHISHING_SPENDER_RISK],
+        severity: 'high',
+      },
     ]);
     expect(describeRisks([])).toEqual([]);
   });

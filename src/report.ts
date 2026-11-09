@@ -31,7 +31,9 @@ import {
   BURN_TO_ZERO_ADDRESS_RISK,
   UNLIMITED_APPROVAL_RISK,
   describeRisks,
+  highestSeverity,
   type RiskDetail,
+  type RiskSeverity,
 } from './risks';
 import {
   emptySimulation,
@@ -100,6 +102,8 @@ function approvalGrantRisks(
 type ReportMeta = {
   risks: string[];
   riskDetails: RiskDetail[];
+  /** Highest severity among `risks`, or `info` when the list is empty. */
+  severity: RiskSeverity;
   simulation: SimulationSnapshot;
 };
 
@@ -166,6 +170,7 @@ function reportMeta(
   return {
     risks,
     riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
     simulation:
       simulateCalldata(data, {
         from: options?.from,
@@ -328,9 +333,12 @@ export function formatReportFooter(report: JsonReport): string[] {
       break;
   }
   if (report.risks.length > 0) {
+    lines.push(`Severity: ${report.severity}`);
     lines.push(`Risks: ${report.risks.join(', ')}`);
     for (const detail of report.riskDetails) {
-      lines.push(`Reason: ${detail.id}: ${detail.reason}`);
+      lines.push(
+        `Reason: ${detail.id} [${detail.severity}]: ${detail.reason}`
+      );
     }
   }
   for (const balance of report.simulation.balances) {

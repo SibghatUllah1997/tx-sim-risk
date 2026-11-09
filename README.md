@@ -15,6 +15,8 @@ Features:
 - Flag unlimited approvals, burns to the zero address, phishing spenders, and grants to EOAs
 - Classify spenders/operators as EOA, contract, or unknown (bytecode or known-contract map)
 - Human-readable reason strings for each risk id (JSON `riskDetails` and CLI footer)
+- Config-driven allow/block lists (`--config`) for trusted and banned spenders
+- info/warn/high severity on each risk and on the report as a whole
 - Offline simulation stub for token-balance and allowance deltas (`--from` names the sender)
 - JSON report mode for downstream tooling
 - Parse EIP-1559 fee fields and chainId from raw transactions (legacy and type-2)
@@ -30,6 +32,9 @@ Quick CLI demo
 ```bash
 # JSON report for an unlimited ERC-20 approval (risk: unlimited_approval)
 node dist/cli.js --json 0x095ea7b30000000000000000000000000000000000000000000000000000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+
+# Same call with a custom allow/block list (see examples/risk-lists.json)
+node dist/cli.js --config examples/risk-lists.json --json 0x095ea7b3...
 ```
 
 Example output:
@@ -46,9 +51,11 @@ Example output:
   "riskDetails": [
     {
       "id": "unlimited_approval",
-      "reason": "The spender is approved for the maximum uint256 amount, so it can move the holder's entire token balance until the allowance is revoked."
+      "reason": "The spender is approved for the maximum uint256 amount, so it can move the holder's entire token balance until the allowance is revoked.",
+      "severity": "high"
     }
   ],
+  "severity": "high",
   "simulation": {
     "balances": [],
     "allowances": [
@@ -75,8 +82,10 @@ flowchart TD
     B -- no --> D[use calldata as-is]
     C --> E[ERC-20 / NFT decoders]
     D --> E[ERC-20 / NFT decoders]
-    E --> F[Risk rules\n(unlimited approval,\nzero-address burn,\nNFT approve-all,\nphishing spender,\napproval to EOA)]
-    F --> R[Reason strings]
+    E --> L[Allow/block lists\n(--config)]
+    E --> F[Risk rules\n(unlimited approval,\nzero-address burn,\nNFT approve-all,\nphishing spender,\napproval to EOA,\nblock-listed spender)]
+    L --> F
+    F --> R[Reason strings + severity]
     E --> S[Simulation stub\n(balance / allowance deltas)]
     R --> G[Plain text stdout]
     R --> H[JSON report (--json)]

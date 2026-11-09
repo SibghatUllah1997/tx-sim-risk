@@ -28,6 +28,59 @@ export type RiskDetail = {
 };
 
 /**
+ * Output severity for a finding. `info` is reserved for reports with no
+ * risks (and for future informational notes). `warn` is a heuristic or
+ * easily reversible action. `high` is a grant or transfer that can drain
+ * assets or targets an explicitly untrusted party.
+ */
+export type RiskSeverity = 'info' | 'warn' | 'high';
+
+export const RISK_SEVERITY_RANK: Readonly<Record<RiskSeverity, number>> =
+  Object.freeze({
+    info: 0,
+    warn: 1,
+    high: 2,
+  });
+
+/**
+ * Stable severity for each known risk id. Amount-based and threat-intel
+ * hits are `high`; heuristic EOA grants and burns (often intentional)
+ * are `warn`.
+ */
+export const RISK_SEVERITIES: Readonly<Record<KnownRiskId, RiskSeverity>> =
+  Object.freeze({
+    [UNLIMITED_APPROVAL_RISK]: 'high',
+    [BURN_TO_ZERO_ADDRESS_RISK]: 'warn',
+    [ERC721_APPROVE_ALL_RISK]: 'high',
+    [ERC1155_APPROVE_ALL_RISK]: 'high',
+    [PHISHING_SPENDER_RISK]: 'high',
+    [APPROVAL_TO_EOA_RISK]: 'warn',
+    [BLOCKLISTED_SPENDER_RISK]: 'high',
+  });
+
+/**
+ * Severity for a risk id. Unknown ids default to `warn` so a newer
+ * producer cannot be silently treated as informational.
+ */
+export function severityForRisk(id: string): RiskSeverity {
+  if (isKnownRiskId(id)) return RISK_SEVERITIES[id];
+  return 'warn';
+}
+
+/**
+ * Highest severity among `ids`. An empty list is `info` so a clean
+ * report still has a defined roll-up.
+ */
+export function highestSeverity(ids: readonly string[]): RiskSeverity {
+  let max: RiskSeverity = 'info';
+  for (const id of ids) {
+    const next = severityForRisk(id);
+    if (RISK_SEVERITY_RANK[next] > RISK_SEVERITY_RANK[max]) max = next;
+  }
+  return max;
+}
+
+/**
  * Plain-English explanation for each risk id the decoder currently emits.
  * Keep these stable: reports and CLI text quote them directly.
  */

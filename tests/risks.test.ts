@@ -8,10 +8,13 @@ import {
   KNOWN_RISK_IDS,
   PHISHING_SPENDER_RISK,
   RISK_REASONS,
+  RISK_SEVERITIES,
   UNLIMITED_APPROVAL_RISK,
   describeRisks,
+  highestSeverity,
   isKnownRiskId,
   reasonForRisk,
+  severityForRisk,
 } from '../src';
 
 describe('risk reason catalog', () => {
@@ -65,3 +68,43 @@ describe('risk reason catalog', () => {
     expect(describeRisks([])).toEqual([]);
   });
 });
+
+describe('risk severity catalog', () => {
+  it('assigns a valid severity to every known id', () => {
+    expect(Object.keys(RISK_SEVERITIES).sort()).toEqual(
+      [...KNOWN_RISK_IDS].sort()
+    );
+    for (const id of KNOWN_RISK_IDS) {
+      expect(['info', 'warn', 'high']).toContain(RISK_SEVERITIES[id]);
+    }
+  });
+
+  it('marks drain-capable and untrusted-party grants as high', () => {
+    expect(severityForRisk(UNLIMITED_APPROVAL_RISK)).toBe('high');
+    expect(severityForRisk(ERC721_APPROVE_ALL_RISK)).toBe('high');
+    expect(severityForRisk(ERC1155_APPROVE_ALL_RISK)).toBe('high');
+    expect(severityForRisk(PHISHING_SPENDER_RISK)).toBe('high');
+    expect(severityForRisk(BLOCKLISTED_SPENDER_RISK)).toBe('high');
+  });
+
+  it('marks heuristic EOA grants and burns as warn', () => {
+    expect(severityForRisk(APPROVAL_TO_EOA_RISK)).toBe('warn');
+    expect(severityForRisk(BURN_TO_ZERO_ADDRESS_RISK)).toBe('warn');
+  });
+
+  it('defaults unknown ids to warn so they are not dropped as info', () => {
+    expect(severityForRisk('not_a_real_risk')).toBe('warn');
+  });
+
+  it('rolls up the highest severity, treating an empty list as info', () => {
+    expect(highestSeverity([])).toBe('info');
+    expect(highestSeverity([APPROVAL_TO_EOA_RISK])).toBe('warn');
+    expect(
+      highestSeverity([APPROVAL_TO_EOA_RISK, PHISHING_SPENDER_RISK])
+    ).toBe('high');
+    expect(
+      highestSeverity([BURN_TO_ZERO_ADDRESS_RISK, APPROVAL_TO_EOA_RISK])
+    ).toBe('warn');
+  });
+});
+

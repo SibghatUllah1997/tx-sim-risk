@@ -17,6 +17,7 @@ import {
   type ReportOptions,
 } from './report';
 import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
+import { reportOptionsFromArgv } from './cliOptions';
 
 function printReportFooter(data: string, options?: ReportOptions): void {
   const report = generateJsonReport(data, options);
@@ -33,7 +34,9 @@ function formatAbiValue(value: AbiArgValue): string {
 }
 
 function printUsage(): void {
-  console.error('Usage: tx-sim-risk <hexData> | --data <hexData>');
+  console.error(
+    'Usage: tx-sim-risk <hexData> | --data <hexData> [--json] [--from <addr>] [--config <lists.json>]'
+  );
   console.error('Example: tx-sim-risk 0x095ea7b3....');
 }
 
@@ -62,22 +65,6 @@ function hasChainIdFlag(argv: string[]): boolean {
   return argv.includes('--chainId') || argv.includes('--chainid');
 }
 
-function flagValue(argv: string[], names: readonly string[]): string | undefined {
-  const exact = new Set(names);
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]!;
-    for (const name of names) {
-      if (arg.startsWith(`${name}=`)) {
-        return arg.slice(name.length + 1);
-      }
-    }
-    if (exact.has(arg) && argv[i + 1]) {
-      return argv[i + 1];
-    }
-  }
-  return undefined;
-}
-
 async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
   let dataArg: string | undefined;
   for (let i = 0; i < argv.length; i++) {
@@ -97,6 +84,11 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
       continue;
     }
     if (arg.startsWith('--from=')) continue;
+    if (arg === '--config') {
+      i++; // skip the path value so it is not treated as calldata
+      continue;
+    }
+    if (arg.startsWith('--config=')) continue;
     if (isHexStringLike(arg)) {
       dataArg = arg;
       break;
@@ -123,12 +115,17 @@ async function main() {
   const wantJson = hasJsonFlag(argv);
   const wantFees = hasFeesFlag(argv);
   const wantChainId = hasChainIdFlag(argv);
-  const from = flagValue(argv, ['--from']);
-  const reportOptions: ReportOptions | undefined = from
-    ? { from }
-    : undefined;
   if (!isHexStringLike(data)) {
     printUsage();
+    process.exit(1);
+    return;
+  }
+
+  let reportOptions: ReportOptions | undefined;
+  try {
+    reportOptions = reportOptionsFromArgv(argv);
+  } catch (err) {
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
     return;
   }

@@ -50,4 +50,12 @@ describe('renderHtmlReport', () => {
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
     expect(html).toContain('<title>T &lt;b&gt;</title>');
   });
+
+  it('inserts trusted preamble markup at the top of the body', () => {
+    const report = generateJsonReport(encodeApprove(ROUTER, '1'))!;
+    const html = renderHtmlReport(report, 'Preamble', {
+      preambleHtml: '<p><a href="./index.html">back</a></p>',
+    });
+    expect(html).toMatch(/<body>\s*<p><a href="\.\/index.html">back<\/a><\/p>\s*<h1>/);
+  });
 });

@@ -74,13 +74,22 @@ const STYLE = [
   '.sev-info{background:#2f6fb3}.sev-warn{background:#b7791f}.sev-high{background:#c53030}',
 ].join('');
 
+export type HtmlReportExtras = {
+  /**
+   * Trusted markup inserted at the start of `<body>`. Callers must
+   * HTML-escape any untrusted text before putting it here.
+   */
+  preambleHtml?: string;
+};
+
 /**
  * Render a JSON report as one self-contained HTML page: no scripts, no
  * external assets, and every dynamic value HTML-escaped.
  */
 export function renderHtmlReport(
   report: JsonReport,
-  title = 'tx-sim-risk report'
+  title = 'tx-sim-risk report',
+  extras?: HtmlReportExtras
 ): string {
   const sev = report.severity;
   const risks =
@@ -108,6 +117,7 @@ export function renderHtmlReport(
     `<style>${STYLE}</style>`,
     '</head>',
     '<body>',
+    extras?.preambleHtml ? extras.preambleHtml : '',
     `<h1>${escapeHtml(title)}</h1>`,
     `<p>Type: <code>${escapeHtml(report.type)}</code> &middot; Severity: <span class="sev sev-${sev}">${sev}</span></p>`,
     '<h2>Details</h2>',

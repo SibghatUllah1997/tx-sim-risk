@@ -14,3 +14,4 @@ export * from './sim';
 export * from './evm/abi';
 export * from './html';
 export * from './samples';
+export * from './pages';

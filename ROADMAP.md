@@ -21,7 +21,7 @@
 - [x] Day 19: Add HTML report renderer
 - [x] Day 20: Add GitHub Pages publishing for sample reports
 - [x] Day 21: Wire simple Solana tx skeleton parsing (web3.js)
-- Day 22: Add Solana associated token account detection
+- [x] Day 22: Add Solana associated token account detection
 - Day 23: Risk rule: Solana CPI to suspicious program IDs
 - Day 24: Add plugin interface for new chain decoders
 - Day 25: Add E2E tests for CLI flows

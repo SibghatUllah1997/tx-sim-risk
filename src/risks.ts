@@ -3,6 +3,7 @@ import { APPROVAL_TO_EOA_RISK } from './evm/addressKind';
 import { ERC1155_APPROVE_ALL_RISK } from './evm/erc1155';
 import { ERC721_APPROVE_ALL_RISK } from './evm/erc721';
 import { PHISHING_SPENDER_RISK } from './evm/phishing';
+import { SOLANA_ATA_MISMATCH_RISK } from './solana/ata';
 
 /** Risk id emitted when an ERC-20 approve uses the maximum uint256 amount. */
 export const UNLIMITED_APPROVAL_RISK = 'unlimited_approval';
@@ -18,6 +19,7 @@ export const KNOWN_RISK_IDS = [
   PHISHING_SPENDER_RISK,
   APPROVAL_TO_EOA_RISK,
   BLOCKLISTED_SPENDER_RISK,
+  SOLANA_ATA_MISMATCH_RISK,
 ] as const;
 
 export type KnownRiskId = (typeof KNOWN_RISK_IDS)[number];
@@ -57,6 +59,7 @@ export const RISK_SEVERITIES: Readonly<Record<KnownRiskId, RiskSeverity>> =
     [PHISHING_SPENDER_RISK]: 'high',
     [APPROVAL_TO_EOA_RISK]: 'warn',
     [BLOCKLISTED_SPENDER_RISK]: 'high',
+    [SOLANA_ATA_MISMATCH_RISK]: 'warn',
   });
 
 /**
@@ -100,6 +103,8 @@ export const RISK_REASONS: Readonly<Record<KnownRiskId, string>> = Object.freeze
     'The spender or operator is an externally owned account rather than a contract, which is a common pattern in approval-phishing scams.',
   [BLOCKLISTED_SPENDER_RISK]:
     'The spender or operator is on your configured block list.',
+  [SOLANA_ATA_MISMATCH_RISK]:
+    'An associated token account instruction names an account that is not the address derived from its wallet, mint, and token program.',
 });
 
 export function isKnownRiskId(id: string): id is KnownRiskId {

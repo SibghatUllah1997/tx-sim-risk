@@ -41,6 +41,28 @@ function payloadRows(report: JsonReport): string[] {
       ...args.map((arg) => row(`${arg.name} (${arg.type})`, formatValue(arg.value))),
     ];
   }
+  if (report.type === 'solana_tx') {
+    const payload = report.payload;
+    return [
+      row('version', String(payload.version)),
+      row('feePayer', payload.feePayer ?? ''),
+      row('recentBlockhash', payload.recentBlockhash),
+      row('signatures', String(payload.signatures.length)),
+      row('accountKeys', payload.accountKeys.join(', ')),
+      ...payload.instructions.map((ix, index) =>
+        row(
+          `instruction ${index}`,
+          `${ix.programId} accounts=[${ix.accounts.join(', ')}] data=${ix.dataHex}`
+        )
+      ),
+      ...payload.addressTableLookups.map((lookup, index) =>
+        row(
+          `lookup ${index}`,
+          `${lookup.accountKey} writable=[${lookup.writableIndexes.join(',')}] readonly=[${lookup.readonlyIndexes.join(',')}]`
+        )
+      ),
+    ];
+  }
   return Object.entries(report.payload).map(([key, value]) =>
     row(key, formatValue(value))
   );

@@ -42,6 +42,10 @@ import {
   type SimOptions,
   type SimulationSnapshot,
 } from './sim';
+import {
+  parseSolanaTxSkeleton,
+  type SolanaTxSkeleton,
+} from './solana/skeleton';
 
 export type ReportOptions = SimOptions & {
   /** Override the built-in phishing index. */
@@ -160,6 +164,10 @@ export type JsonReport =
         standards: AbiStandard[];
         args: AbiDecodedArg[];
       };
+    })
+  | (ReportMeta & {
+      type: 'solana_tx';
+      payload: SolanaTxSkeleton;
     });
 
 function reportMeta(
@@ -291,6 +299,17 @@ export function generateJsonReport(
   return null;
 }
 
+function solanaReport(skeleton: SolanaTxSkeleton): JsonReport {
+  return {
+    type: 'solana_tx',
+    payload: skeleton,
+    risks: [],
+    riskDetails: [],
+    severity: 'info',
+    simulation: emptySimulation(),
+  };
+}
+
 function formatSignedDelta(delta: string): string {
   if (delta === '0' || delta.startsWith('-')) return delta;
   return `+${delta}`;
@@ -329,6 +348,11 @@ export function formatReportFooter(report: JsonReport): string[] {
     case 'abi_call':
       lines.push(`Standards: ${report.payload.standards.join(', ')}`);
       break;
+    case 'solana_tx':
+      lines.push(`Version: ${report.payload.version}`);
+      lines.push(`Fee payer: ${report.payload.feePayer ?? 'unknown'}`);
+      lines.push(`Instructions: ${report.payload.instructions.length}`);
+      break;
     default:
       break;
   }
@@ -361,15 +385,31 @@ export function formatReportFooter(report: JsonReport): string[] {
 }
 
 /**
- * Accepts either ERC-20 calldata (0x...) or a full raw transaction hex (legacy or typed-2).
- * When a raw transaction is provided, unwraps its `data` field before generating the report.
+ * Accepts ERC-20 calldata, a full EVM raw transaction (legacy or typed-2),
+ * or a serialized Solana transaction (hex or base64). EVM raw transactions
+ * are unwrapped to their `data` field before decoding. Solana input is
+ * reported as `solana_tx` with an empty risk list.
  */
 export function generateJsonReportFromAny(
   input: string,
   options?: ReportOptions
 ): JsonReport | null {
-  const unwrapped = extractDataAndChainIdFromRawTx(input);
-  const data = unwrapped ? unwrapped.data : input;
-  return generateJsonReport(data, options);
+  try {
+    const unwrapped = extractDataAndChainIdFromRawTx(input);
+    if (unwrapped) {
+      return generateJsonReport(unwrapped.data, options);
+    }
+  } catch {
+    // Typed-prefix bytes that are not a well-formed EVM tx fall through.
+  }
+  try {
+    const evm = generateJsonReport(input, options);
+    if (evm) return evm;
+  } catch {
+    // Calldata decoders reject non-hex; Solana input is often base64.
+  }
+  const solana = parseSolanaTxSkeleton(input);
+  if (solana) return solanaReport(solana);
+  return null;
 }
 

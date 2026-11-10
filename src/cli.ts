@@ -8,17 +8,21 @@ import {
   decodeErc721SetApprovalForAll,
   decodeErc1155SetApprovalForAll,
   decodeCommonAbi,
+  parseSolanaTxSkeleton,
   type AbiArgValue,
 } from './index';
 import { parseEip1559Fees } from './evm/eip1559';
 import {
   formatReportFooter,
   generateJsonReport,
+  generateJsonReportFromAny,
   type ReportOptions,
 } from './report';
 import { renderHtmlReport } from './html';
 import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
+import { isHexString } from './evm/hex';
 import { reportOptionsFromArgv } from './cliOptions';
+import type { SolanaTxSkeleton } from './solana/skeleton';
 
 function printReportFooter(data: string, options?: ReportOptions): void {
   const report = generateJsonReport(data, options);
@@ -36,13 +40,39 @@ function formatAbiValue(value: AbiArgValue): string {
 
 function printUsage(): void {
   console.error(
-    'Usage: tx-sim-risk <hexData> | --data <hexData> [--json | --html] [--from <addr>] [--config <lists.json>]'
+    'Usage: tx-sim-risk <hexData | solanaTx> | --data <payload> [--json | --html] [--from <addr>] [--config <lists.json>]'
   );
   console.error('Example: tx-sim-risk 0x095ea7b3....');
 }
 
 function isHexStringLike(input: string | null | undefined): input is string {
   return !!input && input.trim().toLowerCase().startsWith('0x');
+}
+
+function isBase64Payload(input: string | null | undefined): input is string {
+  if (!input) return false;
+  const trimmed = input.trim();
+  return (
+    trimmed.length >= 64 && /^[A-Za-z0-9+/]+={0,2}$/.test(trimmed)
+  );
+}
+
+function isPayloadLike(input: string | null | undefined): input is string {
+  return isHexStringLike(input) || isBase64Payload(input);
+}
+
+function printSolanaSkeleton(skeleton: SolanaTxSkeleton): void {
+  console.log(`Detected: Solana transaction (${skeleton.version})`);
+  console.log(`Fee payer: ${skeleton.feePayer ?? 'unknown'}`);
+  console.log(`Recent blockhash: ${skeleton.recentBlockhash}`);
+  console.log(`Signatures: ${skeleton.signatures.length}`);
+  console.log(`Account keys: ${skeleton.accountKeys.length}`);
+  console.log(`Instructions: ${skeleton.instructions.length}`);
+  skeleton.instructions.forEach((ix, index) => {
+    console.log(
+      `  [${index}] program=${ix.programId} accounts=${ix.accounts.length} data=${ix.dataHex}`
+    );
+  });
 }
 
 async function readStdin(): Promise<string> {
@@ -82,7 +112,13 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
       dataArg = arg.slice('--data='.length);
       break;
     }
-    if (arg === '--json' || arg === '--html' || arg === '--fees') continue;
+    if (
+      arg === '--json' ||
+      arg === '--html' ||
+      arg === '--fees' ||
+      arg === '--solana'
+    )
+      continue;
     if (arg === '--chainId' || arg === '--chainid') continue;
     if (arg === '--from') {
       i++; // skip the address value so it is not treated as calldata
@@ -94,19 +130,19 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
       continue;
     }
     if (arg.startsWith('--config=')) continue;
-    if (isHexStringLike(arg)) {
+    if (isPayloadLike(arg)) {
       dataArg = arg;
       break;
     }
   }
 
-  if (isHexStringLike(dataArg)) {
+  if (isPayloadLike(dataArg)) {
     return dataArg!;
   }
 
   if (!process.stdin.isTTY) {
     const fromStdin = (await readStdin()).trim();
-    if (isHexStringLike(fromStdin)) {
+    if (isPayloadLike(fromStdin)) {
       return fromStdin;
     }
   }
@@ -121,7 +157,7 @@ async function main() {
   const wantHtml = hasHtmlFlag(argv);
   const wantFees = hasFeesFlag(argv);
   const wantChainId = hasChainIdFlag(argv);
-  if (!isHexStringLike(data)) {
+  if (!isPayloadLike(data)) {
     printUsage();
     process.exit(1);
     return;
@@ -169,12 +205,19 @@ async function main() {
       return;
     }
 
-    // Unwrap hardware-wallet style raw tx to extract calldata for decoding
-    const unwrapped = extractDataAndChainIdFromRawTx(data);
-    const effectiveData = unwrapped ? unwrapped.data : data;
+    // Unwrap hardware-wallet style raw tx to extract calldata for decoding.
+    // A typed-prefix blob that is not EVM (for example a Solana tx) must
+    // not abort the rest of the pipeline.
+    let effectiveData = data;
+    try {
+      const unwrapped = extractDataAndChainIdFromRawTx(data);
+      if (unwrapped) effectiveData = unwrapped.data;
+    } catch {
+      effectiveData = data;
+    }
 
     if (wantHtml) {
-      const report = generateJsonReport(effectiveData, reportOptions);
+      const report = generateJsonReportFromAny(data, reportOptions);
       if (!report) {
         console.error('Error: no supported call found; cannot build an HTML report.');
         process.exit(1);
@@ -186,7 +229,7 @@ async function main() {
     }
 
     if (wantJson) {
-      const report = generateJsonReport(effectiveData, reportOptions);
+      const report = generateJsonReportFromAny(data, reportOptions);
       if (report) {
         console.log(JSON.stringify(report, null, 2));
       } else {
@@ -197,12 +240,34 @@ async function main() {
     }
 
     if (wantChainId) {
-      const parsed = extractDataAndChainIdFromRawTx(data);
-      if (parsed && parsed.chainId != null) {
-        console.log(`Chain ID: ${parsed.chainId.toString()}`);
-      } else {
+      try {
+        const parsed = extractDataAndChainIdFromRawTx(data);
+        if (parsed && parsed.chainId != null) {
+          console.log(`Chain ID: ${parsed.chainId.toString()}`);
+        } else {
+          console.log('Chain ID: unknown');
+        }
+      } catch {
         console.log('Chain ID: unknown');
       }
+    }
+
+    if (!isHexString(effectiveData)) {
+      const solana = parseSolanaTxSkeleton(data);
+      if (solana) {
+        printSolanaSkeleton(solana);
+        const report = generateJsonReportFromAny(data, reportOptions);
+        if (report) {
+          for (const line of formatReportFooter(report)) {
+            console.log(line);
+          }
+        }
+        process.exit(0);
+        return;
+      }
+      console.log('Unsupported or unknown transaction data for current decoders.');
+      process.exit(0);
+      return;
     }
 
     const approve = decodeErc20Approve(effectiveData);
@@ -278,6 +343,19 @@ async function main() {
         console.log(`${arg.name} (${arg.type}): ${formatAbiValue(arg.value)}`);
       }
       printReportFooter(effectiveData, reportOptions);
+      process.exit(0);
+      return;
+    }
+
+    const solana = parseSolanaTxSkeleton(data);
+    if (solana) {
+      printSolanaSkeleton(solana);
+      const report = generateJsonReportFromAny(data, reportOptions);
+      if (report) {
+        for (const line of formatReportFooter(report)) {
+          console.log(line);
+        }
+      }
       process.exit(0);
       return;
     }

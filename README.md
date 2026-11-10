@@ -3,7 +3,7 @@
 [![CI](https://github.com/SibghatUllah1997/tx-sim-risk/actions/workflows/ci.yml/badge.svg)](https://github.com/SibghatUllah1997/tx-sim-risk/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-One-liner: A tiny CLI and TypeScript library that decodes common ERC-20 calls and surfaces simple risk hints (like unlimited approvals) from raw calldata or full raw transactions.
+One-liner: A tiny CLI and TypeScript library that decodes common ERC-20 calls and Solana transaction skeletons, and surfaces simple risk hints (like unlimited approvals) from raw calldata or full raw transactions.
 
 Why it matters:
 - Wallets often show hex data. It’s easy to miss risky approvals or burns.
@@ -20,7 +20,9 @@ Features:
 - Offline simulation stub for token-balance and allowance deltas (`--from` names the sender)
 - JSON report mode for downstream tooling
 - Parse EIP-1559 fee fields and chainId from raw transactions (legacy and type-2)
+- Parse Solana legacy and v0 transaction skeletons (hex or base64)
 - Address checksum utilities
+- Sample HTML report gallery, published with GitHub Pages
 - Batteries-included tests and GitHub Actions CI
 
 Install
@@ -38,7 +40,14 @@ node dist/cli.js --config examples/risk-lists.json --json 0x095ea7b3...
 
 # Standalone HTML report you can open in a browser
 node dist/cli.js --html 0x095ea7b3... > report.html
+
+# Solana skeleton from a base64-serialized transaction
+node dist/cli.js --json <solanaTxBase64>
 ```
+
+Sample HTML gallery
+- `npm run pages` writes `site/index.html` plus one page per catalog sample
+- Pushes to `main` deploy that gallery with GitHub Pages (see `.github/workflows/pages.yml`)
 
 Example output:
 ```json
@@ -80,26 +89,30 @@ Example output:
 Architecture
 ```mermaid
 flowchart TD
-    A[CLI input\nhex calldata or raw tx] --> B{Raw tx?}
+    A[CLI input\nhex calldata, raw EVM tx, or Solana tx] --> B{EVM raw tx?}
     B -- yes --> C[unwrap data + chainId]
-    B -- no --> D[use calldata as-is]
+    B -- no --> D{EVM calldata?}
     C --> E[ERC-20 / NFT decoders]
-    D --> E[ERC-20 / NFT decoders]
+    D -- yes --> E
+    D -- no --> SOL[Solana skeleton parser]
     E --> L[Allow/block lists\n(--config)]
     E --> F[Risk rules\n(unlimited approval,\nzero-address burn,\nNFT approve-all,\nphishing spender,\napproval to EOA,\nblock-listed spender)]
     L --> F
     F --> R[Reason strings + severity]
     E --> S[Simulation stub\n(balance / allowance deltas)]
+    SOL --> R
     R --> G[Plain text stdout]
     R --> H[JSON report (--json)]
     S --> G
     S --> H
     R --> W[HTML report (--html)]
     S --> W
+    W --> P[Sample gallery\nnpm run pages]
 ```
 
 Testing
 - `npm test` runs unit tests with Vitest
+- `npm run pages` regenerates the sample HTML gallery under `site/`
 - CI: see the badge above for the latest status
 
 Roadmap

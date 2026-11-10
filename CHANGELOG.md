@@ -1,3 +1,9 @@
+## 2026-11-10
+
+- Built a catalog of sample decoded calls and a script-free HTML gallery you can regenerate with `npm run pages`.
+- Added a GitHub Pages workflow that publishes those sample reports from the main branch.
+- Parse Solana legacy and v0 transaction skeletons from hex or base64, and include them in JSON, CLI, and HTML reports.
+
 ## 2026-11-09
 
 - Added config-driven allow and block lists (`--config`) so grants to blocked spenders are flagged and trusted EOAs skip the approval-to-EOA heuristic.

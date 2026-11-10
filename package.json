@@ -34,6 +34,7 @@
   },
   "homepage": "https://github.com/SibghatUllah1997/tx-sim-risk#readme",
   "devDependencies": {
+    "@solana/spl-token": "^0.4.15",
     "@types/node": "^26.6.6",
     "ts-node": "^10.9.2",
     "typescript": "^7.0.2",

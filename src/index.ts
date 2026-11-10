@@ -15,3 +15,4 @@ export * from './evm/abi';
 export * from './html';
 export * from './samples';
 export * from './pages';
+export * from './solana/skeleton';

@@ -39,6 +39,7 @@
     "vitest": "^5.0.5"
   },
   "dependencies": {
+    "@solana/web3.js": "^1.99.0",
     "js-sha3": "0.9.3",
     "viem": "^2.57.16"
   }

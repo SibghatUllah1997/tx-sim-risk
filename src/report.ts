@@ -46,6 +46,11 @@ import {
   parseSolanaTxSkeleton,
   type SolanaTxSkeleton,
 } from './solana/skeleton';
+import {
+  associatedTokenAccountRisks,
+  detectAssociatedTokenAccounts,
+  type SolanaAtaInstruction,
+} from './solana/ata';
 
 export type ReportOptions = SimOptions & {
   /** Override the built-in phishing index. */
@@ -167,7 +172,9 @@ export type JsonReport =
     })
   | (ReportMeta & {
       type: 'solana_tx';
-      payload: SolanaTxSkeleton;
+      payload: SolanaTxSkeleton & {
+        associatedTokenAccounts: SolanaAtaInstruction[];
+      };
     });
 
 function reportMeta(
@@ -300,12 +307,14 @@ export function generateJsonReport(
 }
 
 function solanaReport(skeleton: SolanaTxSkeleton): JsonReport {
+  const associatedTokenAccounts = detectAssociatedTokenAccounts(skeleton);
+  const risks = associatedTokenAccountRisks(associatedTokenAccounts);
   return {
     type: 'solana_tx',
-    payload: skeleton,
-    risks: [],
-    riskDetails: [],
-    severity: 'info',
+    payload: { ...skeleton, associatedTokenAccounts },
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
     simulation: emptySimulation(),
   };
 }
@@ -327,6 +336,17 @@ function formatAllowanceFooter(change: AllowanceDelta): string {
     return `Allowance (${who}): +${change.delta}`;
   }
   return `Allowance (${who}): ${change.delta}`;
+}
+
+/** One plain-text line describing an associated token account instruction. */
+export function formatAtaLine(ata: SolanaAtaInstruction): string {
+  const check =
+    ata.matchesDerivation === null
+      ? 'unchecked'
+      : ata.matchesDerivation
+        ? 'derivation ok'
+        : `MISMATCH expected ${ata.expectedAddress}`;
+  return `ATA [${ata.instructionIndex}] ${ata.kind}: account=${ata.associatedAccount ?? 'unknown'} wallet=${ata.wallet ?? 'unknown'} mint=${ata.mint ?? 'unknown'} (${check})`;
 }
 
 /**
@@ -352,6 +372,9 @@ export function formatReportFooter(report: JsonReport): string[] {
       lines.push(`Version: ${report.payload.version}`);
       lines.push(`Fee payer: ${report.payload.feePayer ?? 'unknown'}`);
       lines.push(`Instructions: ${report.payload.instructions.length}`);
+      for (const ata of report.payload.associatedTokenAccounts) {
+        lines.push(formatAtaLine(ata));
+      }
       break;
     default:
       break;
@@ -388,7 +411,7 @@ export function formatReportFooter(report: JsonReport): string[] {
  * Accepts ERC-20 calldata, a full EVM raw transaction (legacy or typed-2),
  * or a serialized Solana transaction (hex or base64). EVM raw transactions
  * are unwrapped to their `data` field before decoding. Solana input is
- * reported as `solana_tx` with an empty risk list.
+ * reported as `solana_tx`, with associated token account checks.
  */
 export function generateJsonReportFromAny(
   input: string,

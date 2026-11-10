@@ -9,6 +9,7 @@ import {
   PHISHING_SPENDER_RISK,
   RISK_REASONS,
   RISK_SEVERITIES,
+  SOLANA_ATA_MISMATCH_RISK,
   UNLIMITED_APPROVAL_RISK,
   describeRisks,
   highestSeverity,
@@ -28,6 +29,7 @@ describe('risk reason catalog', () => {
         PHISHING_SPENDER_RISK,
         APPROVAL_TO_EOA_RISK,
         BLOCKLISTED_SPENDER_RISK,
+        SOLANA_ATA_MISMATCH_RISK,
       ].sort()
     );
     expect(new Set(KNOWN_RISK_IDS).size).toBe(KNOWN_RISK_IDS.length);

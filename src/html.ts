@@ -1,4 +1,4 @@
-import type { JsonReport } from './report';
+import { formatAtaLine, type JsonReport } from './report';
 import type { SimulationSnapshot } from './sim';
 
 const HTML_ESCAPES: Readonly<Record<string, string>> = Object.freeze({
@@ -60,6 +60,9 @@ function payloadRows(report: JsonReport): string[] {
           `lookup ${index}`,
           `${lookup.accountKey} writable=[${lookup.writableIndexes.join(',')}] readonly=[${lookup.readonlyIndexes.join(',')}]`
         )
+      ),
+      ...payload.associatedTokenAccounts.map((ata) =>
+        row(`ata ${ata.instructionIndex}`, formatAtaLine(ata))
       ),
     ];
   }

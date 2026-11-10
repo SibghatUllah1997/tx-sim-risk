@@ -1,5 +1,6 @@
 ## 2026-11-10
 
+- Detect Solana associated token account instructions (create, createIdempotent, recoverNested) and check each named account against its derived address; a mismatch raises a `solana_ata_mismatch` warning in JSON, CLI, and HTML reports.
 - Built a catalog of sample decoded calls and a script-free HTML gallery you can regenerate with `npm run pages`.
 - Added a GitHub Pages workflow that publishes those sample reports from the main branch.
 - Parse Solana legacy and v0 transaction skeletons from hex or base64, and include them in JSON, CLI, and HTML reports.

@@ -41,6 +41,17 @@ function payloadRows(report: JsonReport): string[] {
       ...args.map((arg) => row(`${arg.name} (${arg.type})`, formatValue(arg.value))),
     ];
   }
+  if (report.type === 'plugin_decode') {
+    const { pluginId, chain, summary, fields } = report.payload;
+    return [
+      row('plugin', pluginId),
+      row('chain', chain),
+      row('summary', summary),
+      ...Object.entries(fields).map(([key, value]) =>
+        row(key, formatValue(value))
+      ),
+    ];
+  }
   if (report.type === 'solana_tx') {
     const payload = report.payload;
     return [

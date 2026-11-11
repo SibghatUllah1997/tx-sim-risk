@@ -57,6 +57,12 @@ import {
   type SolanaCpiHit,
 } from './solana/cpi';
 import type { SuspiciousProgramEntry } from './solana/programs';
+import {
+  createDecoderRegistry,
+  defineChainDecoder,
+  type ChainDecoderPlugin,
+  type DecoderRegistry,
+} from './plugins';
 
 export type ReportOptions = SimOptions & {
   /** Override the built-in phishing index. */
@@ -69,6 +75,8 @@ export type ReportOptions = SimOptions & {
   lists?: AddressLists;
   /** Override the built-in Solana suspicious-program index. */
   suspiciousPrograms?: ReadonlyMap<string, SuspiciousProgramEntry>;
+  /** Override the built-in EVM + Solana decoder registry. */
+  decoders?: DecoderRegistry<JsonReport>;
 };
 
 function kindHintsFor(
@@ -183,6 +191,15 @@ export type JsonReport =
       payload: SolanaTxSkeleton & {
         associatedTokenAccounts: SolanaAtaInstruction[];
         suspiciousCpi: SolanaCpiHit[];
+      };
+    })
+  | (ReportMeta & {
+      type: 'plugin_decode';
+      payload: {
+        pluginId: string;
+        chain: string;
+        summary: string;
+        fields: Record<string, string | number | boolean | null>;
       };
     });
 
@@ -404,6 +421,14 @@ export function formatReportFooter(report: JsonReport): string[] {
         lines.push(formatCpiLine(hit));
       }
       break;
+    case 'plugin_decode':
+      lines.push(`Plugin: ${report.payload.pluginId}`);
+      lines.push(`Chain: ${report.payload.chain}`);
+      lines.push(`Summary: ${report.payload.summary}`);
+      for (const [key, value] of Object.entries(report.payload.fields)) {
+        lines.push(`${key}: ${value}`);
+      }
+      break;
     default:
       break;
   }
@@ -436,32 +461,86 @@ export function formatReportFooter(report: JsonReport): string[] {
 }
 
 /**
+ * Build a `plugin_decode` report for a third-party chain decoder. Built-in
+ * EVM and Solana plugins use their dedicated report types instead.
+ */
+export function pluginDecodeReport(
+  plugin: Pick<ChainDecoderPlugin<JsonReport>, 'id' | 'name'>,
+  spec: {
+    summary: string;
+    fields?: Record<string, string | number | boolean | null>;
+    risks?: string[];
+  }
+): JsonReport {
+  const risks = spec.risks ?? [];
+  return {
+    type: 'plugin_decode',
+    payload: {
+      pluginId: plugin.id,
+      chain: plugin.name,
+      summary: spec.summary,
+      fields: spec.fields ?? {},
+    },
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
+    simulation: emptySimulation(),
+  };
+}
+
+/**
+ * Built-in Ethereum decoder: unwraps a raw tx when present, then runs the
+ * ERC calldata decoders. Returns null for non-hex or unrecognized input.
+ */
+export const EVM_DECODER: ChainDecoderPlugin<JsonReport> = defineChainDecoder({
+  id: 'evm',
+  name: 'Ethereum',
+  tryDecode(input, options) {
+    const reportOptions = options as ReportOptions | undefined;
+    try {
+      const unwrapped = extractDataAndChainIdFromRawTx(input);
+      if (unwrapped) {
+        return generateJsonReport(unwrapped.data, reportOptions);
+      }
+    } catch {
+      // Typed-prefix bytes that are not a well-formed EVM tx fall through.
+    }
+    try {
+      return generateJsonReport(input, reportOptions);
+    } catch {
+      return null;
+    }
+  },
+});
+
+/**
+ * Built-in Solana decoder: parses a legacy/v0 skeleton and attaches ATA
+ * plus suspicious-CPI findings.
+ */
+export const SOLANA_DECODER: ChainDecoderPlugin<JsonReport> = defineChainDecoder({
+  id: 'solana',
+  name: 'Solana',
+  tryDecode(input, options) {
+    const skeleton = parseSolanaTxSkeleton(input);
+    if (!skeleton) return null;
+    return solanaReport(skeleton, options as ReportOptions | undefined);
+  },
+});
+
+/** Default host registry: EVM first, then Solana. */
+export const DEFAULT_DECODER_REGISTRY: DecoderRegistry<JsonReport> =
+  createDecoderRegistry([EVM_DECODER, SOLANA_DECODER]);
+
+/**
  * Accepts ERC-20 calldata, a full EVM raw transaction (legacy or typed-2),
- * or a serialized Solana transaction (hex or base64). EVM raw transactions
- * are unwrapped to their `data` field before decoding. Solana input is
- * reported as `solana_tx`, with associated token account checks and
- * CPI-to-suspicious-program matching.
+ * a serialized Solana transaction (hex or base64), or input claimed by a
+ * custom decoder in `options.decoders`. Plugins run in registry order.
  */
 export function generateJsonReportFromAny(
   input: string,
   options?: ReportOptions
 ): JsonReport | null {
-  try {
-    const unwrapped = extractDataAndChainIdFromRawTx(input);
-    if (unwrapped) {
-      return generateJsonReport(unwrapped.data, options);
-    }
-  } catch {
-    // Typed-prefix bytes that are not a well-formed EVM tx fall through.
-  }
-  try {
-    const evm = generateJsonReport(input, options);
-    if (evm) return evm;
-  } catch {
-    // Calldata decoders reject non-hex; Solana input is often base64.
-  }
-  const solana = parseSolanaTxSkeleton(input);
-  if (solana) return solanaReport(solana, options);
-  return null;
+  const registry = options?.decoders ?? DEFAULT_DECODER_REGISTRY;
+  return registry.decode(input, options);
 }
 

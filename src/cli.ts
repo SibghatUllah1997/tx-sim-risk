@@ -360,6 +360,19 @@ async function main() {
       return;
     }
 
+    const viaPlugin = generateJsonReportFromAny(data, reportOptions);
+    if (viaPlugin?.type === 'plugin_decode') {
+      console.log(
+        `Detected: ${viaPlugin.payload.chain} via plugin ${viaPlugin.payload.pluginId}`
+      );
+      console.log(`Summary: ${viaPlugin.payload.summary}`);
+      for (const line of formatReportFooter(viaPlugin)) {
+        console.log(line);
+      }
+      process.exit(0);
+      return;
+    }
+
     console.log('Unsupported or unknown transaction data for current decoders.');
     process.exit(0);
   } catch (err) {

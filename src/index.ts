@@ -13,9 +13,16 @@ export * from './sim';
 
 export * from './evm/abi';
 export * from './html';
+export {
+  DEFAULT_DECODER_REGISTRY,
+  EVM_DECODER,
+  SOLANA_DECODER,
+  pluginDecodeReport,
+} from './report';
 export * from './samples';
 export * from './pages';
 export * from './solana/skeleton';
 export * from './solana/ata';
 export * from './solana/programs';
 export * from './solana/cpi';
+export * from './plugins';

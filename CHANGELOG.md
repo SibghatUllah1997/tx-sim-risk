@@ -1,5 +1,7 @@
 ## 2026-11-11
 
+- Added end-to-end CLI tests that build the CLI once and run it as a real process across text, JSON, HTML, stdin, raw-tx, Solana, and error flows, checking stdout, stderr, and exit codes.
+- `--fees` now reads unsigned EIP-1559 transactions (9 fields) as well as signed ones; it used to reject them even though calldata unwrapping accepted them.
 - Flag Solana transactions that invoke, or can cross-program-invoke into, a program on the built-in suspicious program-id list (`solana_suspicious_cpi`). Hits show up in JSON, CLI, and HTML reports.
 - Added a chain-decoder plugin interface and registry. EVM and Solana run as built-in plugins; extra chains can register and return a `plugin_decode` report without changing the host.
 

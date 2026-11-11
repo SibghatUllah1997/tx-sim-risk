@@ -113,7 +113,7 @@ flowchart TD
 ```
 
 Testing
-- `npm test` runs unit tests with Vitest
+- `npm test` runs unit tests with Vitest, plus end-to-end CLI tests under `tests/e2e/` that compile the CLI once and run it as a child process (text, `--json`, `--html`, stdin, raw tx, Solana, and error exit codes)
 - `npm run pages` regenerates the sample HTML gallery under `site/`
 - CI: see the badge above for the latest status
 

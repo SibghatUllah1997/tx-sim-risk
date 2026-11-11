@@ -17,3 +17,4 @@ export * from './samples';
 export * from './pages';
 export * from './solana/skeleton';
 export * from './solana/ata';
+export * from './solana/programs';

@@ -51,6 +51,12 @@ import {
   detectAssociatedTokenAccounts,
   type SolanaAtaInstruction,
 } from './solana/ata';
+import {
+  detectSuspiciousCpi,
+  suspiciousCpiRisks,
+  type SolanaCpiHit,
+} from './solana/cpi';
+import type { SuspiciousProgramEntry } from './solana/programs';
 
 export type ReportOptions = SimOptions & {
   /** Override the built-in phishing index. */
@@ -61,6 +67,8 @@ export type ReportOptions = SimOptions & {
   bytecodeByAddress?: ReadonlyMap<string, string>;
   /** User allow/block lists (see `loadAddressLists`). */
   lists?: AddressLists;
+  /** Override the built-in Solana suspicious-program index. */
+  suspiciousPrograms?: ReadonlyMap<string, SuspiciousProgramEntry>;
 };
 
 function kindHintsFor(
@@ -174,6 +182,7 @@ export type JsonReport =
       type: 'solana_tx';
       payload: SolanaTxSkeleton & {
         associatedTokenAccounts: SolanaAtaInstruction[];
+        suspiciousCpi: SolanaCpiHit[];
       };
     });
 
@@ -306,12 +315,22 @@ export function generateJsonReport(
   return null;
 }
 
-function solanaReport(skeleton: SolanaTxSkeleton): JsonReport {
+function solanaReport(
+  skeleton: SolanaTxSkeleton,
+  options?: ReportOptions
+): JsonReport {
   const associatedTokenAccounts = detectAssociatedTokenAccounts(skeleton);
-  const risks = associatedTokenAccountRisks(associatedTokenAccounts);
+  const suspiciousCpi = detectSuspiciousCpi(
+    skeleton,
+    options?.suspiciousPrograms
+  );
+  const risks = [
+    ...associatedTokenAccountRisks(associatedTokenAccounts),
+    ...suspiciousCpiRisks(suspiciousCpi),
+  ];
   return {
     type: 'solana_tx',
-    payload: { ...skeleton, associatedTokenAccounts },
+    payload: { ...skeleton, associatedTokenAccounts, suspiciousCpi },
     risks,
     riskDetails: describeRisks(risks),
     severity: highestSeverity(risks),
@@ -349,6 +368,12 @@ export function formatAtaLine(ata: SolanaAtaInstruction): string {
   return `ATA [${ata.instructionIndex}] ${ata.kind}: account=${ata.associatedAccount ?? 'unknown'} wallet=${ata.wallet ?? 'unknown'} mint=${ata.mint ?? 'unknown'} (${check})`;
 }
 
+/** One plain-text line describing a suspicious Solana CPI hit. */
+export function formatCpiLine(hit: SolanaCpiHit): string {
+  const role = hit.role === 'invoked' ? 'invoked' : 'cpi-target';
+  return `CPI [${hit.instructionIndex}] ${role} ${hit.label} (${hit.category}): ${hit.programId}`;
+}
+
 /**
  * Extra plain-text lines for CLI output: spender/operator kind, collected
  * risk ids with reasons, and stub balance/allowance deltas. Empty when
@@ -374,6 +399,9 @@ export function formatReportFooter(report: JsonReport): string[] {
       lines.push(`Instructions: ${report.payload.instructions.length}`);
       for (const ata of report.payload.associatedTokenAccounts) {
         lines.push(formatAtaLine(ata));
+      }
+      for (const hit of report.payload.suspiciousCpi) {
+        lines.push(formatCpiLine(hit));
       }
       break;
     default:
@@ -411,7 +439,8 @@ export function formatReportFooter(report: JsonReport): string[] {
  * Accepts ERC-20 calldata, a full EVM raw transaction (legacy or typed-2),
  * or a serialized Solana transaction (hex or base64). EVM raw transactions
  * are unwrapped to their `data` field before decoding. Solana input is
- * reported as `solana_tx`, with associated token account checks.
+ * reported as `solana_tx`, with associated token account checks and
+ * CPI-to-suspicious-program matching.
  */
 export function generateJsonReportFromAny(
   input: string,
@@ -432,7 +461,7 @@ export function generateJsonReportFromAny(
     // Calldata decoders reject non-hex; Solana input is often base64.
   }
   const solana = parseSolanaTxSkeleton(input);
-  if (solana) return solanaReport(solana);
+  if (solana) return solanaReport(solana, options);
   return null;
 }
 

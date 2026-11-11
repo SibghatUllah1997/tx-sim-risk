@@ -4,6 +4,7 @@ import {
   PublicKey,
   SystemProgram,
   Transaction,
+  TransactionInstruction,
 } from '@solana/web3.js';
 import {
   formatReportFooter,
@@ -11,6 +12,8 @@ import {
 } from '../src/report';
 import { renderHtmlReport } from '../src/html';
 import { SOLANA_ATA_MISMATCH_RISK } from '../src/solana/ata';
+import { SOLANA_SUSPICIOUS_CPI_RISK } from '../src/solana/cpi';
+import { SEED_DRAINER_PROGRAM_ID } from '../src/solana/programs';
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
@@ -57,6 +60,7 @@ describe('Solana reports', () => {
     expect(report.payload.instructions[0]!.programId).toBe(
       SystemProgram.programId.toBase58()
     );
+    expect(report.payload.suspiciousCpi).toEqual([]);
     expect(report.risks).toEqual([]);
     expect(report.severity).toBe('info');
     expect(() => JSON.stringify(report)).not.toThrow();
@@ -143,5 +147,53 @@ describe('Solana associated token account reports', () => {
     const html = renderHtmlReport(report);
     expect(html).toContain('ata 0');
     expect(html).toContain(SOLANA_ATA_MISMATCH_RISK);
+  });
+});
+
+describe('Solana suspicious CPI reports', () => {
+  function drainerTx(): { encoded: string; programId: string } {
+    const payer = Keypair.generate();
+    const programId = new PublicKey(SEED_DRAINER_PROGRAM_ID);
+    const tx = new Transaction({
+      feePayer: payer.publicKey,
+      recentBlockhash: BLOCKHASH,
+    }).add(
+      new TransactionInstruction({
+        programId,
+        keys: [{ pubkey: payer.publicKey, isSigner: true, isWritable: true }],
+        data: Buffer.alloc(0),
+      })
+    );
+    tx.sign(payer);
+    return {
+      programId: SEED_DRAINER_PROGRAM_ID,
+      encoded: Buffer.from(tx.serialize()).toString('base64'),
+    };
+  }
+
+  it('lists CPI hits and a high-severity risk in JSON, footer, and HTML', () => {
+    const { encoded, programId } = drainerTx();
+    const report = generateJsonReportFromAny(encoded)!;
+    if (report.type !== 'solana_tx') throw new Error('expected solana_tx');
+    expect(report.payload.suspiciousCpi).toEqual([
+      {
+        instructionIndex: 0,
+        programId,
+        role: 'invoked',
+        label: 'seed_drainer_program',
+        category: 'drainer',
+      },
+    ]);
+    expect(report.risks).toEqual([SOLANA_SUSPICIOUS_CPI_RISK]);
+    expect(report.severity).toBe('high');
+    const footer = formatReportFooter(report).join('\n');
+    expect(footer).toContain(
+      `CPI [0] invoked seed_drainer_program (drainer): ${programId}`
+    );
+    expect(footer).toContain(`Risks: ${SOLANA_SUSPICIOUS_CPI_RISK}`);
+    const html = renderHtmlReport(report);
+    expect(html).toContain('cpi 0');
+    expect(html).toContain(SOLANA_SUSPICIOUS_CPI_RISK);
+    expect(html).toContain(programId);
   });
 });

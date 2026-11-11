@@ -24,7 +24,7 @@
 - [x] Day 22: Add Solana associated token account detection
 - [x] Day 23: Risk rule: Solana CPI to suspicious program IDs
 - [x] Day 24: Add plugin interface for new chain decoders
-- Day 25: Add E2E tests for CLI flows
+- [x] Day 25: Add E2E tests for CLI flows
 - Day 26: Add example dataset and fixtures
 - Day 27: Add JSON schema for report output
 - Day 28: Add README examples and screenshots

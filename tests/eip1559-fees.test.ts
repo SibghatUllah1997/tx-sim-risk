@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { serializeTransaction } from 'viem';
 import { parseEip1559Fees } from '../src/evm/eip1559';
 
 function hexFromBigInt(n: bigint): string {
@@ -78,5 +79,35 @@ describe('EIP-1559 fee parser', () => {
     const notTyped = '0x01abcdef';
     expect(parseEip1559Fees(notTyped)).toBeNull();
   });
-});
 
+  it('accepts an unsigned 9-field payload as well as a signed one', () => {
+    const tx = {
+      type: 'eip1559' as const,
+      chainId: 137,
+      nonce: 3,
+      gas: 21_000n,
+      maxPriorityFeePerGas: 1_500_000_000n,
+      maxFeePerGas: 40_000_000_000n,
+      to: `0x${'cc'.repeat(20)}` as const,
+      value: 0n,
+    };
+    const expected = {
+      maxPriorityFeePerGas: 1_500_000_000n,
+      maxFeePerGas: 40_000_000_000n,
+      gasLimit: 21_000n,
+    };
+    expect(parseEip1559Fees(serializeTransaction(tx))).toEqual(expected);
+    const signed = serializeTransaction(tx, {
+      r: `0x${'11'.repeat(32)}`,
+      s: `0x${'22'.repeat(32)}`,
+      yParity: 1,
+    });
+    expect(parseEip1559Fees(signed)).toEqual(expected);
+  });
+
+  it('rejects a list whose field count is neither 9 nor 12', () => {
+    // 10 empty-string items: not a valid unsigned or signed shape.
+    const raw = '0x02' + 'ca' + '80'.repeat(10);
+    expect(() => parseEip1559Fees(raw)).toThrow(/missing fields/);
+  });
+});

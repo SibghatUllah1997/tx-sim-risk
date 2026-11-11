@@ -10,6 +10,7 @@ import {
   RISK_REASONS,
   RISK_SEVERITIES,
   SOLANA_ATA_MISMATCH_RISK,
+  SOLANA_SUSPICIOUS_CPI_RISK,
   UNLIMITED_APPROVAL_RISK,
   describeRisks,
   highestSeverity,
@@ -30,6 +31,7 @@ describe('risk reason catalog', () => {
         APPROVAL_TO_EOA_RISK,
         BLOCKLISTED_SPENDER_RISK,
         SOLANA_ATA_MISMATCH_RISK,
+        SOLANA_SUSPICIOUS_CPI_RISK,
       ].sort()
     );
     expect(new Set(KNOWN_RISK_IDS).size).toBe(KNOWN_RISK_IDS.length);
@@ -99,6 +101,7 @@ describe('risk severity catalog', () => {
     expect(severityForRisk(ERC1155_APPROVE_ALL_RISK)).toBe('high');
     expect(severityForRisk(PHISHING_SPENDER_RISK)).toBe('high');
     expect(severityForRisk(BLOCKLISTED_SPENDER_RISK)).toBe('high');
+    expect(severityForRisk(SOLANA_SUSPICIOUS_CPI_RISK)).toBe('high');
   });
 
   it('marks heuristic EOA grants and burns as warn', () => {

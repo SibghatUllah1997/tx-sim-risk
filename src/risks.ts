@@ -4,6 +4,7 @@ import { ERC1155_APPROVE_ALL_RISK } from './evm/erc1155';
 import { ERC721_APPROVE_ALL_RISK } from './evm/erc721';
 import { PHISHING_SPENDER_RISK } from './evm/phishing';
 import { SOLANA_ATA_MISMATCH_RISK } from './solana/ata';
+import { SOLANA_SUSPICIOUS_CPI_RISK } from './solana/cpi';
 
 /** Risk id emitted when an ERC-20 approve uses the maximum uint256 amount. */
 export const UNLIMITED_APPROVAL_RISK = 'unlimited_approval';
@@ -20,6 +21,7 @@ export const KNOWN_RISK_IDS = [
   APPROVAL_TO_EOA_RISK,
   BLOCKLISTED_SPENDER_RISK,
   SOLANA_ATA_MISMATCH_RISK,
+  SOLANA_SUSPICIOUS_CPI_RISK,
 ] as const;
 
 export type KnownRiskId = (typeof KNOWN_RISK_IDS)[number];
@@ -60,6 +62,7 @@ export const RISK_SEVERITIES: Readonly<Record<KnownRiskId, RiskSeverity>> =
     [APPROVAL_TO_EOA_RISK]: 'warn',
     [BLOCKLISTED_SPENDER_RISK]: 'high',
     [SOLANA_ATA_MISMATCH_RISK]: 'warn',
+    [SOLANA_SUSPICIOUS_CPI_RISK]: 'high',
   });
 
 /**
@@ -105,6 +108,8 @@ export const RISK_REASONS: Readonly<Record<KnownRiskId, string>> = Object.freeze
     'The spender or operator is on your configured block list.',
   [SOLANA_ATA_MISMATCH_RISK]:
     'An associated token account instruction names an account that is not the address derived from its wallet, mint, and token program.',
+  [SOLANA_SUSPICIOUS_CPI_RISK]:
+    'The transaction invokes, or can cross-program-invoke into, a program on the built-in list of known-bad Solana program ids.',
 });
 
 export function isKnownRiskId(id: string): id is KnownRiskId {

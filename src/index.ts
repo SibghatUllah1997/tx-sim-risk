@@ -18,3 +18,4 @@ export * from './pages';
 export * from './solana/skeleton';
 export * from './solana/ata';
 export * from './solana/programs';
+export * from './solana/cpi';

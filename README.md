@@ -21,6 +21,8 @@ Features:
 - JSON report mode for downstream tooling
 - Parse EIP-1559 fee fields and chainId from raw transactions (legacy and type-2)
 - Parse Solana legacy and v0 transaction skeletons (hex or base64)
+- Flag Solana CPI to known-bad program ids (`solana_suspicious_cpi`)
+- Plugin interface for additional chain decoders (`defineChainDecoder`)
 - Address checksum utilities
 - Sample HTML report gallery, published with GitHub Pages
 - Batteries-included tests and GitHub Actions CI
@@ -89,12 +91,12 @@ Example output:
 Architecture
 ```mermaid
 flowchart TD
-    A[CLI input\nhex calldata, raw EVM tx, or Solana tx] --> B{EVM raw tx?}
-    B -- yes --> C[unwrap data + chainId]
-    B -- no --> D{EVM calldata?}
-    C --> E[ERC-20 / NFT decoders]
-    D -- yes --> E
-    D -- no --> SOL[Solana skeleton parser]
+    A[CLI input\nhex calldata, raw EVM tx, or Solana tx] --> P[Decoder registry\n(EVM, Solana, plugins)]
+    P --> B{EVM plugin}
+    B -- raw tx --> C[unwrap data + chainId]
+    B -- calldata --> E[ERC-20 / NFT decoders]
+    C --> E
+    P --> SOL[Solana plugin\nskeleton + ATA + CPI]
     E --> L[Allow/block lists\n(--config)]
     E --> F[Risk rules\n(unlimited approval,\nzero-address burn,\nNFT approve-all,\nphishing spender,\napproval to EOA,\nblock-listed spender)]
     L --> F

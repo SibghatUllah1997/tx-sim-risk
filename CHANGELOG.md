@@ -1,3 +1,9 @@
+## 2026-11-12
+
+- Added a labelled example dataset (`examples/dataset/cases.json`): 19 EVM and Solana inputs (calldata, raw txs, base64 Solana txs), each with its expected report type, risks, and severity.
+- The dataset is built from code with fixed keys and placeholder signatures, so `npm run dataset` regenerates it byte for byte; a test fails if the file drifts.
+- New `loadDataset` / `checkDataset` helpers validate the file and diff every case against the decoders; E2E tests replay each case through the real CLI.
+
 ## 2026-11-11
 
 - Added end-to-end CLI tests that build the CLI once and run it as a real process across text, JSON, HTML, stdin, raw-tx, Solana, and error flows, checking stdout, stderr, and exit codes.

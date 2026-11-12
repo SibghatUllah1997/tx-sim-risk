@@ -25,7 +25,7 @@
 - [x] Day 23: Risk rule: Solana CPI to suspicious program IDs
 - [x] Day 24: Add plugin interface for new chain decoders
 - [x] Day 25: Add E2E tests for CLI flows
-- Day 26: Add example dataset and fixtures
+- [x] Day 26: Add example dataset and fixtures
 - Day 27: Add JSON schema for report output
 - Day 28: Add README examples and screenshots
 - Day 29: Polish docs, comments, and code quality

@@ -25,6 +25,7 @@ Features:
 - Plugin interface for additional chain decoders (`defineChainDecoder`)
 - Address checksum utilities
 - Sample HTML report gallery, published with GitHub Pages
+- Labelled example dataset of EVM and Solana inputs with expected risks (`examples/dataset/`)
 - Batteries-included tests and GitHub Actions CI
 
 Install
@@ -50,6 +51,12 @@ node dist/cli.js --json <solanaTxBase64>
 Sample HTML gallery
 - `npm run pages` writes `site/index.html` plus one page per catalog sample
 - Pushes to `main` deploy that gallery with GitHub Pages (see `.github/workflows/pages.yml`)
+
+Example dataset
+- `examples/dataset/cases.json` holds 19 labelled inputs (ERC-20, NFT, raw EVM txs, Solana) with the report type, risks, and severity each should produce
+- Every case maps to CLI flags, e.g. `node dist/cli.js <input> --config examples/risk-lists.json --json`
+- `npm run dataset` rebuilds the file from `src/datasetCases.ts` and checks every case; tests fail if the file and the builder drift
+- Use it as a regression corpus or to compare another decoder: `checkDatasetFile('examples/dataset/cases.json')`
 
 Example output:
 ```json
@@ -113,7 +120,7 @@ flowchart TD
 ```
 
 Testing
-- `npm test` runs unit tests with Vitest, plus end-to-end CLI tests under `tests/e2e/` that compile the CLI once and run it as a child process (text, `--json`, `--html`, stdin, raw tx, Solana, and error exit codes)
+- `npm test` runs unit tests with Vitest, plus end-to-end CLI tests under `tests/e2e/` that compile the CLI once and run it as a child process (text, `--json`, `--html`, stdin, raw tx, Solana, and error exit codes), plus a replay of every example dataset case
 - `npm run pages` regenerates the sample HTML gallery under `site/`
 - CI: see the badge above for the latest status
 

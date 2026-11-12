@@ -1,5 +1,7 @@
 ## 2026-11-12
 
+- JSON reports now have a published JSON Schema (`schema/report.schema.json`). `tx-sim-risk --schema` prints it, a library validator checks extra keys and type mismatches, and every example dataset case is tested against it.
+- README includes worked CLI examples plus terminal screenshots generated from the dataset (`docs/examples/`; refresh with `npm run examples`).
 - Added a labelled example dataset (`examples/dataset/cases.json`): 19 EVM and Solana inputs (calldata, raw txs, base64 Solana txs), each with its expected report type, risks, and severity.
 - The dataset is built from code with fixed keys and placeholder signatures, so `npm run dataset` regenerates it byte for byte; a test fails if the file drifts.
 - New `loadDataset` / `checkDataset` helpers validate the file and diff every case against the decoders; E2E tests replay each case through the real CLI.

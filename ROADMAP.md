@@ -26,8 +26,8 @@
 - [x] Day 24: Add plugin interface for new chain decoders
 - [x] Day 25: Add E2E tests for CLI flows
 - [x] Day 26: Add example dataset and fixtures
-- Day 27: Add JSON schema for report output
-- Day 28: Add README examples and screenshots
+- [x] Day 27: Add JSON schema for report output
+- [x] Day 28: Add README examples and screenshots
 - Day 29: Polish docs, comments, and code quality
 - Day 30: Tag v0.1.0 and write release notes
 

@@ -26,6 +26,8 @@ Features:
 - Address checksum utilities
 - Sample HTML report gallery, published with GitHub Pages
 - Labelled example dataset of EVM and Solana inputs with expected risks (`examples/dataset/`)
+- JSON Schema for `--json` report output (`schema/report.schema.json`, also `tx-sim-risk --schema`)
+- README terminal screenshots generated from the dataset (`docs/examples/`)
 - Batteries-included tests and GitHub Actions CI
 
 Install
@@ -46,7 +48,33 @@ node dist/cli.js --html 0x095ea7b3... > report.html
 
 # Solana skeleton from a base64-serialized transaction
 node dist/cli.js --json <solanaTxBase64>
+
+# Print the JSON Schema for --json reports
+node dist/cli.js --schema
 ```
+
+Worked examples
+Replay three labelled dataset cases (same inputs as the screenshots below). Copy the hex from `examples/dataset/cases.json` if you want the other 16.
+
+```bash
+# Unlimited approve to the Uniswap V2 router (high: unlimited_approval)
+node dist/cli.js 0x095ea7b30000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+
+# Transfer to the zero address (warn: burn_to_zero_address)
+node dist/cli.js 0xa9059cbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a
+
+# Named sender so simulation deltas use the from address, not "caller"
+node dist/cli.js --from 0x1111111111111111111111111111111111111111 --json 0xa9059cbb000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa00000000000000000000000000000000000000000000000000000000000000ff
+```
+
+Screenshots
+These match the CLI text output. Regenerate with `npm run examples` if the decoder copy changes.
+
+![Unlimited ERC-20 approval](docs/examples/erc20-unlimited-approve.svg)
+
+![Transfer to the zero address](docs/examples/erc20-burn-transfer.svg)
+
+![Solana invoke of a seed-listed drainer](docs/examples/solana-drainer-invoke.svg)
 
 Sample HTML gallery
 - `npm run pages` writes `site/index.html` plus one page per catalog sample
@@ -57,6 +85,7 @@ Example dataset
 - Every case maps to CLI flags, e.g. `node dist/cli.js <input> --config examples/risk-lists.json --json`
 - `npm run dataset` rebuilds the file from `src/datasetCases.ts` and checks every case; tests fail if the file and the builder drift
 - Use it as a regression corpus or to compare another decoder: `checkDatasetFile('examples/dataset/cases.json')`
+- JSON reports from those cases are checked against `schema/report.schema.json`
 
 Example output:
 ```json
@@ -112,6 +141,7 @@ flowchart TD
     SOL --> R
     R --> G[Plain text stdout]
     R --> H[JSON report (--json)]
+    H --> SCH[JSON Schema\nschema/report.schema.json]
     S --> G
     S --> H
     R --> W[HTML report (--html)]
@@ -120,8 +150,10 @@ flowchart TD
 ```
 
 Testing
-- `npm test` runs unit tests with Vitest, plus end-to-end CLI tests under `tests/e2e/` that compile the CLI once and run it as a child process (text, `--json`, `--html`, stdin, raw tx, Solana, and error exit codes), plus a replay of every example dataset case
+- `npm test` runs unit tests with Vitest, plus end-to-end CLI tests under `tests/e2e/` that compile the CLI once and run it as a child process (text, `--json`, `--html`, stdin, raw tx, Solana, `--schema`, and error exit codes), plus a replay of every example dataset case
+- Dataset JSON reports are checked against `schema/report.schema.json`
 - `npm run pages` regenerates the sample HTML gallery under `site/`
+- `npm run examples` regenerates the README terminal screenshots under `docs/examples/`
 - CI: see the badge above for the latest status
 
 Roadmap

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { readFileSync } from 'node:fs';
 import {
   decodeErc20Approve,
   decodeErc20Transfer,
@@ -22,6 +23,7 @@ import { renderHtmlReport } from './html';
 import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
 import { isHexString } from './evm/hex';
 import { reportOptionsFromArgv } from './cliOptions';
+import { defaultReportSchemaPath } from './schema';
 import type { SolanaTxSkeleton } from './solana/skeleton';
 
 function printReportFooter(data: string, options?: ReportOptions): void {
@@ -42,6 +44,7 @@ function printUsage(): void {
   console.error(
     'Usage: tx-sim-risk <hexData | solanaTx> | --data <payload> [--json | --html] [--from <addr>] [--config <lists.json>]'
   );
+  console.error('       tx-sim-risk --schema');
   console.error('Example: tx-sim-risk 0x095ea7b3....');
 }
 
@@ -100,6 +103,14 @@ function hasChainIdFlag(argv: string[]): boolean {
   return argv.includes('--chainId') || argv.includes('--chainid');
 }
 
+function hasSchemaFlag(argv: string[]): boolean {
+  return argv.includes('--schema');
+}
+
+function printReportSchema(): void {
+  process.stdout.write(readFileSync(defaultReportSchemaPath(), 'utf8'));
+}
+
 async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
   let dataArg: string | undefined;
   for (let i = 0; i < argv.length; i++) {
@@ -116,7 +127,8 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
       arg === '--json' ||
       arg === '--html' ||
       arg === '--fees' ||
-      arg === '--solana'
+      arg === '--solana' ||
+      arg === '--schema'
     )
       continue;
     if (arg === '--chainId' || arg === '--chainid') continue;
@@ -152,6 +164,11 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
 
 async function main() {
   const argv = process.argv.slice(2);
+  if (hasSchemaFlag(argv)) {
+    printReportSchema();
+    process.exit(0);
+    return;
+  }
   const data = await getHexFromArgsOrStdin(argv);
   const wantJson = hasJsonFlag(argv);
   const wantHtml = hasHtmlFlag(argv);

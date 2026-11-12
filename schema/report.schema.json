@@ -1,0 +1,552 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/SibghatUllah1997/tx-sim-risk/raw/main/schema/report.schema.json",
+  "title": "tx-sim-risk JSON report",
+  "description": "Shape of JSON printed by --json and returned by generateJsonReportFromAny. The unknown variant is the CLI fallback when no decoder claims the input.",
+  "oneOf": [
+    { "$ref": "#/$defs/erc20ApproveReport" },
+    { "$ref": "#/$defs/erc20TransferReport" },
+    { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },
+    { "$ref": "#/$defs/erc20DecreaseAllowanceReport" },
+    { "$ref": "#/$defs/nftSetApprovalForAllReport" },
+    { "$ref": "#/$defs/abiCallReport" },
+    { "$ref": "#/$defs/solanaTxReport" },
+    { "$ref": "#/$defs/pluginDecodeReport" },
+    { "$ref": "#/$defs/unknownReport" }
+  ],
+  "$defs": {
+    "severity": {
+      "type": "string",
+      "enum": ["info", "warn", "high"]
+    },
+    "addressKind": {
+      "type": "string",
+      "enum": ["eoa", "contract", "unknown"]
+    },
+    "evmAddress": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{40}$"
+    },
+    "decimalString": {
+      "type": "string",
+      "pattern": "^-?[0-9]+$"
+    },
+    "unsignedDecimalString": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "hexBytes": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]*$"
+    },
+    "selector": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{8}$"
+    },
+    "pluginId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "uint": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "riskIds": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "riskDetail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "reason", "severity"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "reason": { "$ref": "#/$defs/nonEmptyString" },
+        "severity": { "$ref": "#/$defs/severity" }
+      }
+    },
+    "balanceDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["account", "delta"],
+      "properties": {
+        "account": { "$ref": "#/$defs/nonEmptyString" },
+        "delta": { "$ref": "#/$defs/decimalString" }
+      }
+    },
+    "allowanceDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "spender", "mode", "delta", "newValue", "wouldRevert"],
+      "properties": {
+        "owner": { "$ref": "#/$defs/nonEmptyString" },
+        "spender": { "$ref": "#/$defs/nonEmptyString" },
+        "mode": { "type": "string", "enum": ["set", "increase", "decrease"] },
+        "delta": {
+          "anyOf": [
+            { "$ref": "#/$defs/decimalString" },
+            { "type": "null" }
+          ]
+        },
+        "newValue": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "wouldRevert": { "type": "boolean" }
+      }
+    },
+    "operatorDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operator", "approved"],
+      "properties": {
+        "operator": { "$ref": "#/$defs/nonEmptyString" },
+        "approved": { "type": "boolean" }
+      }
+    },
+    "simulation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["balances", "allowances", "operators", "notes"],
+      "properties": {
+        "balances": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/balanceDelta" }
+        },
+        "allowances": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/allowanceDelta" }
+        },
+        "operators": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operatorDelta" }
+        },
+        "notes": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "decodedReportMeta": {
+      "type": "object",
+      "required": ["risks", "riskDetails", "severity", "simulation"],
+      "properties": {
+        "risks": { "$ref": "#/$defs/riskIds" },
+        "riskDetails": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/riskDetail" }
+        },
+        "severity": { "$ref": "#/$defs/severity" },
+        "simulation": { "$ref": "#/$defs/simulation" }
+      }
+    },
+    "erc20ApprovePayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spender", "amount", "isUnlimitedApproval", "spenderKind"],
+      "properties": {
+        "spender": { "$ref": "#/$defs/evmAddress" },
+        "amount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "isUnlimitedApproval": { "type": "boolean" },
+        "spenderKind": { "$ref": "#/$defs/addressKind" }
+      }
+    },
+    "erc20TransferPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["to", "amount", "isToZeroAddress"],
+      "properties": {
+        "to": { "$ref": "#/$defs/evmAddress" },
+        "amount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "isToZeroAddress": { "type": "boolean" }
+      }
+    },
+    "erc20AllowanceDeltaPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spender", "amountDelta", "spenderKind"],
+      "properties": {
+        "spender": { "$ref": "#/$defs/evmAddress" },
+        "amountDelta": { "$ref": "#/$defs/unsignedDecimalString" },
+        "spenderKind": { "$ref": "#/$defs/addressKind" }
+      }
+    },
+    "nftSetApprovalForAllPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operator", "approved", "isApproveAll", "standards", "operatorKind"],
+      "properties": {
+        "operator": { "$ref": "#/$defs/evmAddress" },
+        "approved": { "type": "boolean" },
+        "isApproveAll": { "type": "boolean" },
+        "standards": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [
+            { "const": "erc721" },
+            { "const": "erc1155" }
+          ],
+          "items": false
+        },
+        "operatorKind": { "$ref": "#/$defs/addressKind" }
+      }
+    },
+    "abiStandard": {
+      "type": "string",
+      "enum": ["erc20", "erc721", "erc1155"]
+    },
+    "abiArgValue": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "boolean" },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/abiArgValue" }
+        }
+      ]
+    },
+    "abiDecodedArg": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "value"],
+      "properties": {
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "type": { "$ref": "#/$defs/nonEmptyString" },
+        "value": { "$ref": "#/$defs/abiArgValue" }
+      }
+    },
+    "abiCallPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["functionName", "signature", "selector", "standards", "args"],
+      "properties": {
+        "functionName": { "$ref": "#/$defs/nonEmptyString" },
+        "signature": { "$ref": "#/$defs/nonEmptyString" },
+        "selector": { "$ref": "#/$defs/selector" },
+        "standards": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/abiStandard" }
+        },
+        "args": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/abiDecodedArg" }
+        }
+      }
+    },
+    "solanaVersion": {
+      "anyOf": [
+        { "const": "legacy" },
+        { "const": 0 },
+        { "const": 1 }
+      ]
+    },
+    "solanaMessageHeader": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "numRequiredSignatures",
+        "numReadonlySignedAccounts",
+        "numReadonlyUnsignedAccounts"
+      ],
+      "properties": {
+        "numRequiredSignatures": { "$ref": "#/$defs/uint" },
+        "numReadonlySignedAccounts": { "$ref": "#/$defs/uint" },
+        "numReadonlyUnsignedAccounts": { "$ref": "#/$defs/uint" }
+      }
+    },
+    "solanaInstruction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "programId",
+        "programIdIndex",
+        "accounts",
+        "accountIndexes",
+        "dataHex"
+      ],
+      "properties": {
+        "programId": { "type": "string" },
+        "programIdIndex": { "$ref": "#/$defs/uint" },
+        "accounts": { "type": "array", "items": { "type": "string" } },
+        "accountIndexes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/uint" }
+        },
+        "dataHex": { "$ref": "#/$defs/hexBytes" }
+      }
+    },
+    "solanaAddressTableLookup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accountKey", "writableIndexes", "readonlyIndexes"],
+      "properties": {
+        "accountKey": { "$ref": "#/$defs/nonEmptyString" },
+        "writableIndexes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/uint" }
+        },
+        "readonlyIndexes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/uint" }
+        }
+      }
+    },
+    "nullableString": {
+      "anyOf": [{ "type": "string" }, { "type": "null" }]
+    },
+    "solanaAtaInstruction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instructionIndex",
+        "kind",
+        "payer",
+        "associatedAccount",
+        "wallet",
+        "mint",
+        "tokenProgram",
+        "isKnownTokenProgram",
+        "expectedAddress",
+        "matchesDerivation"
+      ],
+      "properties": {
+        "instructionIndex": { "$ref": "#/$defs/uint" },
+        "kind": {
+          "type": "string",
+          "enum": ["create", "createIdempotent", "recoverNested", "unknown"]
+        },
+        "payer": { "$ref": "#/$defs/nullableString" },
+        "associatedAccount": { "$ref": "#/$defs/nullableString" },
+        "wallet": { "$ref": "#/$defs/nullableString" },
+        "mint": { "$ref": "#/$defs/nullableString" },
+        "tokenProgram": { "$ref": "#/$defs/nullableString" },
+        "isKnownTokenProgram": { "type": "boolean" },
+        "expectedAddress": { "$ref": "#/$defs/nullableString" },
+        "matchesDerivation": {
+          "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+        }
+      }
+    },
+    "solanaCpiHit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["instructionIndex", "programId", "role", "label", "category"],
+      "properties": {
+        "instructionIndex": { "$ref": "#/$defs/uint" },
+        "programId": { "$ref": "#/$defs/nonEmptyString" },
+        "role": { "type": "string", "enum": ["invoked", "cpi_target"] },
+        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "category": {
+          "type": "string",
+          "enum": ["drainer", "fake_token", "approval_scam"]
+        }
+      }
+    },
+    "solanaTxPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "signatures",
+        "feePayer",
+        "recentBlockhash",
+        "accountKeys",
+        "header",
+        "instructions",
+        "addressTableLookups",
+        "associatedTokenAccounts",
+        "suspiciousCpi"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/solanaVersion" },
+        "signatures": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hexBytes" }
+        },
+        "feePayer": { "$ref": "#/$defs/nullableString" },
+        "recentBlockhash": { "type": "string" },
+        "accountKeys": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "header": { "$ref": "#/$defs/solanaMessageHeader" },
+        "instructions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/solanaInstruction" }
+        },
+        "addressTableLookups": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/solanaAddressTableLookup" }
+        },
+        "associatedTokenAccounts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/solanaAtaInstruction" }
+        },
+        "suspiciousCpi": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/solanaCpiHit" }
+        }
+      }
+    },
+    "pluginDecodePayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pluginId", "chain", "summary", "fields"],
+      "properties": {
+        "pluginId": { "$ref": "#/$defs/pluginId" },
+        "chain": { "$ref": "#/$defs/nonEmptyString" },
+        "summary": { "type": "string" },
+        "fields": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" },
+              { "type": "null" }
+            ]
+          }
+        }
+      }
+    },
+    "typedReport": {
+      "allOf": [
+        { "$ref": "#/$defs/decodedReportMeta" },
+        {
+          "type": "object",
+          "required": ["type", "payload", "risks", "riskDetails", "severity", "simulation"]
+        }
+      ]
+    },
+    "erc20ApproveReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "erc20_approve" },
+            "payload": { "$ref": "#/$defs/erc20ApprovePayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
+    "erc20TransferReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "erc20_transfer" },
+            "payload": { "$ref": "#/$defs/erc20TransferPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
+    "erc20IncreaseAllowanceReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "erc20_increaseAllowance" },
+            "payload": { "$ref": "#/$defs/erc20AllowanceDeltaPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
+    "erc20DecreaseAllowanceReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "erc20_decreaseAllowance" },
+            "payload": { "$ref": "#/$defs/erc20AllowanceDeltaPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
+    "nftSetApprovalForAllReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "nft_setApprovalForAll" },
+            "payload": { "$ref": "#/$defs/nftSetApprovalForAllPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
+    "abiCallReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "abi_call" },
+            "payload": { "$ref": "#/$defs/abiCallPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
+    "solanaTxReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "solana_tx" },
+            "payload": { "$ref": "#/$defs/solanaTxPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
+    "pluginDecodeReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "plugin_decode" },
+            "payload": { "$ref": "#/$defs/pluginDecodePayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
+    "unknownReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "risks", "payload"],
+      "properties": {
+        "type": { "const": "unknown" },
+        "risks": { "type": "array", "maxItems": 0 },
+        "payload": { "type": "object", "additionalProperties": false }
+      }
+    }
+  }
+}

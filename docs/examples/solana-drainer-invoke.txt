@@ -1,0 +1,8 @@
+Detected: Solana transaction (legacy)
+Version: legacy
+Fee payer: 2Ln8Qg75VxHiJ8AZgtpG5k3bpkFCXhsrM6qPrifxwLcz
+Instructions: 1
+CPI [0] invoked seed_drainer_program (drainer): 8qepaN6YGtuVwawGiGYimDNBnwpoe8rBGRux6QTmEFbD
+Severity: high
+Risks: solana_suspicious_cpi
+Reason: solana_suspicious_cpi [high]: The transaction invokes, or can cross-program-invoke into, a program on the built-in list of known-bad Solana program ids.

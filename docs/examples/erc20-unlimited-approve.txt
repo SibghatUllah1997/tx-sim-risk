@@ -1,0 +1,9 @@
+Detected: ERC-20 approve(address,uint256)
+Spender: 0x7a250d5630b4cf539739df2c5dacb4c659f2488d
+Amount: 115792089237316195423570985008687907853269984665640564039457584007913129639935
+Unlimited approval: yes
+Spender kind: contract
+Severity: high
+Risks: unlimited_approval
+Reason: unlimited_approval [high]: The spender is approved for the maximum uint256 amount, so it can move the holder's entire token balance until the allowance is revoked.
+Allowance (0x7a250d5630b4cf539739df2c5dacb4c659f2488d): set to 115792089237316195423570985008687907853269984665640564039457584007913129639935

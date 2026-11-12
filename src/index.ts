@@ -29,3 +29,4 @@ export * from './plugins';
 export * from './dataset';
 export * from './schema';
 export * from './schemaValidate';
+export * from './exampleSnapshots';

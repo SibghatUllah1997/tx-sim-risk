@@ -1,0 +1,9 @@
+Detected: ERC-20 transfer(address,uint256)
+To: 0x0000000000000000000000000000000000000000
+Amount: 10
+Burn address: yes
+Severity: warn
+Risks: burn_to_zero_address
+Reason: burn_to_zero_address [warn]: Tokens are sent to the zero address, which permanently removes them from circulation.
+Balance delta (caller): -10
+Balance delta (0x0000000000000000000000000000000000000000): +10

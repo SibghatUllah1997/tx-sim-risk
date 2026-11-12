@@ -7,7 +7,8 @@
     "test": "vitest run --reporter=dot",
     "build": "tsc -p tsconfig.json",
     "pages": "npm run build && node dist/generatePages.js",
-    "dataset": "npm run build && node dist/generateDataset.js"
+    "dataset": "npm run build && node dist/generateDataset.js",
+    "examples": "npm run build && node dist/generateExampleDocs.js"
   },
   "bin": {
     "tx-sim-risk": "dist/cli.js"

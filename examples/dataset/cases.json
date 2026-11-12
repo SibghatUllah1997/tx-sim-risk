@@ -1,0 +1,237 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "erc20-unlimited-approve",
+      "chain": "evm",
+      "description": "approve() for max uint256 to a router contract.",
+      "input": "0x095ea7b30000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "expect": {
+        "type": "erc20_approve",
+        "risks": [
+          "unlimited_approval"
+        ],
+        "severity": "high"
+      }
+    },
+    {
+      "id": "erc20-limited-approve",
+      "chain": "evm",
+      "description": "approve() for 100 units to a router contract.",
+      "input": "0x095ea7b30000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488d0000000000000000000000000000000000000000000000000000000000000064",
+      "expect": {
+        "type": "erc20_approve",
+        "risks": [],
+        "severity": "info"
+      }
+    },
+    {
+      "id": "erc20-revoke-approve",
+      "chain": "evm",
+      "description": "approve() for zero, which revokes the allowance.",
+      "input": "0x095ea7b3000000000000000000000000bad00000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000",
+      "expect": {
+        "type": "erc20_approve",
+        "risks": [],
+        "severity": "info"
+      }
+    },
+    {
+      "id": "erc20-phishing-approve",
+      "chain": "evm",
+      "description": "Finite approve() to a spender on the phishing seed list.",
+      "input": "0x095ea7b3000000000000000000000000bad00000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000064",
+      "expect": {
+        "type": "erc20_approve",
+        "risks": [
+          "phishing_spender"
+        ],
+        "severity": "high"
+      }
+    },
+    {
+      "id": "erc20-blocklisted-approve",
+      "chain": "evm",
+      "description": "Finite approve() to a spender on the example block list.",
+      "input": "0x095ea7b3000000000000000000000000badc0ffee00000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000064",
+      "config": "../risk-lists.json",
+      "expect": {
+        "type": "erc20_approve",
+        "risks": [
+          "blocklisted_spender"
+        ],
+        "severity": "high"
+      }
+    },
+    {
+      "id": "erc20-plain-transfer",
+      "chain": "evm",
+      "description": "transfer() of 255 units from a named sender.",
+      "input": "0xa9059cbb000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa00000000000000000000000000000000000000000000000000000000000000ff",
+      "from": "0x1111111111111111111111111111111111111111",
+      "expect": {
+        "type": "erc20_transfer",
+        "risks": [],
+        "severity": "info"
+      }
+    },
+    {
+      "id": "erc20-burn-transfer",
+      "chain": "evm",
+      "description": "transfer() to the zero address.",
+      "input": "0xa9059cbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a",
+      "expect": {
+        "type": "erc20_transfer",
+        "risks": [
+          "burn_to_zero_address"
+        ],
+        "severity": "warn"
+      }
+    },
+    {
+      "id": "erc20-increase-allowance",
+      "chain": "evm",
+      "description": "increaseAllowance() by 42 units for a router.",
+      "input": "0x395093510000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488d000000000000000000000000000000000000000000000000000000000000002a",
+      "expect": {
+        "type": "erc20_increaseAllowance",
+        "risks": [],
+        "severity": "info"
+      }
+    },
+    {
+      "id": "erc20-increase-allowance-phishing",
+      "chain": "evm",
+      "description": "increaseAllowance() for a phishing-listed spender.",
+      "input": "0x39509351000000000000000000000000bad0000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002a",
+      "expect": {
+        "type": "erc20_increaseAllowance",
+        "risks": [
+          "phishing_spender"
+        ],
+        "severity": "high"
+      }
+    },
+    {
+      "id": "erc20-decrease-allowance",
+      "chain": "evm",
+      "description": "decreaseAllowance() by 7 units for a router.",
+      "input": "0xa457c2d70000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488d0000000000000000000000000000000000000000000000000000000000000007",
+      "expect": {
+        "type": "erc20_decreaseAllowance",
+        "risks": [],
+        "severity": "info"
+      }
+    },
+    {
+      "id": "nft-approve-all",
+      "chain": "evm",
+      "description": "setApprovalForAll(true) to a router operator.",
+      "input": "0xa22cb4650000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488d0000000000000000000000000000000000000000000000000000000000000001",
+      "expect": {
+        "type": "nft_setApprovalForAll",
+        "risks": [
+          "erc721_approve_all",
+          "erc1155_approve_all"
+        ],
+        "severity": "high"
+      }
+    },
+    {
+      "id": "nft-revoke-all",
+      "chain": "evm",
+      "description": "setApprovalForAll(false), an operator revocation.",
+      "input": "0xa22cb4650000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488d0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": {
+        "type": "nft_setApprovalForAll",
+        "risks": [],
+        "severity": "info"
+      }
+    },
+    {
+      "id": "abi-transfer-from",
+      "chain": "evm",
+      "description": "transferFrom() decoded through the common ABI set.",
+      "input": "0x23b872dd0000000000000000000000001111111111111111111111111111111111111111000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa00000000000000000000000000000000000000000000000000000000000001f4",
+      "expect": {
+        "type": "abi_call",
+        "risks": [],
+        "severity": "info"
+      }
+    },
+    {
+      "id": "rawtx-eip1559-unlimited-approve",
+      "chain": "evm",
+      "description": "Unsigned EIP-1559 tx on chain 1 wrapping an unlimited approve.",
+      "input": "0x02f86d010784773594008506fc23ac0082ea6094cccccccccccccccccccccccccccccccccccccccc80b844095ea7b30000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc0",
+      "expect": {
+        "type": "erc20_approve",
+        "risks": [
+          "unlimited_approval"
+        ],
+        "severity": "high"
+      }
+    },
+    {
+      "id": "rawtx-legacy-burn",
+      "chain": "evm",
+      "description": "Legacy EIP-155 tx on chain 137 wrapping a burn transfer.",
+      "input": "0xf8ab018502540be40082ea6094cccccccccccccccccccccccccccccccccccccccc80b844a9059cbb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001820135a01111111111111111111111111111111111111111111111111111111111111111a02222222222222222222222222222222222222222222222222222222222222222",
+      "expect": {
+        "type": "erc20_transfer",
+        "risks": [
+          "burn_to_zero_address"
+        ],
+        "severity": "warn"
+      }
+    },
+    {
+      "id": "solana-system-transfer",
+      "chain": "solana",
+      "description": "Signed legacy SOL transfer with no risks.",
+      "input": "AW30shvYmBa+GVceqgxMkExfgXltCTj5rR8angikYcl6+czu+cj/DqNKhzPzKRHIVY7MzUx8tHFJcpismORs3QUBAAEDX41ABWG0BXqqHc2EKf5NQ0jUCMZMswnyKX/vitUQckid5yItlCMGo3wAvE2d04C1QlqaZNLfp9/FlgPXLz8cZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAgIAAQwCAAAAiBMAAAAAAAA=",
+      "expect": {
+        "type": "solana_tx",
+        "risks": [],
+        "severity": "info"
+      }
+    },
+    {
+      "id": "solana-drainer-invoke",
+      "chain": "solana",
+      "description": "Direct invoke of a program on the suspicious seed list.",
+      "input": "AXkGbCRVH7/74FtFHNPR6nI7yNXh0P3O/HMuaJmgyJjPRQqVn2NBsKtT39gAtK0ubhEUKF3HxfljX/0yY7G7NQMBAAECE+y/lgAHDo/GU8ZNd1d5Fy504st+8hX8KaO4ZGY/BzN0eHNpbTpkcmFpbmVyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQEBAAMBAgM=",
+      "expect": {
+        "type": "solana_tx",
+        "risks": [
+          "solana_suspicious_cpi"
+        ],
+        "severity": "high"
+      }
+    },
+    {
+      "id": "solana-ata-create",
+      "chain": "solana",
+      "description": "createIdempotent for the correctly derived associated token account.",
+      "input": "AQoqP87cB0pi90SFbJKHo/imIGPdWk5JZnIkYp9zzPCcOZcb6ya+gINcv2qUULC+Qdpl9LupVwDtRXNv4E321w4BAAUHJZDLg1XgVpXAqkWNyJIFsHhm/EH3FOmT8XrRVU6cYIqGWmYnIMk/JK2IQi/2Qc8D6l0l4rZkOQ14VmKZFCTA7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAjJclj04kifG7PRApFI4NgwtaE5na/xCEBI572Nvp+Fmwi9AVOeIM6DnlQtbyHbNzFpc45F5ZWbkox4UJU8terP4HLQgIA1M2iR5Slh/OBcKRq2owR88Tci2V7MB+d7/JBt324ddloZPZy+FGzut5rBy0he1fWzeROoz1hX7/AKkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEDBgABBAUCBgEB",
+      "expect": {
+        "type": "solana_tx",
+        "risks": [],
+        "severity": "info"
+      }
+    },
+    {
+      "id": "solana-ata-mismatch",
+      "chain": "solana",
+      "description": "createIdempotent naming an account that is not the derived ATA.",
+      "input": "AQEBW8CEf0+bGOwRll6DJNIXi4szYQ08NRYAhhmg5xfCKv8IpPjhCBsBSfRkwz5Oc729QgoRW76BtfuqeXqdSwgBAAUHJZDLg1XgVpXAqkWNyJIFsHhm/EH3FOmT8XrRVU6cYIpMzEXIy/L1Y5BOuqo8twrLF0QYIq101lQe+g+WcYcrugAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAjJclj04kifG7PRApFI4NgwtaE5na/xCEBI572Nvp+Fmwi9AVOeIM6DnlQtbyHbNzFpc45F5ZWbkox4UJU8terP4HLQgIA1M2iR5Slh/OBcKRq2owR88Tci2V7MB+d7/JBt324ddloZPZy+FGzut5rBy0he1fWzeROoz1hX7/AKkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEDBgABBAUCBgEB",
+      "expect": {
+        "type": "solana_tx",
+        "risks": [
+          "solana_ata_mismatch"
+        ],
+        "severity": "warn"
+      }
+    }
+  ]
+}

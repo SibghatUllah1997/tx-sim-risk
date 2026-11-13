@@ -13,6 +13,7 @@ Why it matters:
 
 Features:
 - Decode ERC-20 approve, transfer, increaseAllowance, decreaseAllowance
+- Decode EIP-2612 and DAI-style `permit` signatures and flag unlimited permits (`unlimited_permit`)
 - Decode ERC-721 / ERC-1155 setApprovalForAll and flag operator grants
 - Flag unlimited approvals, burns to the zero address, phishing spenders, and grants to EOAs
 - Classify spenders/operators as EOA, contract, or unknown (bytecode or known-contract map)
@@ -99,7 +100,7 @@ Sample HTML gallery
 - Pushes to `main` deploy that gallery with GitHub Pages (see `.github/workflows/pages.yml`)
 
 Example dataset
-- `examples/dataset/cases.json` holds 19 labelled inputs (ERC-20, NFT, raw EVM txs, Solana) with the report type, risks, and severity each should produce
+- `examples/dataset/cases.json` holds 23 labelled inputs (ERC-20 incl. permits, NFT, raw EVM txs, Solana) with the report type, risks, and severity each should produce
 - Every case maps to CLI flags, e.g. `node dist/cli.js <input> --config examples/risk-lists.json --json`
 - `npm run dataset` rebuilds the file from `src/datasetCases.ts` and checks every case; tests fail if the file and the builder drift
 - Use it as a regression corpus or to compare another decoder: `checkDatasetFile('examples/dataset/cases.json')`

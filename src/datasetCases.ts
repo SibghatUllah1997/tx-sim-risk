@@ -45,6 +45,35 @@ const decreaseAllowance = (spender: string, amount: string) =>
 const setApprovalForAll = (operator: string, approved: boolean) =>
   selectorCall('a22cb465', operator, approved ? '1' : '0');
 
+const PERMIT_SIG_R: Hex = `0x${'ab'.repeat(32)}`;
+const PERMIT_SIG_S: Hex = `0x${'cd'.repeat(32)}`;
+const PERMIT_DEADLINE = 1_900_000_000n;
+
+const EIP2612_PERMIT_ABI = parseAbi([
+  'function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)',
+]);
+const DAI_PERMIT_ABI = parseAbi([
+  'function permit(address holder, address spender, uint256 nonce, uint256 expiry, bool allowed, uint8 v, bytes32 r, bytes32 s)',
+]);
+
+/** EIP-2612 permit with a placeholder signature (never valid on-chain). */
+function eip2612Permit(spender: string, value: bigint): Hex {
+  return encodeFunctionData({
+    abi: EIP2612_PERMIT_ABI,
+    functionName: 'permit',
+    args: [SENDER, `0x${spender}`, value, PERMIT_DEADLINE, 27, PERMIT_SIG_R, PERMIT_SIG_S],
+  });
+}
+
+/** DAI-style permit with a placeholder signature (never valid on-chain). */
+function daiPermit(spender: string, allowed: boolean): Hex {
+  return encodeFunctionData({
+    abi: DAI_PERMIT_ABI,
+    functionName: 'permit',
+    args: [SENDER, `0x${spender}`, 0n, 0n, allowed, 28, PERMIT_SIG_R, PERMIT_SIG_S],
+  });
+}
+
 const TRANSFER_FROM_ABI = parseAbi([
   'function transferFrom(address from, address to, uint256 value)',
 ]);
@@ -193,6 +222,18 @@ export function buildExampleDataset(): Dataset {
       approve(BLOCKED, '64'),
       { type: 'erc20_approve', risks: ['blocklisted_spender'], severity: 'high' },
       { config: RISK_LISTS }),
+    evm('erc20-unlimited-permit', 'EIP-2612 permit() for max uint256 to a router contract.',
+      eip2612Permit(ROUTER, (1n << 256n) - 1n),
+      { type: 'erc20_permit', risks: ['unlimited_permit'], severity: 'high' }),
+    evm('erc20-phishing-permit', 'Finite EIP-2612 permit() to a spender on the phishing seed list.',
+      eip2612Permit(PHISHING_DRAINER, 100n),
+      { type: 'erc20_permit', risks: ['phishing_spender'], severity: 'high' }),
+    evm('dai-permit-allowed', 'DAI-style permit(allowed=true) with no expiry to a router.',
+      daiPermit(ROUTER, true),
+      { type: 'erc20_permit', risks: ['unlimited_permit'], severity: 'high' }),
+    evm('dai-permit-revoke', 'DAI-style permit(allowed=false), which revokes the allowance.',
+      daiPermit(PHISHING_DRAINER, false),
+      { type: 'erc20_permit', risks: [], severity: 'info' }),
     evm('erc20-plain-transfer', 'transfer() of 255 units from a named sender.',
       transfer(RECIPIENT, 'ff'),
       { type: 'erc20_transfer', risks: [], severity: 'info' },

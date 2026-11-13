@@ -35,7 +35,7 @@
 
 More decoders and report formats, still one small shippable step per day. Default analysis stays offline. Use existing audited libraries (`viem`, `@solana/web3.js`) and do not hand-roll cryptography.
 
-- [ ] Day 31: Decode EIP-2612 `permit` and DAI-style permit, and flag unlimited permit allowances
+- [x] Day 31: Decode EIP-2612 `permit` and DAI-style permit, and flag unlimited permit allowances
 - [ ] Day 32: Decode Uniswap Permit2 `approve` / `permit` / `permitTransferFrom` and surface spender and expiration risks
 - [ ] Day 33: Decode `multicall` / `multicall3` and recursively analyze inner calls for the same risks
 - [ ] Day 34: Parse ERC-4337 UserOperation fields and flag a paymaster or a callData approval

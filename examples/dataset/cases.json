@@ -64,6 +64,56 @@
       }
     },
     {
+      "id": "erc20-unlimited-permit",
+      "chain": "evm",
+      "description": "EIP-2612 permit() for max uint256 to a router contract.",
+      "input": "0xd505accf00000000000000000000000011111111111111111111111111111111111111110000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000000000000713fb300000000000000000000000000000000000000000000000000000000000000001bababababababababababababababababababababababababababababababababcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "expect": {
+        "type": "erc20_permit",
+        "risks": [
+          "unlimited_permit"
+        ],
+        "severity": "high"
+      }
+    },
+    {
+      "id": "erc20-phishing-permit",
+      "chain": "evm",
+      "description": "Finite EIP-2612 permit() to a spender on the phishing seed list.",
+      "input": "0xd505accf0000000000000000000000001111111111111111111111111111111111111111000000000000000000000000bad0000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000006400000000000000000000000000000000000000000000000000000000713fb300000000000000000000000000000000000000000000000000000000000000001bababababababababababababababababababababababababababababababababcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "expect": {
+        "type": "erc20_permit",
+        "risks": [
+          "phishing_spender"
+        ],
+        "severity": "high"
+      }
+    },
+    {
+      "id": "dai-permit-allowed",
+      "chain": "evm",
+      "description": "DAI-style permit(allowed=true) with no expiry to a router.",
+      "input": "0x8fcbaf0c00000000000000000000000011111111111111111111111111111111111111110000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000001cababababababababababababababababababababababababababababababababcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "expect": {
+        "type": "erc20_permit",
+        "risks": [
+          "unlimited_permit"
+        ],
+        "severity": "high"
+      }
+    },
+    {
+      "id": "dai-permit-revoke",
+      "chain": "evm",
+      "description": "DAI-style permit(allowed=false), which revokes the allowance.",
+      "input": "0x8fcbaf0c0000000000000000000000001111111111111111111111111111111111111111000000000000000000000000bad0000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001cababababababababababababababababababababababababababababababababcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "expect": {
+        "type": "erc20_permit",
+        "risks": [],
+        "severity": "info"
+      }
+    },
+    {
       "id": "erc20-plain-transfer",
       "chain": "evm",
       "description": "transfer() of 255 units from a named sender.",

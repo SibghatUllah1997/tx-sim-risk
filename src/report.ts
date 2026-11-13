@@ -1,6 +1,11 @@
 import { decodeErc20Approve } from './evm/approval';
 import { decodeErc20Transfer } from './evm/transfer';
 import {
+  decodeErc20Permit,
+  unlimitedPermitRisks,
+  type PermitVariant,
+} from './evm/permit';
+import {
   decodeErc20IncreaseAllowance,
   decodeErc20DecreaseAllowance,
 } from './evm/allowance';
@@ -143,6 +148,21 @@ export type JsonReport =
       };
     })
   | (ReportMeta & {
+      type: 'erc20_permit';
+      payload: {
+        variant: PermitVariant;
+        owner: string;
+        spender: string;
+        value: string;
+        deadline: string;
+        nonce: string | null;
+        allowed: boolean | null;
+        isUnlimitedPermit: boolean;
+        hasNoExpiry: boolean;
+        spenderKind: AddressKind;
+      };
+    })
+  | (ReportMeta & {
       type: 'erc20_transfer';
       payload: {
         to: string;
@@ -240,6 +260,35 @@ export function generateJsonReport(
         spenderKind: spenderKindFor(approve.spender, options),
       },
       ...reportMeta(risks, data, options),
+    };
+  }
+
+  // A permit is an approve signed off-chain, so it gets the same spender
+  // checks. Anyone holding the signature can submit it, not just the owner.
+  const permit = decodeErc20Permit(data);
+  if (permit) {
+    return {
+      type: 'erc20_permit',
+      payload: {
+        variant: permit.variant,
+        owner: permit.owner,
+        spender: permit.spender,
+        value: permit.value.toString(),
+        deadline: permit.deadline.toString(),
+        nonce: permit.nonce != null ? permit.nonce.toString() : null,
+        allowed: permit.allowed,
+        isUnlimitedPermit: permit.isUnlimitedPermit,
+        hasNoExpiry: permit.hasNoExpiry,
+        spenderKind: spenderKindFor(permit.spender, options),
+      },
+      ...reportMeta(
+        [
+          ...unlimitedPermitRisks(permit),
+          ...approvalGrantRisks(permit.spender, permit.value > 0n, options),
+        ],
+        data,
+        options
+      ),
     };
   }
 
@@ -400,6 +449,7 @@ export function formatReportFooter(report: JsonReport): string[] {
   const lines: string[] = [];
   switch (report.type) {
     case 'erc20_approve':
+    case 'erc20_permit':
     case 'erc20_increaseAllowance':
     case 'erc20_decreaseAllowance':
       lines.push(`Spender kind: ${report.payload.spenderKind}`);

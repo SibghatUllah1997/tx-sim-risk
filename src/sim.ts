@@ -5,6 +5,7 @@ import {
 } from './evm/allowance';
 import { decodeErc20Approve } from './evm/approval';
 import { decodeErc721SetApprovalForAll } from './evm/erc721';
+import { decodeErc20Permit } from './evm/permit';
 import { MAX_UINT256, stripHexPrefix } from './evm/hex';
 import { decodeErc20Transfer } from './evm/transfer';
 
@@ -107,6 +108,29 @@ export function simulateCalldata(
           newValue: amount.toString(),
           wouldRevert: false,
         },
+      ],
+    });
+  }
+
+  // The permit names its own owner, so `from` (the submitter) is ignored:
+  // a relayer often submits someone else's signed permit.
+  const permit = decodeErc20Permit(data);
+  if (permit) {
+    const value = permit.value;
+    const delta = current != null ? value - current : null;
+    return snapshot({
+      allowances: [
+        {
+          owner: permit.owner,
+          spender: permit.spender,
+          mode: 'set',
+          delta: delta != null ? delta.toString() : null,
+          newValue: value.toString(),
+          wouldRevert: false,
+        },
+      ],
+      notes: [
+        'Permit sets the allowance from an off-chain signature; the token rejects it if the signature, nonce, or deadline is invalid.',
       ],
     });
   }

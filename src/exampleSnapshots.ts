@@ -5,11 +5,8 @@ import {
   reportOptionsForCase,
   type DatasetCase,
 } from './dataset';
-import {
-  formatReportFooter,
-  generateJsonReportFromAny,
-  type JsonReport,
-} from './report';
+import { generateJsonReportFromAny, type JsonReport } from './report';
+import { formatPlainTextReport } from './textReport';
 
 /** Dataset case ids used for README terminal screenshots. Keep this short. */
 export const SNAPSHOT_CASE_IDS = [
@@ -43,32 +40,9 @@ function escapeXml(text: string): string {
   return text.replace(/[&<>"']/g, (ch) => XML_ESCAPES[ch]!);
 }
 
-function headerFor(report: JsonReport): string[] {
-  switch (report.type) {
-    case 'erc20_approve':
-      return [
-        'Detected: ERC-20 approve(address,uint256)',
-        `Spender: ${report.payload.spender}`,
-        `Amount: ${report.payload.amount}`,
-        `Unlimited approval: ${report.payload.isUnlimitedApproval ? 'yes' : 'no'}`,
-      ];
-    case 'erc20_transfer':
-      return [
-        'Detected: ERC-20 transfer(address,uint256)',
-        `To: ${report.payload.to}`,
-        `Amount: ${report.payload.amount}`,
-        `Burn address: ${report.payload.isToZeroAddress ? 'yes' : 'no'}`,
-      ];
-    case 'solana_tx':
-      return [`Detected: Solana transaction (${report.payload.version})`];
-    default:
-      return [`Detected: ${report.type}`];
-  }
-}
-
 /** CLI-style analysis lines for a decoded report. */
 export function cliTextForReport(report: JsonReport): string {
-  return [...headerFor(report), ...formatReportFooter(report)].join('\n');
+  return formatPlainTextReport(report).join('\n');
 }
 
 function wrapLine(line: string, width: number): string[] {

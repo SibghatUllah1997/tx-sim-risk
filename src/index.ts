@@ -50,3 +50,10 @@ export {
   isReservedArg,
   reportOptionsFromArgv,
 } from './cliOptions';
+export {
+  formatChainIdLine,
+  formatDetectedHeader,
+  formatFeeAnalysis,
+  formatPlainTextAnalysis,
+  formatPlainTextReport,
+} from './textReport';

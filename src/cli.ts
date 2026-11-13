@@ -2,27 +2,6 @@
 
 import { readFileSync } from 'node:fs';
 import {
-  decodeErc20Approve,
-  decodeErc20Transfer,
-  decodeErc20IncreaseAllowance,
-  decodeErc20DecreaseAllowance,
-  decodeErc721SetApprovalForAll,
-  decodeErc1155SetApprovalForAll,
-  decodeCommonAbi,
-  parseSolanaTxSkeleton,
-  type AbiArgValue,
-} from './index';
-import { parseEip1559Fees } from './evm/eip1559';
-import {
-  formatReportFooter,
-  generateJsonReport,
-  generateJsonReportFromAny,
-  type ReportOptions,
-} from './report';
-import { renderHtmlReport } from './html';
-import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
-import { isHexString } from './evm/hex';
-import {
   CLI_USAGE_LINES,
   hasFlag,
   isReservedArg,
@@ -31,38 +10,19 @@ import {
 import { classifyCliInput, isPayloadLike } from './payload';
 import { formatPackageIdentity } from './packageInfo';
 import { defaultReportSchemaPath } from './schema';
-import type { SolanaTxSkeleton } from './solana/skeleton';
-
-function printReportFooter(data: string, options?: ReportOptions): void {
-  const report = generateJsonReport(data, options);
-  if (!report) return;
-  for (const line of formatReportFooter(report)) {
-    console.log(line);
-  }
-}
-
-function formatAbiValue(value: AbiArgValue): string {
-  return Array.isArray(value)
-    ? `[${value.map(formatAbiValue).join(', ')}]`
-    : String(value);
-}
+import {
+  generateJsonReportFromAny,
+  type ReportOptions,
+} from './report';
+import { renderHtmlReport } from './html';
+import {
+  formatChainIdLine,
+  formatFeeAnalysis,
+  formatPlainTextAnalysis,
+} from './textReport';
 
 function printUsage(stream: NodeJS.WritableStream = process.stderr): void {
   stream.write(`${CLI_USAGE_LINES.join('\n')}\n`);
-}
-
-function printSolanaSkeleton(skeleton: SolanaTxSkeleton): void {
-  console.log(`Detected: Solana transaction (${skeleton.version})`);
-  console.log(`Fee payer: ${skeleton.feePayer ?? 'unknown'}`);
-  console.log(`Recent blockhash: ${skeleton.recentBlockhash}`);
-  console.log(`Signatures: ${skeleton.signatures.length}`);
-  console.log(`Account keys: ${skeleton.accountKeys.length}`);
-  console.log(`Instructions: ${skeleton.instructions.length}`);
-  skeleton.instructions.forEach((ix, index) => {
-    console.log(
-      `  [${index}] program=${ix.programId} accounts=${ix.accounts.length} data=${ix.dataHex}`
-    );
-  });
 }
 
 async function readStdin(): Promise<string> {
@@ -134,6 +94,12 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
   return null;
 }
 
+function printLines(lines: readonly string[]): void {
+  for (const line of lines) {
+    console.log(line);
+  }
+}
+
 async function main() {
   const argv = process.argv.slice(2);
   if (hasFlag(argv, ['--help', '-h'])) {
@@ -180,46 +146,9 @@ async function main() {
 
   try {
     if (wantFees) {
-      const fees = parseEip1559Fees(data);
-      if (fees) {
-        console.log('Detected: EIP-1559 raw transaction');
-        console.log(`Gas limit: ${fees.gasLimit.toString()}`);
-        console.log(
-          `Max priority fee per gas: ${fees.maxPriorityFeePerGas.toString()} wei`
-        );
-        console.log(`Max fee per gas: ${fees.maxFeePerGas.toString()} wei`);
-        if (wantChainId) {
-          const parsed = extractDataAndChainIdFromRawTx(data);
-          if (parsed && parsed.txType === 'eip1559') {
-            console.log(`Chain ID: ${parsed.chainId.toString()}`);
-          } else {
-            console.log('Chain ID: unknown');
-          }
-        }
-      } else {
-        console.log('No EIP-1559 fee fields found in input.');
-        if (wantChainId) {
-          const parsed = extractDataAndChainIdFromRawTx(data);
-          if (parsed && parsed.chainId != null) {
-            console.log(`Chain ID: ${parsed.chainId.toString()}`);
-          } else {
-            console.log('Chain ID: unknown');
-          }
-        }
-      }
+      printLines(formatFeeAnalysis(data, wantChainId));
       process.exit(0);
       return;
-    }
-
-    // Unwrap hardware-wallet style raw tx to extract calldata for decoding.
-    // A typed-prefix blob that is not EVM (for example a Solana tx) must
-    // not abort the rest of the pipeline.
-    let effectiveData = data;
-    try {
-      const unwrapped = extractDataAndChainIdFromRawTx(data);
-      if (unwrapped) effectiveData = unwrapped.data;
-    } catch {
-      effectiveData = data;
     }
 
     if (wantHtml) {
@@ -246,139 +175,15 @@ async function main() {
     }
 
     if (wantChainId) {
-      try {
-        const parsed = extractDataAndChainIdFromRawTx(data);
-        if (parsed && parsed.chainId != null) {
-          console.log(`Chain ID: ${parsed.chainId.toString()}`);
-        } else {
-          console.log('Chain ID: unknown');
-        }
-      } catch {
-        console.log('Chain ID: unknown');
-      }
+      console.log(formatChainIdLine(data));
     }
 
-    if (!isHexString(effectiveData)) {
-      const solana = parseSolanaTxSkeleton(data);
-      if (solana) {
-        printSolanaSkeleton(solana);
-        const report = generateJsonReportFromAny(data, reportOptions);
-        if (report) {
-          for (const line of formatReportFooter(report)) {
-            console.log(line);
-          }
-        }
-        process.exit(0);
-        return;
-      }
+    const lines = formatPlainTextAnalysis(data, reportOptions);
+    if (lines) {
+      printLines(lines);
+    } else {
       console.log('Unsupported or unknown transaction data for current decoders.');
-      process.exit(0);
-      return;
     }
-
-    const approve = decodeErc20Approve(effectiveData);
-    if (approve) {
-      console.log('Detected: ERC-20 approve(address,uint256)');
-      console.log(`Spender: ${approve.spender}`);
-      console.log(`Amount: ${approve.amount.toString()}`);
-      console.log(
-        `Unlimited approval: ${approve.isUnlimitedApproval ? 'yes' : 'no'}`
-      );
-      printReportFooter(effectiveData, reportOptions);
-      process.exit(0);
-      return;
-    }
-
-    const transfer = decodeErc20Transfer(effectiveData);
-    if (transfer) {
-      console.log('Detected: ERC-20 transfer(address,uint256)');
-      console.log(`To: ${transfer.to}`);
-      console.log(`Amount: ${transfer.amount.toString()}`);
-      console.log(
-        `Burn address: ${transfer.isToZeroAddress ? 'yes' : 'no'}`
-      );
-      printReportFooter(effectiveData, reportOptions);
-      process.exit(0);
-      return;
-    }
-
-    const inc = decodeErc20IncreaseAllowance(effectiveData);
-    if (inc) {
-      console.log('Detected: ERC-20 increaseAllowance(address,uint256)');
-      console.log(`Spender: ${inc.spender}`);
-      console.log(`Delta: +${inc.amountDelta.toString()}`);
-      printReportFooter(effectiveData, reportOptions);
-      process.exit(0);
-      return;
-    }
-
-    const dec = decodeErc20DecreaseAllowance(effectiveData);
-    if (dec) {
-      console.log('Detected: ERC-20 decreaseAllowance(address,uint256)');
-      console.log(`Spender: ${dec.spender}`);
-      console.log(`Delta: -${dec.amountDelta.toString()}`);
-      printReportFooter(effectiveData, reportOptions);
-      process.exit(0);
-      return;
-    }
-
-    const nft721 = decodeErc721SetApprovalForAll(effectiveData);
-    if (nft721) {
-      const nft1155 = decodeErc1155SetApprovalForAll(effectiveData);
-      console.log(
-        'Detected: setApprovalForAll(address,bool) [ERC-721 / ERC-1155]'
-      );
-      console.log(`Operator: ${nft721.operator}`);
-      console.log(`Approved: ${nft721.approved ? 'yes' : 'no'}`);
-      console.log(
-        `ERC-721 approve-all: ${nft721.isApproveAll ? 'yes' : 'no'}`
-      );
-      console.log(
-        `ERC-1155 approve-all: ${nft1155?.isApproveAll ? 'yes' : 'no'}`
-      );
-      printReportFooter(effectiveData, reportOptions);
-      process.exit(0);
-      return;
-    }
-
-    const generic = decodeCommonAbi(effectiveData);
-    if (generic) {
-      console.log(`Detected: ${generic.signature} [via ABI]`);
-      for (const arg of generic.args) {
-        console.log(`${arg.name} (${arg.type}): ${formatAbiValue(arg.value)}`);
-      }
-      printReportFooter(effectiveData, reportOptions);
-      process.exit(0);
-      return;
-    }
-
-    const solana = parseSolanaTxSkeleton(data);
-    if (solana) {
-      printSolanaSkeleton(solana);
-      const report = generateJsonReportFromAny(data, reportOptions);
-      if (report) {
-        for (const line of formatReportFooter(report)) {
-          console.log(line);
-        }
-      }
-      process.exit(0);
-      return;
-    }
-
-    const viaPlugin = generateJsonReportFromAny(data, reportOptions);
-    if (viaPlugin?.type === 'plugin_decode') {
-      console.log(
-        `Detected: ${viaPlugin.payload.chain} via plugin ${viaPlugin.payload.pluginId}`
-      );
-      console.log(`Summary: ${viaPlugin.payload.summary}`);
-      for (const line of formatReportFooter(viaPlugin)) {
-        console.log(line);
-      }
-      process.exit(0);
-      return;
-    }
-
-    console.log('Unsupported or unknown transaction data for current decoders.');
     process.exit(0);
   } catch (err) {
     const message =

@@ -1,3 +1,9 @@
+## 2026-11-13
+
+- Shared ABI word parsing and CLI payload checks so decoder errors stay consistent, and added `--help` / `--version`.
+- Plain-text analysis is built by a testable formatter; address checksums reuse the same hex helpers.
+- Marked Days 29–30 done and published v0.1.0 release notes.
+
 ## 2026-11-12
 
 - JSON reports now have a published JSON Schema (`schema/report.schema.json`). `tx-sim-risk --schema` prints it, a library validator checks extra keys and type mismatches, and every example dataset case is tested against it.

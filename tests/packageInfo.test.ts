@@ -24,6 +24,7 @@ describe('packageInfo', () => {
   });
 
   it('reads the published name and version used by --version', () => {
+    expect(MANIFEST.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(readPackageVersion()).toBe(MANIFEST.version);
     expect(formatPackageIdentity()).toBe(
       `${MANIFEST.name} ${MANIFEST.version}`

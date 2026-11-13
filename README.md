@@ -5,6 +5,8 @@
 
 One-liner: A tiny CLI and TypeScript library that decodes common ERC-20 calls and Solana transaction skeletons, and surfaces simple risk hints (like unlimited approvals) from raw calldata or full raw transactions.
 
+Status: **v0.1.0**. See `docs/RELEASE-NOTES.md` for the tagged release notes.
+
 Why it matters:
 - Wallets often show hex data. It’s easy to miss risky approvals or burns.
 - Quick, deterministic decoding helps reviewers and infra build guardrails before signing.
@@ -28,12 +30,24 @@ Features:
 - Labelled example dataset of EVM and Solana inputs with expected risks (`examples/dataset/`)
 - JSON Schema for `--json` report output (`schema/report.schema.json`, also `tx-sim-risk --schema`)
 - README terminal screenshots generated from the dataset (`docs/examples/`)
+- `--help` and `--version` without a payload
 - Batteries-included tests and GitHub Actions CI
 
 Install
 - Requirements: Node.js 18+ and npm
 - Setup: `npm ci`
 - Build (for CLI binary in dist): `npm run build`
+
+Library
+```ts
+import { decodeErc20Approve, generateJsonReport } from 'tx-sim-risk';
+
+const data =
+  '0x095ea7b30000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488d' +
+  'f'.repeat(64);
+const decoded = decodeErc20Approve(data);
+const report = generateJsonReport(data);
+```
 
 Quick CLI demo
 ```bash

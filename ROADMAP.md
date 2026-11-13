@@ -28,8 +28,8 @@
 - [x] Day 26: Add example dataset and fixtures
 - [x] Day 27: Add JSON schema for report output
 - [x] Day 28: Add README examples and screenshots
-- [ ] Day 29: Polish docs, comments, and code quality
-- [ ] Day 30: Tag v0.1.0 and write release notes
+- [x] Day 29: Polish docs, comments, and code quality
+- [x] Day 30: Tag v0.1.0 and write release notes
 
 ### Phase 2
 

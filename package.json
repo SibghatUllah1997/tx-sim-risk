@@ -1,8 +1,20 @@
 {
   "name": "tx-sim-risk",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Decode Ethereum calldata, raw transactions, and Solana tx skeletons with simple risk hints (CLI + TS lib).",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "schema",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "docs/RELEASE-NOTES.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "test": "vitest run --reporter=dot",
     "build": "tsc -p tsconfig.json",

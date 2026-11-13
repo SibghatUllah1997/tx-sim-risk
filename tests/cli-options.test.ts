@@ -8,7 +8,13 @@ import {
   isBlocklisted,
   loadAddressLists,
 } from '../src';
-import { flagValue, reportOptionsFromArgv } from '../src/cliOptions';
+import {
+  CLI_USAGE_LINES,
+  flagValue,
+  hasFlag,
+  isReservedArg,
+  reportOptionsFromArgv,
+} from '../src/cliOptions';
 import { generateJsonReport } from '../src/report';
 
 function word(hexNoPrefix: string): string {
@@ -32,6 +38,33 @@ describe('flagValue', () => {
     ).toBe('second.json');
     expect(flagValue(['--json'], ['--config'])).toBeUndefined();
     expect(flagValue(['--config'], ['--config'])).toBeUndefined();
+  });
+});
+
+describe('hasFlag and isReservedArg', () => {
+  it('matches bare boolean flags and ignores --name=value forms', () => {
+    expect(hasFlag(['--json', '0xab'], ['--json'])).toBe(true);
+    expect(hasFlag(['--json=true'], ['--json'])).toBe(false);
+    expect(hasFlag(['--help'], ['--help', '-h'])).toBe(true);
+    expect(hasFlag(['-V'], ['--version', '-V'])).toBe(true);
+    expect(hasFlag(['--schema'], ['--help'])).toBe(false);
+  });
+
+  it('treats known flags and their values as reserved so they are not calldata', () => {
+    const argv = ['--from', '0x' + '11'.repeat(20), '--json', '0xab'];
+    expect(isReservedArg(argv, 0)).toBe(true);
+    expect(isReservedArg(argv, 1)).toBe(true);
+    expect(isReservedArg(argv, 2)).toBe(true);
+    expect(isReservedArg(argv, 3)).toBe(false);
+    expect(isReservedArg(['--from=0xab'], 0)).toBe(true);
+  });
+});
+
+describe('CLI_USAGE_LINES', () => {
+  it('starts with the usage synopsis the e2e tests match', () => {
+    expect(CLI_USAGE_LINES[0]).toMatch(/^Usage: tx-sim-risk /);
+    expect(CLI_USAGE_LINES.join('\n')).toContain('--version');
+    expect(CLI_USAGE_LINES.join('\n')).toContain('--help');
   });
 });
 

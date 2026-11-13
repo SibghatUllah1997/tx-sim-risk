@@ -22,7 +22,14 @@ import {
 import { renderHtmlReport } from './html';
 import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
 import { isHexString } from './evm/hex';
-import { reportOptionsFromArgv } from './cliOptions';
+import {
+  CLI_USAGE_LINES,
+  hasFlag,
+  isReservedArg,
+  reportOptionsFromArgv,
+} from './cliOptions';
+import { classifyCliInput, isPayloadLike } from './payload';
+import { formatPackageIdentity } from './packageInfo';
 import { defaultReportSchemaPath } from './schema';
 import type { SolanaTxSkeleton } from './solana/skeleton';
 
@@ -40,28 +47,8 @@ function formatAbiValue(value: AbiArgValue): string {
     : String(value);
 }
 
-function printUsage(): void {
-  console.error(
-    'Usage: tx-sim-risk <hexData | solanaTx> | --data <payload> [--json | --html] [--from <addr>] [--config <lists.json>]'
-  );
-  console.error('       tx-sim-risk --schema');
-  console.error('Example: tx-sim-risk 0x095ea7b3....');
-}
-
-function isHexStringLike(input: string | null | undefined): input is string {
-  return !!input && input.trim().toLowerCase().startsWith('0x');
-}
-
-function isBase64Payload(input: string | null | undefined): input is string {
-  if (!input) return false;
-  const trimmed = input.trim();
-  return (
-    trimmed.length >= 64 && /^[A-Za-z0-9+/]+={0,2}$/.test(trimmed)
-  );
-}
-
-function isPayloadLike(input: string | null | undefined): input is string {
-  return isHexStringLike(input) || isBase64Payload(input);
+function printUsage(stream: NodeJS.WritableStream = process.stderr): void {
+  stream.write(`${CLI_USAGE_LINES.join('\n')}\n`);
 }
 
 function printSolanaSkeleton(skeleton: SolanaTxSkeleton): void {
@@ -87,34 +74,38 @@ async function readStdin(): Promise<string> {
   });
 }
 
-function hasJsonFlag(argv: string[]): boolean {
-  return argv.includes('--json');
-}
-
-function hasHtmlFlag(argv: string[]): boolean {
-  return argv.includes('--html');
-}
-
-function hasFeesFlag(argv: string[]): boolean {
-  return argv.includes('--fees');
-}
-
-function hasChainIdFlag(argv: string[]): boolean {
-  return argv.includes('--chainId') || argv.includes('--chainid');
-}
-
-function hasSchemaFlag(argv: string[]): boolean {
-  return argv.includes('--schema');
-}
-
 function printReportSchema(): void {
   process.stdout.write(readFileSync(defaultReportSchemaPath(), 'utf8'));
+}
+
+function payloadFromToken(token: string): string {
+  const classified = classifyCliInput(token);
+  if (classified.kind === 'invalid-hex') {
+    throw new Error('input is not valid hex');
+  }
+  if (classified.kind === 'hex' || classified.kind === 'base64') {
+    return classified.value;
+  }
+  throw new Error(
+    'input is not hex calldata, a raw transaction, or a Solana tx'
+  );
+}
+
+function tryPayloadFromToken(token: string | null | undefined): string | null {
+  const classified = classifyCliInput(token);
+  if (classified.kind === 'invalid-hex') {
+    throw new Error('input is not valid hex');
+  }
+  if (classified.kind === 'hex' || classified.kind === 'base64') {
+    return classified.value;
+  }
+  return null;
 }
 
 async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
   let dataArg: string | undefined;
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
+    const arg = argv[i]!;
     if (arg === '--data' && argv[i + 1]) {
       dataArg = argv[i + 1];
       break;
@@ -123,40 +114,21 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
       dataArg = arg.slice('--data='.length);
       break;
     }
-    if (
-      arg === '--json' ||
-      arg === '--html' ||
-      arg === '--fees' ||
-      arg === '--solana' ||
-      arg === '--schema'
-    )
-      continue;
-    if (arg === '--chainId' || arg === '--chainid') continue;
-    if (arg === '--from') {
-      i++; // skip the address value so it is not treated as calldata
-      continue;
-    }
-    if (arg.startsWith('--from=')) continue;
-    if (arg === '--config') {
-      i++; // skip the path value so it is not treated as calldata
-      continue;
-    }
-    if (arg.startsWith('--config=')) continue;
-    if (isPayloadLike(arg)) {
-      dataArg = arg;
+    if (isReservedArg(argv, i)) continue;
+    const payload = tryPayloadFromToken(arg);
+    if (payload) {
+      dataArg = payload;
       break;
     }
   }
 
-  if (isPayloadLike(dataArg)) {
-    return dataArg!;
+  if (dataArg != null) {
+    return payloadFromToken(dataArg);
   }
 
   if (!process.stdin.isTTY) {
     const fromStdin = (await readStdin()).trim();
-    if (isPayloadLike(fromStdin)) {
-      return fromStdin;
-    }
+    return tryPayloadFromToken(fromStdin);
   }
 
   return null;
@@ -164,16 +136,33 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
 
 async function main() {
   const argv = process.argv.slice(2);
-  if (hasSchemaFlag(argv)) {
+  if (hasFlag(argv, ['--help', '-h'])) {
+    printUsage(process.stdout);
+    process.exit(0);
+    return;
+  }
+  if (hasFlag(argv, ['--version', '-V'])) {
+    console.log(formatPackageIdentity());
+    process.exit(0);
+    return;
+  }
+  if (hasFlag(argv, ['--schema'])) {
     printReportSchema();
     process.exit(0);
     return;
   }
-  const data = await getHexFromArgsOrStdin(argv);
-  const wantJson = hasJsonFlag(argv);
-  const wantHtml = hasHtmlFlag(argv);
-  const wantFees = hasFeesFlag(argv);
-  const wantChainId = hasChainIdFlag(argv);
+  let data: string | null;
+  try {
+    data = await getHexFromArgsOrStdin(argv);
+  } catch (err) {
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+    return;
+  }
+  const wantJson = hasFlag(argv, ['--json']);
+  const wantHtml = hasFlag(argv, ['--html']);
+  const wantFees = hasFlag(argv, ['--fees']);
+  const wantChainId = hasFlag(argv, ['--chainId', '--chainid']);
   if (!isPayloadLike(data)) {
     printUsage();
     process.exit(1);
@@ -289,7 +278,6 @@ async function main() {
 
     const approve = decodeErc20Approve(effectiveData);
     if (approve) {
-      // Plain-text analysis output (JSON report arrives later in roadmap)
       console.log('Detected: ERC-20 approve(address,uint256)');
       console.log(`Spender: ${approve.spender}`);
       console.log(`Amount: ${approve.amount.toString()}`);
@@ -401,4 +389,3 @@ async function main() {
 }
 
 main();
-

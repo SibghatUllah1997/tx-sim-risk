@@ -51,6 +51,10 @@ node dist/cli.js --json <solanaTxBase64>
 
 # Print the JSON Schema for --json reports
 node dist/cli.js --schema
+
+# Usage and version (no payload needed)
+node dist/cli.js --help
+node dist/cli.js --version
 ```
 
 Worked examples

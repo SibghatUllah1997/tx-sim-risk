@@ -10,6 +10,7 @@ export * from './evm/phishing';
 export * from './evm/addressKind';
 export * from './evm/eip1559';
 export * from './evm/rawtx';
+export * from './evm/permit';
 export * from './risks';
 export * from './config';
 export * from './sim';

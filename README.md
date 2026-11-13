@@ -13,6 +13,7 @@ Why it matters:
 
 Features:
 - Decode ERC-20 approve, transfer, increaseAllowance, decreaseAllowance
+- Decode EIP-2612 and DAI-style `permit` signatures and flag unlimited permits (`unlimited_permit`)
 - Decode ERC-721 / ERC-1155 setApprovalForAll and flag operator grants
 - Flag unlimited approvals, burns to the zero address, phishing spenders, and grants to EOAs
 - Classify spenders/operators as EOA, contract, or unknown (bytecode or known-contract map)

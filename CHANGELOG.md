@@ -1,5 +1,7 @@
 ## 2026-11-13
 
+- Decode EIP-2612 `permit` and DAI-style `permit` calls into a new `erc20_permit` report (owner, spender, value, deadline/expiry, nonce, `allowed`). An unlimited permit (max uint256, or DAI `allowed = true`) raises the high-severity `unlimited_permit` risk, and the spender gets the same phishing, block-list, and EOA checks as `approve`.
+- The simulation records the permit's allowance against the signing owner rather than `--from`, since a relayer often submits someone else's permit. The JSON Schema and example dataset (now 23 cases) cover the new report.
 - Shared ABI word parsing and CLI payload checks so decoder errors stay consistent, and added `--help` / `--version`.
 - Plain-text analysis is built by a testable formatter; address checksums reuse the same hex helpers.
 - Marked Days 29–30 done and published v0.1.0 release notes.

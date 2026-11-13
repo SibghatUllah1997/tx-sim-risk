@@ -27,6 +27,20 @@ export function formatDetectedHeader(report: JsonReport): string[] {
         `Amount: ${report.payload.amount}`,
         `Unlimited approval: ${report.payload.isUnlimitedApproval ? 'yes' : 'no'}`,
       ];
+    case 'erc20_permit': {
+      const p = report.payload;
+      const lines = [
+        `Detected: ERC-20 ${p.variant === 'dai' ? 'DAI-style ' : 'EIP-2612 '}permit`,
+        `Owner: ${p.owner}`,
+        `Spender: ${p.spender}`,
+        `Value: ${p.value}`,
+        `${p.variant === 'dai' ? 'Expiry' : 'Deadline'}: ${p.deadline}${p.hasNoExpiry ? ' (never expires)' : ''}`,
+      ];
+      if (p.nonce != null) lines.push(`Nonce: ${p.nonce}`);
+      if (p.allowed != null) lines.push(`Allowed: ${p.allowed ? 'yes' : 'no'}`);
+      lines.push(`Unlimited permit: ${p.isUnlimitedPermit ? 'yes' : 'no'}`);
+      return lines;
+    }
     case 'erc20_transfer':
       return [
         'Detected: ERC-20 transfer(address,uint256)',

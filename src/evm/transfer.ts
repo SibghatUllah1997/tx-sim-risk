@@ -15,6 +15,10 @@ export type Erc20TransferDecoded = {
 const TRANSFER_SELECTOR = 'a9059cbb'; // keccak256('transfer(address,uint256)')[0..4]
 const TRANSFER_SIGNATURE = 'transfer(address,uint256)';
 
+/**
+ * Decode ERC-20 `transfer(address,uint256)`. Flags the zero address as a
+ * burn. Returns null when the selector does not match.
+ */
 export function decodeErc20Transfer(data: string): Erc20TransferDecoded | null {
   const words = matchSelectorWords(
     data,

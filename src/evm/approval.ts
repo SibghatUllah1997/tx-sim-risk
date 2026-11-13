@@ -15,6 +15,10 @@ export type Erc20ApproveDecoded = {
 const APPROVE_SELECTOR = '095ea7b3'; // keccak256('approve(address,uint256)')[0..4]
 const APPROVE_SIGNATURE = 'approve(address,uint256)';
 
+/**
+ * Decode ERC-20 `approve(address,uint256)`. Returns null when the selector
+ * does not match. Throws on invalid hex or a truncated argument section.
+ */
 export function decodeErc20Approve(data: string): Erc20ApproveDecoded | null {
   const words = matchSelectorWords(data, APPROVE_SELECTOR, 2, APPROVE_SIGNATURE);
   if (!words) return null;

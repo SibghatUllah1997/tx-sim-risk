@@ -1,12 +1,5 @@
 import { keccak_256 } from 'js-sha3';
-
-function stripHexPrefix(input: string): string {
-  return input.startsWith('0x') || input.startsWith('0X') ? input.slice(2) : input;
-}
-
-function isHex(input: string): boolean {
-  return /^[0-9a-fA-F]+$/.test(input);
-}
+import { isHexChars, stripHexPrefix } from './hex';
 
 /**
  * Returns true when the string is a 20-byte hex address (40 hex chars) with or without 0x.
@@ -14,7 +7,7 @@ function isHex(input: string): boolean {
  */
 export function isAddressHexLike(address: string): boolean {
   const hex = stripHexPrefix(address);
-  return hex.length === 40 && isHex(hex);
+  return hex.length === 40 && isHexChars(hex);
 }
 
 /**
@@ -24,7 +17,7 @@ export function isAddressHexLike(address: string): boolean {
  */
 export function toChecksumAddress(address: string): string {
   const raw = stripHexPrefix(address);
-  if (raw.length !== 40 || !isHex(raw)) {
+  if (raw.length !== 40 || !isHexChars(raw)) {
     throw new Error('Invalid address format');
   }
   const lower = raw.toLowerCase();
@@ -73,4 +66,3 @@ export function isValidAddress(address: string): boolean {
   if (isValidChecksumAddress(address)) return true;
   return without === without.toLowerCase() || without === without.toUpperCase();
 }
-

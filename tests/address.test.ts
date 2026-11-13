@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   isAddressHexLike,
+  isHexChars,
   isValidAddress,
   isValidChecksumAddress,
+  stripHexPrefix,
   toChecksumAddress,
-} from '../src/evm/address';
+} from '../src';
 
 describe('EIP-55 address utilities', () => {
   it('validates basic hex shape', () => {
@@ -35,6 +37,13 @@ describe('EIP-55 address utilities', () => {
   it('rejects malformed inputs', () => {
     expect(() => toChecksumAddress('0x' + '1'.repeat(39))).toThrow(/invalid address/i);
     expect(isValidAddress('0x' + 'z'.repeat(40))).toBe(false);
+  });
+
+  it('reuses shared hex helpers for prefix stripping and digit checks', () => {
+    expect(stripHexPrefix('0X' + 'ab'.repeat(20))).toBe('ab'.repeat(20));
+    expect(isHexChars('aF0')).toBe(true);
+    expect(isAddressHexLike('ab'.repeat(20))).toBe(true);
+    expect(isAddressHexLike('0X' + 'ab'.repeat(20))).toBe(true);
   });
 });
 

@@ -34,6 +34,7 @@ function decodeAllowancePair(
   };
 }
 
+/** Decode ERC-20 `increaseAllowance(address,uint256)`, or null. */
 export function decodeErc20IncreaseAllowance(
   data: string
 ): Erc20IncreaseAllowanceDecoded | null {
@@ -46,6 +47,7 @@ export function decodeErc20IncreaseAllowance(
   return { method: 'erc20_increaseAllowance', ...decoded };
 }
 
+/** Decode ERC-20 `decreaseAllowance(address,uint256)`, or null. */
 export function decodeErc20DecreaseAllowance(
   data: string
 ): Erc20DecreaseAllowanceDecoded | null {

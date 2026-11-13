@@ -99,7 +99,7 @@ Sample HTML gallery
 - Pushes to `main` deploy that gallery with GitHub Pages (see `.github/workflows/pages.yml`)
 
 Example dataset
-- `examples/dataset/cases.json` holds 19 labelled inputs (ERC-20, NFT, raw EVM txs, Solana) with the report type, risks, and severity each should produce
+- `examples/dataset/cases.json` holds 23 labelled inputs (ERC-20 incl. permits, NFT, raw EVM txs, Solana) with the report type, risks, and severity each should produce
 - Every case maps to CLI flags, e.g. `node dist/cli.js <input> --config examples/risk-lists.json --json`
 - `npm run dataset` rebuilds the file from `src/datasetCases.ts` and checks every case; tests fail if the file and the builder drift
 - Use it as a regression corpus or to compare another decoder: `checkDatasetFile('examples/dataset/cases.json')`

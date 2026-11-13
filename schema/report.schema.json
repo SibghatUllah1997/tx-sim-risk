@@ -5,6 +5,7 @@
   "description": "Shape of JSON printed by --json and returned by generateJsonReportFromAny. The unknown variant is the CLI fallback when no decoder claims the input.",
   "oneOf": [
     { "$ref": "#/$defs/erc20ApproveReport" },
+    { "$ref": "#/$defs/erc20PermitReport" },
     { "$ref": "#/$defs/erc20TransferReport" },
     { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },
     { "$ref": "#/$defs/erc20DecreaseAllowanceReport" },
@@ -154,6 +155,39 @@
         "spender": { "$ref": "#/$defs/evmAddress" },
         "amount": { "$ref": "#/$defs/unsignedDecimalString" },
         "isUnlimitedApproval": { "type": "boolean" },
+        "spenderKind": { "$ref": "#/$defs/addressKind" }
+      }
+    },
+    "erc20PermitPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variant",
+        "owner",
+        "spender",
+        "value",
+        "deadline",
+        "nonce",
+        "allowed",
+        "isUnlimitedPermit",
+        "hasNoExpiry",
+        "spenderKind"
+      ],
+      "properties": {
+        "variant": { "type": "string", "enum": ["eip2612", "dai"] },
+        "owner": { "$ref": "#/$defs/evmAddress" },
+        "spender": { "$ref": "#/$defs/evmAddress" },
+        "value": { "$ref": "#/$defs/unsignedDecimalString" },
+        "deadline": { "$ref": "#/$defs/unsignedDecimalString" },
+        "nonce": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "allowed": { "type": ["boolean", "null"] },
+        "isUnlimitedPermit": { "type": "boolean" },
+        "hasNoExpiry": { "type": "boolean" },
         "spenderKind": { "$ref": "#/$defs/addressKind" }
       }
     },
@@ -435,6 +469,20 @@
           "properties": {
             "type": { "const": "erc20_approve" },
             "payload": { "$ref": "#/$defs/erc20ApprovePayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
+    "erc20PermitReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "erc20_permit" },
+            "payload": { "$ref": "#/$defs/erc20PermitPayload" }
           },
           "required": ["type", "payload"]
         }

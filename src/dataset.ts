@@ -45,6 +45,7 @@ const CHAINS: readonly DatasetChain[] = ['evm', 'solana'];
 const SEVERITIES: readonly RiskSeverity[] = ['info', 'warn', 'high'];
 const REPORT_TYPES: readonly JsonReport['type'][] = [
   'erc20_approve',
+  'erc20_permit',
   'erc20_transfer',
   'erc20_increaseAllowance',
   'erc20_decreaseAllowance',

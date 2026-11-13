@@ -5,13 +5,11 @@ import {
 } from './evm/allowance';
 import { decodeErc20Approve } from './evm/approval';
 import { decodeErc721SetApprovalForAll } from './evm/erc721';
-import { stripHexPrefix } from './evm/hex';
+import { MAX_UINT256, stripHexPrefix } from './evm/hex';
 import { decodeErc20Transfer } from './evm/transfer';
 
 /** Placeholder owner/sender when {@link SimOptions.from} is omitted. */
 export const CALLER_ACCOUNT = 'caller';
-
-const MAX_UINT256 = (1n << 256n) - 1n;
 
 export type SimOptions = {
   /** Transaction sender / token holder. Defaults to {@link CALLER_ACCOUNT}. */

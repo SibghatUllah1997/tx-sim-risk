@@ -33,6 +33,12 @@ describe('ERC-20 transfer decoder', () => {
     expect(() => decodeErc20Transfer('0xzzzz')).toThrowError(/invalid hex/i);
   });
 
+  it('throws when the transfer selector is present but arguments are truncated', () => {
+    expect(() => decodeErc20Transfer('0xa9059cbb' + '00'.repeat(20))).toThrowError(
+      /data too short for transfer/i
+    );
+  });
+
   it('flags transfer to zero address as a burn risk', () => {
     const selector = 'a9059cbb';
     const zero = '0'.repeat(40);

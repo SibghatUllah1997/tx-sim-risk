@@ -47,5 +47,11 @@ describe('ERC-20 approve decoder', () => {
   it('throws on invalid hex', () => {
     expect(() => decodeErc20Approve('0xzzzz')).toThrowError(/invalid hex/i);
   });
+
+  it('throws when the approve selector is present but arguments are truncated', () => {
+    expect(() => decodeErc20Approve('0x095ea7b3' + '00'.repeat(20))).toThrowError(
+      /data too short for approve/i
+    );
+  });
 });
 

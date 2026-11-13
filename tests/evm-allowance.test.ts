@@ -61,5 +61,14 @@ describe('ERC-20 increase/decrease allowance decoders', () => {
       /invalid hex/i
     );
   });
+
+  it('throws when a matching selector has truncated arguments', () => {
+    expect(() =>
+      decodeErc20IncreaseAllowance('0x39509351' + '00'.repeat(20))
+    ).toThrowError(/data too short for increaseAllowance/i);
+    expect(() =>
+      decodeErc20DecreaseAllowance('0xa457c2d7' + '00'.repeat(20))
+    ).toThrowError(/data too short for decreaseAllowance/i);
+  });
 });
 

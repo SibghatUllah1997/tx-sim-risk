@@ -7,6 +7,7 @@ import {
   ERC721_APPROVE_ALL_RISK,
   KNOWN_RISK_IDS,
   UNLIMITED_PERMIT_RISK,
+  PERMIT2_NO_EXPIRY_RISK,
   PHISHING_SPENDER_RISK,
   RISK_REASONS,
   RISK_SEVERITIES,
@@ -34,6 +35,7 @@ describe('risk reason catalog', () => {
         SOLANA_ATA_MISMATCH_RISK,
         SOLANA_SUSPICIOUS_CPI_RISK,
         UNLIMITED_PERMIT_RISK,
+        PERMIT2_NO_EXPIRY_RISK,
       ].sort()
     );
     expect(new Set(KNOWN_RISK_IDS).size).toBe(KNOWN_RISK_IDS.length);

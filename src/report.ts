@@ -3,8 +3,17 @@ import { decodeErc20Transfer } from './evm/transfer';
 import {
   decodeErc20Permit,
   unlimitedPermitRisks,
+  UNLIMITED_PERMIT_RISK,
   type PermitVariant,
 } from './evm/permit';
+import {
+  decodePermit2,
+  permit2ExpiryRisks,
+  permit2UnlimitedApproval,
+  permit2UnlimitedPermit,
+  type Permit2Decoded,
+  type Permit2Variant,
+} from './evm/permit2';
 import {
   decodeErc20IncreaseAllowance,
   decodeErc20DecreaseAllowance,
@@ -163,6 +172,30 @@ export type JsonReport =
       };
     })
   | (ReportMeta & {
+      type: 'permit2';
+      payload: {
+        variant: Permit2Variant;
+        owner: string | null;
+        spender: string | null;
+        token: string;
+        amount: string;
+        expiration: string | null;
+        deadline: string | null;
+        nonce: string | null;
+        to: string | null;
+        requestedAmount: string | null;
+        allowances: {
+          token: string;
+          amount: string;
+          expiration: string;
+          nonce: string | null;
+        }[];
+        isUnlimited: boolean;
+        hasNoExpiry: boolean;
+        spenderKind: AddressKind | null;
+      };
+    })
+  | (ReportMeta & {
       type: 'erc20_transfer';
       payload: {
         to: string;
@@ -240,6 +273,66 @@ function reportMeta(
   };
 }
 
+function stringifyNullable(value: bigint | null): string | null {
+  return value == null ? null : value.toString();
+}
+
+function permit2GrantsValue(decoded: Permit2Decoded): boolean {
+  if (decoded.isUnlimited || decoded.amount > 0n) return true;
+  if ((decoded.requestedAmount ?? 0n) > 0n) return true;
+  return decoded.allowances.some((item) => item.amount > 0n);
+}
+
+function permit2Risks(
+  decoded: Permit2Decoded,
+  options?: ReportOptions
+): string[] {
+  const risks: string[] = [];
+  if (permit2UnlimitedApproval(decoded)) risks.push(UNLIMITED_APPROVAL_RISK);
+  if (permit2UnlimitedPermit(decoded)) risks.push(UNLIMITED_PERMIT_RISK);
+  risks.push(...permit2ExpiryRisks(decoded));
+  if (decoded.spender) {
+    risks.push(
+      ...approvalGrantRisks(decoded.spender, permit2GrantsValue(decoded), options)
+    );
+  } else if (decoded.to && permit2GrantsValue(decoded)) {
+    risks.push(
+      ...blocklistedSpenderRisks(decoded.to, options?.lists),
+      ...phishingSpenderRisks(decoded.to, options?.phishingIndex)
+    );
+  }
+  return risks;
+}
+
+function permit2Payload(
+  decoded: Permit2Decoded,
+  options?: ReportOptions
+): Extract<JsonReport, { type: 'permit2' }>['payload'] {
+  return {
+    variant: decoded.variant,
+    owner: decoded.owner,
+    spender: decoded.spender,
+    token: decoded.token,
+    amount: decoded.amount.toString(),
+    expiration: stringifyNullable(decoded.expiration),
+    deadline: stringifyNullable(decoded.deadline),
+    nonce: stringifyNullable(decoded.nonce),
+    to: decoded.to,
+    requestedAmount: stringifyNullable(decoded.requestedAmount),
+    allowances: decoded.allowances.map((item) => ({
+      token: item.token,
+      amount: item.amount.toString(),
+      expiration: item.expiration.toString(),
+      nonce: stringifyNullable(item.nonce),
+    })),
+    isUnlimited: decoded.isUnlimited,
+    hasNoExpiry: decoded.hasNoExpiry,
+    spenderKind: decoded.spender
+      ? spenderKindFor(decoded.spender, options)
+      : null,
+  };
+}
+
 export function generateJsonReport(
   data: string,
   options?: ReportOptions
@@ -289,6 +382,15 @@ export function generateJsonReport(
         data,
         options
       ),
+    };
+  }
+
+  const permit2 = decodePermit2(data);
+  if (permit2) {
+    return {
+      type: 'permit2',
+      payload: permit2Payload(permit2, options),
+      ...reportMeta(permit2Risks(permit2, options), data, options),
     };
   }
 
@@ -453,6 +555,11 @@ export function formatReportFooter(report: JsonReport): string[] {
     case 'erc20_increaseAllowance':
     case 'erc20_decreaseAllowance':
       lines.push(`Spender kind: ${report.payload.spenderKind}`);
+      break;
+    case 'permit2':
+      if (report.payload.spenderKind) {
+        lines.push(`Spender kind: ${report.payload.spenderKind}`);
+      }
       break;
     case 'nft_setApprovalForAll':
       lines.push(`Operator kind: ${report.payload.operatorKind}`);

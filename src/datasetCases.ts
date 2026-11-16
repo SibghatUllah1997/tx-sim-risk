@@ -74,6 +74,59 @@ function daiPermit(spender: string, allowed: boolean): Hex {
   });
 }
 
+const TOKEN: Hex = `0x${'cc'.repeat(20)}`;
+const MAX_UINT160 = (1n << 160n) - 1n;
+const MAX_UINT48 = (1n << 48n) - 1n;
+const PERMIT2_SIG: Hex = `0x${'ab'.repeat(65)}`;
+const PERMIT2_EXPIRY = 1_900_000_000n;
+
+const PERMIT2_APPROVE_ABI = parseAbi([
+  'function approve(address token, address spender, uint160 amount, uint48 expiration)',
+]);
+const PERMIT2_PERMIT_ABI = parseAbi([
+  'function permit(address owner, ((address token, uint160 amount, uint48 expiration, uint48 nonce) details, address spender, uint256 sigDeadline) permitSingle, bytes signature)',
+]);
+const PERMIT2_TRANSFER_ABI = parseAbi([
+  'function permitTransferFrom(((address token, uint256 amount) permitted, uint256 nonce, uint256 deadline) permit, (address to, uint256 requestedAmount) transferDetails, address owner, bytes signature)',
+]);
+
+function permit2Approve(spender: string, amount: bigint, expiration: bigint): Hex {
+  return encodeFunctionData({
+    abi: PERMIT2_APPROVE_ABI,
+    functionName: 'approve',
+    args: [TOKEN, `0x${spender}`, amount, Number(expiration)],
+  });
+}
+
+function permit2Permit(spender: string, amount: bigint, expiration: bigint): Hex {
+  return encodeFunctionData({
+    abi: PERMIT2_PERMIT_ABI,
+    functionName: 'permit',
+    args: [
+      SENDER,
+      {
+        details: { token: TOKEN, amount, expiration: Number(expiration), nonce: 1 },
+        spender: `0x${spender}`,
+        sigDeadline: PERMIT2_EXPIRY,
+      },
+      PERMIT2_SIG,
+    ],
+  });
+}
+
+function permit2TransferFrom(to: string, amount: bigint): Hex {
+  return encodeFunctionData({
+    abi: PERMIT2_TRANSFER_ABI,
+    functionName: 'permitTransferFrom',
+    args: [
+      { permitted: { token: TOKEN, amount }, nonce: 1n, deadline: PERMIT2_EXPIRY },
+      { to: `0x${to}`, requestedAmount: amount },
+      SENDER,
+      PERMIT2_SIG,
+    ],
+  });
+}
+
 const TRANSFER_FROM_ABI = parseAbi([
   'function transferFrom(address from, address to, uint256 value)',
 ]);
@@ -234,6 +287,18 @@ export function buildExampleDataset(): Dataset {
     evm('dai-permit-revoke', 'DAI-style permit(allowed=false), which revokes the allowance.',
       daiPermit(PHISHING_DRAINER, false),
       { type: 'erc20_permit', risks: [], severity: 'info' }),
+    evm('permit2-unlimited-approve', 'Permit2 approve() for type(uint160).max that never expires.',
+      permit2Approve(ROUTER, MAX_UINT160, MAX_UINT48),
+      { type: 'permit2', risks: ['unlimited_approval', 'permit2_no_expiry'], severity: 'high' }),
+    evm('permit2-phishing-permit', 'Finite Permit2 permit() to a spender on the phishing seed list.',
+      permit2Permit(PHISHING_DRAINER, 100n, PERMIT2_EXPIRY),
+      { type: 'permit2', risks: ['phishing_spender'], severity: 'high' }),
+    evm('permit2-transfer-from', 'Permit2 permitTransferFrom() of 80 units to a named recipient.',
+      permit2TransferFrom(RECIPIENT, 80n),
+      { type: 'permit2', risks: [], severity: 'info' }),
+    evm('permit2-phishing-transfer', 'Permit2 permitTransferFrom() to a phishing-listed recipient.',
+      permit2TransferFrom(PHISHING_DRAINER, 80n),
+      { type: 'permit2', risks: ['phishing_spender'], severity: 'high' }),
     evm('erc20-plain-transfer', 'transfer() of 255 units from a named sender.',
       transfer(RECIPIENT, 'ff'),
       { type: 'erc20_transfer', risks: [], severity: 'info' },

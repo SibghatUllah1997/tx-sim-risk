@@ -41,6 +41,32 @@ export function formatDetectedHeader(report: JsonReport): string[] {
       lines.push(`Unlimited permit: ${p.isUnlimitedPermit ? 'yes' : 'no'}`);
       return lines;
     }
+    case 'permit2': {
+      const p = report.payload;
+      const labels: Record<typeof p.variant, string> = {
+        approve: 'Permit2 approve',
+        permit: 'Permit2 permit',
+        permit_batch: 'Permit2 permit (batch)',
+        permit_transfer_from: 'Permit2 permitTransferFrom',
+      };
+      const lines = [`Detected: ${labels[p.variant]}`, `Token: ${p.token}`];
+      if (p.owner) lines.push(`Owner: ${p.owner}`);
+      if (p.spender) lines.push(`Spender: ${p.spender}`);
+      if (p.to) lines.push(`To: ${p.to}`);
+      lines.push(`Amount: ${p.amount}`);
+      if (p.requestedAmount != null) {
+        lines.push(`Requested amount: ${p.requestedAmount}`);
+      }
+      if (p.expiration != null) lines.push(`Expiration: ${p.expiration}`);
+      if (p.deadline != null) lines.push(`Deadline: ${p.deadline}`);
+      if (p.nonce != null) lines.push(`Nonce: ${p.nonce}`);
+      if (p.variant === 'permit_batch') {
+        lines.push(`Entries: ${p.allowances.length}`);
+      }
+      lines.push(`Never expires: ${p.hasNoExpiry ? 'yes' : 'no'}`);
+      lines.push(`Unlimited: ${p.isUnlimited ? 'yes' : 'no'}`);
+      return lines;
+    }
     case 'erc20_transfer':
       return [
         'Detected: ERC-20 transfer(address,uint256)',

@@ -3,6 +3,7 @@ import { APPROVAL_TO_EOA_RISK } from './evm/addressKind';
 import { ERC1155_APPROVE_ALL_RISK } from './evm/erc1155';
 import { ERC721_APPROVE_ALL_RISK } from './evm/erc721';
 import { UNLIMITED_PERMIT_RISK } from './evm/permit';
+import { PERMIT2_NO_EXPIRY_RISK } from './evm/permit2';
 import { PHISHING_SPENDER_RISK } from './evm/phishing';
 import { SOLANA_ATA_MISMATCH_RISK } from './solana/ata';
 import { SOLANA_SUSPICIOUS_CPI_RISK } from './solana/cpi';
@@ -24,6 +25,7 @@ export const KNOWN_RISK_IDS = [
   SOLANA_ATA_MISMATCH_RISK,
   SOLANA_SUSPICIOUS_CPI_RISK,
   UNLIMITED_PERMIT_RISK,
+  PERMIT2_NO_EXPIRY_RISK,
 ] as const;
 
 export type KnownRiskId = (typeof KNOWN_RISK_IDS)[number];
@@ -66,6 +68,7 @@ export const RISK_SEVERITIES: Readonly<Record<KnownRiskId, RiskSeverity>> =
     [SOLANA_ATA_MISMATCH_RISK]: 'warn',
     [SOLANA_SUSPICIOUS_CPI_RISK]: 'high',
     [UNLIMITED_PERMIT_RISK]: 'high',
+    [PERMIT2_NO_EXPIRY_RISK]: 'warn',
   });
 
 /**
@@ -115,6 +118,8 @@ export const RISK_REASONS: Readonly<Record<KnownRiskId, string>> = Object.freeze
     'The transaction invokes, or can cross-program-invoke into, a program on the built-in list of known-bad Solana program ids.',
   [UNLIMITED_PERMIT_RISK]:
     "A signed permit grants the spender the maximum allowance, so anyone holding the signature can let it move the owner's entire token balance.",
+  [PERMIT2_NO_EXPIRY_RISK]:
+    'The Permit2 allowance or signature deadline never expires, so a granted spender can keep using it until it is revoked.',
 });
 
 export function isKnownRiskId(id: string): id is KnownRiskId {

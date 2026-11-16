@@ -11,6 +11,7 @@ export * from './evm/addressKind';
 export * from './evm/eip1559';
 export * from './evm/rawtx';
 export * from './evm/permit';
+export * from './evm/permit2';
 export * from './risks';
 export * from './config';
 export * from './sim';

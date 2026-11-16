@@ -6,6 +6,7 @@ import {
 import { decodeErc20Approve } from './evm/approval';
 import { decodeErc721SetApprovalForAll } from './evm/erc721';
 import { decodeErc20Permit } from './evm/permit';
+import { decodePermit2 } from './evm/permit2';
 import { MAX_UINT256, stripHexPrefix } from './evm/hex';
 import { decodeErc20Transfer } from './evm/transfer';
 
@@ -133,6 +134,42 @@ export function simulateCalldata(
         'Permit sets the allowance from an off-chain signature; the token rejects it if the signature, nonce, or deadline is invalid.',
       ],
     });
+  }
+
+  const permit2 = decodePermit2(data);
+  if (permit2) {
+    if (permit2.variant === 'permit_transfer_from' && permit2.to && permit2.owner) {
+      const pull = permit2.requestedAmount ?? permit2.amount;
+      return snapshot({
+        balances: [
+          { account: permit2.owner, delta: (-pull).toString() },
+          { account: permit2.to, delta: pull.toString() },
+        ],
+        notes: [
+          'Permit2 permitTransferFrom moves tokens from the signing owner to the recipient if the signature is valid.',
+        ],
+      });
+    }
+    if (permit2.spender) {
+      const value = permit2.amount;
+      const allowanceOwner = permit2.owner ?? owner;
+      const delta = current != null ? value - current : null;
+      return snapshot({
+        allowances: [
+          {
+            owner: allowanceOwner,
+            spender: permit2.spender,
+            mode: 'set',
+            delta: delta != null ? delta.toString() : null,
+            newValue: value.toString(),
+            wouldRevert: false,
+          },
+        ],
+        notes: [
+          'Permit2 records the allowance on its own contract. The token must already be approved to Permit2 for a later transfer to succeed.',
+        ],
+      });
+    }
   }
 
   const transfer = decodeErc20Transfer(data);

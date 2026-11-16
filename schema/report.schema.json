@@ -6,6 +6,7 @@
   "oneOf": [
     { "$ref": "#/$defs/erc20ApproveReport" },
     { "$ref": "#/$defs/erc20PermitReport" },
+    { "$ref": "#/$defs/permit2Report" },
     { "$ref": "#/$defs/erc20TransferReport" },
     { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },
     { "$ref": "#/$defs/erc20DecreaseAllowanceReport" },
@@ -189,6 +190,101 @@
         "isUnlimitedPermit": { "type": "boolean" },
         "hasNoExpiry": { "type": "boolean" },
         "spenderKind": { "$ref": "#/$defs/addressKind" }
+      }
+    },
+    "permit2Allowance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["token", "amount", "expiration", "nonce"],
+      "properties": {
+        "token": { "$ref": "#/$defs/evmAddress" },
+        "amount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "expiration": { "$ref": "#/$defs/unsignedDecimalString" },
+        "nonce": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "permit2Payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variant",
+        "owner",
+        "spender",
+        "token",
+        "amount",
+        "expiration",
+        "deadline",
+        "nonce",
+        "to",
+        "requestedAmount",
+        "allowances",
+        "isUnlimited",
+        "hasNoExpiry",
+        "spenderKind"
+      ],
+      "properties": {
+        "variant": { "type": "string", "enum": ["approve", "permit", "permit_batch", "permit_transfer_from"] },
+        "owner": {
+          "anyOf": [
+            { "$ref": "#/$defs/evmAddress" },
+            { "type": "null" }
+          ]
+        },
+        "spender": {
+          "anyOf": [
+            { "$ref": "#/$defs/evmAddress" },
+            { "type": "null" }
+          ]
+        },
+        "token": { "$ref": "#/$defs/evmAddress" },
+        "amount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "expiration": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "deadline": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "nonce": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "to": {
+          "anyOf": [
+            { "$ref": "#/$defs/evmAddress" },
+            { "type": "null" }
+          ]
+        },
+        "requestedAmount": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "allowances": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/permit2Allowance" }
+        },
+        "isUnlimited": { "type": "boolean" },
+        "hasNoExpiry": { "type": "boolean" },
+        "spenderKind": {
+          "anyOf": [
+            { "$ref": "#/$defs/addressKind" },
+            { "type": "null" }
+          ]
+        }
       }
     },
     "erc20TransferPayload": {
@@ -483,6 +579,20 @@
           "properties": {
             "type": { "const": "erc20_permit" },
             "payload": { "$ref": "#/$defs/erc20PermitPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
+    "permit2Report": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "permit2" },
+            "payload": { "$ref": "#/$defs/permit2Payload" }
           },
           "required": ["type", "payload"]
         }

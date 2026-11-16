@@ -1,3 +1,9 @@
+## 2026-11-16
+
+- Decode Uniswap Permit2 `approve`, `permit` (single and batch), and `permitTransferFrom` into a `permit2` report. Unlimited amounts (`type(uint160).max` or `type(uint256).max`) reuse the existing high-severity allowance/permit risks, and a never-expiring grant (`type(uint48).max` or a max deadline) adds the new `permit2_no_expiry` warning. Spenders, and transfer recipients, get the same phishing, block-list, and EOA checks as `approve`.
+- The simulation records a Permit2 allowance against the signing owner (or the submitter for on-chain `approve`) and treats `permitTransferFrom` as a pull from the owner to the recipient. The JSON Schema and example dataset (now 27 cases) cover the new report.
+- Expiration `0` is not treated as open-ended: Permit2 expires that allowance at the current block.
+
 ## 2026-11-13
 
 - Decode EIP-2612 `permit` and DAI-style `permit` calls into a new `erc20_permit` report (owner, spender, value, deadline/expiry, nonce, `allowed`). An unlimited permit (max uint256, or DAI `allowed = true`) raises the high-severity `unlimited_permit` risk, and the spender gets the same phishing, block-list, and EOA checks as `approve`.

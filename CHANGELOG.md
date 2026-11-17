@@ -2,7 +2,9 @@
 
 - Decode router `multicall(bytes[])` (plus the deadline and previous-block-hash variants) and Multicall3 `aggregate`, `tryAggregate`, `aggregate3`, `aggregate3Value`, `blockAndAggregate`, and `tryBlockAndAggregate` into a new `multicall` report. Each inner call carries its own nested report, and inner risks roll up to the batch.
 - New warnings: `multicall_batched_grant` when an approval, permit, or operator grant sits inside a batch, and `multicall_depth_limit` when batches nest deeper than four levels. Batches over 256 calls are rejected.
-- Multicall3 inner calls are simulated against the Multicall3 contract (it is `msg.sender` there); router multicall keeps the signer. The JSON Schema and example dataset (now 29 cases) cover the new report.
+- Multicall3 inner calls are simulated against the Multicall3 contract (it is `msg.sender` there); router multicall keeps the signer. The JSON Schema and example dataset cover the new report.
+- Parse ERC-4337 EntryPoint `handleOps` (v0.6 and packed v0.7), unwrap account `execute` / `executeBatch`, and flag a paymaster (`erc4337_paymaster`) or a hidden allowance grant in `callData` (`erc4337_calldata_approval`).
+- Parse EIP-7702 type-4 authorization lists and flag a delegate designation (`eip7702_delegation`) or an any-chain `chain_id = 0` grant (`eip7702_broad_delegate`). The example dataset now has 33 cases.
 
 ## 2026-11-16
 

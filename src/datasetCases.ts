@@ -147,6 +147,76 @@ function multicall3(calls: Hex[]): Hex {
 const TRANSFER_FROM_ABI = parseAbi([
   'function transferFrom(address from, address to, uint256 value)',
 ]);
+const EXECUTE_ABI = parseAbi([
+  'function execute(address dest, uint256 value, bytes func)',
+]);
+const HANDLE_OPS_V06_ABI = parseAbi([
+  'function handleOps((address sender, uint256 nonce, bytes initCode, bytes callData, uint256 callGasLimit, uint256 verificationGasLimit, uint256 preVerificationGas, uint256 maxFeePerGas, uint256 maxPriorityFeePerGas, bytes paymasterAndData, bytes signature)[] ops, address beneficiary)',
+]);
+
+const BENEFICIARY: Hex = `0x${'22'.repeat(20)}`;
+const PAYMASTER: Hex = `0x${'33'.repeat(20)}`;
+const DELEGATE: Hex = `0x${'aa'.repeat(20)}`;
+const USEROP_SIGNATURE: Hex = `0x${'ab'.repeat(65)}`;
+const AUTH_R: Hex = `0x${'11'.repeat(32)}`;
+const AUTH_S: Hex = `0x${'22'.repeat(32)}`;
+
+function execute(dest: Hex, func: Hex): Hex {
+  return encodeFunctionData({
+    abi: EXECUTE_ABI,
+    functionName: 'execute',
+    args: [dest, 0n, func],
+  });
+}
+
+function handleOpsV06(callData: Hex, paymasterAndData: Hex = '0x'): Hex {
+  return encodeFunctionData({
+    abi: HANDLE_OPS_V06_ABI,
+    functionName: 'handleOps',
+    args: [
+      [
+        {
+          sender: SENDER,
+          nonce: 1n,
+          initCode: '0x',
+          callData,
+          callGasLimit: 80_000n,
+          verificationGasLimit: 90_000n,
+          preVerificationGas: 21_000n,
+          maxFeePerGas: 30n,
+          maxPriorityFeePerGas: 2n,
+          paymasterAndData,
+          signature: USEROP_SIGNATURE,
+        },
+      ],
+      BENEFICIARY,
+    ],
+  });
+}
+
+function eip7702Tx(chainId: number, delegate: Hex): Hex {
+  return serializeTransaction({
+    type: 'eip7702',
+    chainId: 1,
+    nonce: 4,
+    maxPriorityFeePerGas: 1n,
+    maxFeePerGas: 2n,
+    gas: 50_000n,
+    to: TX_TARGET,
+    value: 0n,
+    data: '0x',
+    authorizationList: [
+      {
+        chainId,
+        address: delegate,
+        nonce: 0,
+        r: AUTH_R,
+        s: AUTH_S,
+        yParity: 1,
+      },
+    ],
+  });
+}
 
 function eip1559Tx(data: Hex, chainId: number): Hex {
   return serializeTransaction({
@@ -323,6 +393,18 @@ export function buildExampleDataset(): Dataset {
     evm('multicall3-plain-transfers', 'Multicall3 aggregate3() with two plain transfers and no grants.',
       multicall3([transfer(RECIPIENT, '1'), transfer(RECIPIENT, '2')]),
       { type: 'multicall', risks: [], severity: 'info' }),
+    evm('erc4337-calldata-approve', 'EntryPoint handleOps whose execute() callData is an unlimited approve.',
+      handleOpsV06(execute(TOKEN, approve(ROUTER, MAX_UINT))),
+      { type: 'erc4337_userop', risks: ['erc4337_calldata_approval', 'unlimited_approval'], severity: 'high' }),
+    evm('erc4337-paymaster', 'EntryPoint handleOps with a paymaster and a plain token transfer.',
+      handleOpsV06(execute(TOKEN, transfer(RECIPIENT, '50')), PAYMASTER),
+      { type: 'erc4337_userop', risks: ['erc4337_paymaster'], severity: 'warn' }),
+    evm('eip7702-delegation', 'Type-4 transaction designating a contract on chain 1.',
+      eip7702Tx(1, DELEGATE),
+      { type: 'eip7702', risks: ['eip7702_delegation'], severity: 'high' }),
+    evm('eip7702-broad-delegate', 'Type-4 transaction with chain_id 0, valid on every chain.',
+      eip7702Tx(0, DELEGATE),
+      { type: 'eip7702', risks: ['eip7702_delegation', 'eip7702_broad_delegate'], severity: 'high' }),
     evm('erc20-plain-transfer', 'transfer() of 255 units from a named sender.',
       transfer(RECIPIENT, 'ff'),
       { type: 'erc20_transfer', risks: [], severity: 'info' },

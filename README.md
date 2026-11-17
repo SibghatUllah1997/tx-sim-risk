@@ -16,6 +16,8 @@ Features:
 - Decode EIP-2612 and DAI-style `permit` signatures and flag unlimited permits (`unlimited_permit`)
 - Decode Uniswap Permit2 `approve` / `permit` / `permitTransferFrom`, and flag unlimited or never-expiring grants (`permit2_no_expiry`)
 - Split router `multicall` and Multicall3 `aggregate*` batches, run every inner call through the same rules, and flag grants hidden inside a batch (`multicall_batched_grant`)
+- Parse ERC-4337 `handleOps` UserOperations, unwrap account `execute`, and flag a paymaster or a callData approval
+- Parse EIP-7702 type-4 authorization lists and flag delegate designations, including any-chain (`chain_id = 0`) grants
 - Decode ERC-721 / ERC-1155 setApprovalForAll and flag operator grants
 - Flag unlimited approvals, burns to the zero address, phishing spenders, and grants to EOAs
 - Classify spenders/operators as EOA, contract, or unknown (bytecode or known-contract map)
@@ -24,7 +26,7 @@ Features:
 - info/warn/high severity on each risk and on the report as a whole
 - Offline simulation stub for token-balance and allowance deltas (`--from` names the sender)
 - JSON report mode for downstream tooling
-- Parse EIP-1559 fee fields and chainId from raw transactions (legacy and type-2)
+- Parse EIP-1559 fee fields and chainId from raw transactions (legacy, type-2, and type-4)
 - Parse Solana legacy and v0 transaction skeletons (hex or base64)
 - Flag Solana CPI to known-bad program ids (`solana_suspicious_cpi`)
 - Plugin interface for additional chain decoders (`defineChainDecoder`)
@@ -102,7 +104,7 @@ Sample HTML gallery
 - Pushes to `main` deploy that gallery with GitHub Pages (see `.github/workflows/pages.yml`)
 
 Example dataset
-- `examples/dataset/cases.json` holds 29 labelled inputs (ERC-20 incl. permits and Permit2, multicall batches, NFT, raw EVM txs, Solana) with the report type, risks, and severity each should produce
+- `examples/dataset/cases.json` holds 33 labelled inputs (ERC-20 incl. permits and Permit2, multicall, ERC-4337, EIP-7702, NFT, raw EVM txs, Solana) with the report type, risks, and severity each should produce
 - Every case maps to CLI flags, e.g. `node dist/cli.js <input> --config examples/risk-lists.json --json`
 - `npm run dataset` rebuilds the file from `src/datasetCases.ts` and checks every case; tests fail if the file and the builder drift
 - Use it as a regression corpus or to compare another decoder: `checkDatasetFile('examples/dataset/cases.json')`

@@ -64,6 +64,10 @@ describe('example dataset file', () => {
       'erc1155_approve_all',
       'solana_suspicious_cpi',
       'solana_ata_mismatch',
+      'erc4337_paymaster',
+      'erc4337_calldata_approval',
+      'eip7702_delegation',
+      'eip7702_broad_delegate',
     ]) {
       expect(risks, id).toContain(id);
     }

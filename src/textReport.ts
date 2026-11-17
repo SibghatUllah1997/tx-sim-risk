@@ -67,6 +67,30 @@ export function formatDetectedHeader(report: JsonReport): string[] {
       lines.push(`Unlimited: ${p.isUnlimited ? 'yes' : 'no'}`);
       return lines;
     }
+    case 'erc4337_userop': {
+      const lines = [
+        `Detected: ERC-4337 handleOps (${report.payload.version})`,
+        `Ops: ${report.payload.ops.length}`,
+        `Beneficiary: ${report.payload.beneficiary}`,
+      ];
+      report.payload.ops.forEach((op, opIndex) => {
+        lines.push(
+          `  [${opIndex}] sender=${op.sender} paymaster=${op.paymaster ?? 'none'}`
+        );
+        op.calls.forEach((call, callIndex) => {
+          const target = call.target ?? 'callData';
+          const inner = call.report?.type ?? 'unknown';
+          const risks =
+            call.report && call.report.risks.length > 0
+              ? ` risks=${call.report.risks.join(',')}`
+              : '';
+          lines.push(
+            `    call ${callIndex} target=${target} value=${call.value} type=${inner}${risks}`
+          );
+        });
+      });
+      return lines;
+    }
     case 'multicall': {
       const p = report.payload;
       const lines = [`Detected: ${p.signature} batch`, `Calls: ${p.calls.length}`];

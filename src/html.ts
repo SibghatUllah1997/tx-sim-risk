@@ -41,6 +41,31 @@ function payloadRows(report: JsonReport): string[] {
       ...args.map((arg) => row(`${arg.name} (${arg.type})`, formatValue(arg.value))),
     ];
   }
+  if (report.type === 'erc4337_userop') {
+    const payload = report.payload;
+    const rows = [
+      row('version', payload.version),
+      row('beneficiary', payload.beneficiary),
+      row('ops', String(payload.ops.length)),
+    ];
+    payload.ops.forEach((op, opIndex) => {
+      rows.push(
+        row(
+          `op ${opIndex}`,
+          `sender=${op.sender} nonce=${op.nonce} paymaster=${op.paymaster ?? 'none'}`
+        )
+      );
+      op.calls.forEach((call, callIndex) => {
+        rows.push(
+          row(
+            `op ${opIndex} call ${callIndex}`,
+            `target=${call.target ?? 'callData'} value=${call.value} type=${call.report?.type ?? 'unknown'} risks=${(call.report?.risks ?? []).join(',')}`
+          )
+        );
+      });
+    });
+    return rows;
+  }
   if (report.type === 'plugin_decode') {
     const { pluginId, chain, summary, fields } = report.payload;
     return [

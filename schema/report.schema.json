@@ -8,6 +8,7 @@
     { "$ref": "#/$defs/erc20PermitReport" },
     { "$ref": "#/$defs/permit2Report" },
     { "$ref": "#/$defs/multicallReport" },
+    { "$ref": "#/$defs/erc4337UserOpReport" },
     { "$ref": "#/$defs/erc20TransferReport" },
     { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },
     { "$ref": "#/$defs/erc20DecreaseAllowanceReport" },
@@ -362,6 +363,83 @@
         }
       }
     },
+    "userOpCall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "value", "data", "report"],
+      "properties": {
+        "target": {
+          "anyOf": [
+            { "$ref": "#/$defs/evmAddress" },
+            { "type": "null" }
+          ]
+        },
+        "value": { "$ref": "#/$defs/unsignedDecimalString" },
+        "data": { "$ref": "#/$defs/hexBytes" },
+        "report": {
+          "anyOf": [
+            { "$ref": "#/$defs/decodedEvmReport" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "erc4337UserOp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sender",
+        "nonce",
+        "initCode",
+        "callData",
+        "callGasLimit",
+        "verificationGasLimit",
+        "preVerificationGas",
+        "maxFeePerGas",
+        "maxPriorityFeePerGas",
+        "paymasterAndData",
+        "paymaster",
+        "signature",
+        "calls"
+      ],
+      "properties": {
+        "sender": { "$ref": "#/$defs/evmAddress" },
+        "nonce": { "$ref": "#/$defs/unsignedDecimalString" },
+        "initCode": { "$ref": "#/$defs/hexBytes" },
+        "callData": { "$ref": "#/$defs/hexBytes" },
+        "callGasLimit": { "$ref": "#/$defs/unsignedDecimalString" },
+        "verificationGasLimit": { "$ref": "#/$defs/unsignedDecimalString" },
+        "preVerificationGas": { "$ref": "#/$defs/unsignedDecimalString" },
+        "maxFeePerGas": { "$ref": "#/$defs/unsignedDecimalString" },
+        "maxPriorityFeePerGas": { "$ref": "#/$defs/unsignedDecimalString" },
+        "paymasterAndData": { "$ref": "#/$defs/hexBytes" },
+        "paymaster": {
+          "anyOf": [
+            { "$ref": "#/$defs/evmAddress" },
+            { "type": "null" }
+          ]
+        },
+        "signature": { "$ref": "#/$defs/hexBytes" },
+        "calls": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/userOpCall" }
+        }
+      }
+    },
+    "erc4337UserOpPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "beneficiary", "ops"],
+      "properties": {
+        "version": { "type": "string", "enum": ["v0.6", "v0.7"] },
+        "beneficiary": { "$ref": "#/$defs/evmAddress" },
+        "ops": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/erc4337UserOp" }
+        }
+      }
+    },
     "erc20TransferPayload": {
       "type": "object",
       "additionalProperties": false,
@@ -687,6 +765,20 @@
         }
       ]
     },
+    "erc4337UserOpReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "erc4337_userop" },
+            "payload": { "$ref": "#/$defs/erc4337UserOpPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
     "decodedEvmReport": {
       "description": "Any report the EVM calldata decoder can emit; used for calls nested inside a multicall batch.",
       "oneOf": [
@@ -694,6 +786,7 @@
         { "$ref": "#/$defs/erc20PermitReport" },
         { "$ref": "#/$defs/permit2Report" },
         { "$ref": "#/$defs/multicallReport" },
+        { "$ref": "#/$defs/erc4337UserOpReport" },
         { "$ref": "#/$defs/erc20TransferReport" },
         { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },
         { "$ref": "#/$defs/erc20DecreaseAllowanceReport" },

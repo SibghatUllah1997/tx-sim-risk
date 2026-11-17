@@ -8,6 +8,10 @@ import {
   MULTICALL_DEPTH_LIMIT_RISK,
 } from './evm/multicall';
 import { PERMIT2_NO_EXPIRY_RISK } from './evm/permit2';
+import {
+  ERC4337_CALLDATA_APPROVAL_RISK,
+  ERC4337_PAYMASTER_RISK,
+} from './evm/userOp';
 import { PHISHING_SPENDER_RISK } from './evm/phishing';
 import { SOLANA_ATA_MISMATCH_RISK } from './solana/ata';
 import { SOLANA_SUSPICIOUS_CPI_RISK } from './solana/cpi';
@@ -32,6 +36,8 @@ export const KNOWN_RISK_IDS = [
   PERMIT2_NO_EXPIRY_RISK,
   MULTICALL_BATCHED_GRANT_RISK,
   MULTICALL_DEPTH_LIMIT_RISK,
+  ERC4337_PAYMASTER_RISK,
+  ERC4337_CALLDATA_APPROVAL_RISK,
 ] as const;
 
 export type KnownRiskId = (typeof KNOWN_RISK_IDS)[number];
@@ -77,6 +83,8 @@ export const RISK_SEVERITIES: Readonly<Record<KnownRiskId, RiskSeverity>> =
     [PERMIT2_NO_EXPIRY_RISK]: 'warn',
     [MULTICALL_BATCHED_GRANT_RISK]: 'warn',
     [MULTICALL_DEPTH_LIMIT_RISK]: 'warn',
+    [ERC4337_PAYMASTER_RISK]: 'warn',
+    [ERC4337_CALLDATA_APPROVAL_RISK]: 'high',
   });
 
 /**
@@ -132,6 +140,10 @@ export const RISK_REASONS: Readonly<Record<KnownRiskId, string>> = Object.freeze
     'An approval, permit, or operator grant is bundled inside a multicall batch, where wallets that only show the outer call can hide it.',
   [MULTICALL_DEPTH_LIMIT_RISK]:
     'The batch nests further multicalls deeper than the analyzer follows, so some inner calls were not checked.',
+  [ERC4337_PAYMASTER_RISK]:
+    'The UserOperation names a paymaster, so a third party sponsors gas and can apply its own policy to whether the operation is included.',
+  [ERC4337_CALLDATA_APPROVAL_RISK]:
+    'The UserOperation callData grants a token allowance or NFT operator, which can be easy to miss inside an account-abstraction envelope.',
 });
 
 export function isKnownRiskId(id: string): id is KnownRiskId {

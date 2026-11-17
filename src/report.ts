@@ -23,6 +23,13 @@ import {
   type MulticallVariant,
 } from './evm/multicall';
 import {
+  decodeHandleOps,
+  ERC4337_CALLDATA_APPROVAL_RISK,
+  ERC4337_PAYMASTER_RISK,
+  type HandleOpsDecoded,
+  type UserOpVersion,
+} from './evm/userOp';
+import {
   decodeErc20IncreaseAllowance,
   decodeErc20DecreaseAllowance,
 } from './evm/allowance';
@@ -216,6 +223,14 @@ export type JsonReport =
       };
     })
   | (ReportMeta & {
+      type: 'erc4337_userop';
+      payload: {
+        version: UserOpVersion;
+        beneficiary: string;
+        ops: UserOpReport[];
+      };
+    })
+  | (ReportMeta & {
       type: 'erc20_transfer';
       payload: {
         to: string;
@@ -275,6 +290,31 @@ export type JsonReport =
         fields: Record<string, string | number | boolean | null>;
       };
     });
+
+/** One inner call recovered from account `execute` / `executeBatch`. */
+export type UserOpCallReport = {
+  target: string | null;
+  value: string;
+  data: string;
+  report: JsonReport | null;
+};
+
+/** One UserOperation inside an EntryPoint `handleOps` report. */
+export type UserOpReport = {
+  sender: string;
+  nonce: string;
+  initCode: string;
+  callData: string;
+  callGasLimit: string;
+  verificationGasLimit: string;
+  preVerificationGas: string;
+  maxFeePerGas: string;
+  maxPriorityFeePerGas: string;
+  paymasterAndData: string;
+  paymaster: string | null;
+  signature: string;
+  calls: UserOpCallReport[];
+};
 
 /** One inner call of a `multicall` report with its own nested report. */
 export type MulticallCallReport = {
@@ -391,6 +431,14 @@ function grantsAccess(report: JsonReport): boolean {
       return report.payload.amountDelta !== '0';
     case 'nft_setApprovalForAll':
       return report.payload.approved;
+    case 'multicall':
+      return report.payload.calls.some(
+        (call) => call.report != null && grantsAccess(call.report)
+      );
+    case 'erc4337_userop':
+      return report.payload.ops.some((op) =>
+        op.calls.some((call) => call.report != null && grantsAccess(call.report))
+      );
     default:
       return false;
   }
@@ -477,6 +525,98 @@ function multicallReport(
       previousBlockhash: decoded.previousBlockhash,
       totalValue: decoded.totalValue.toString(),
       calls,
+    },
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
+    simulation,
+  };
+}
+
+function mergeSimulation(
+  into: SimulationSnapshot,
+  from: SimulationSnapshot
+): void {
+  into.balances.push(...from.balances);
+  into.allowances.push(...from.allowances);
+  into.operators.push(...from.operators);
+  pushUnique(into.notes, from.notes);
+}
+
+function userOpReport(
+  decoded: HandleOpsDecoded,
+  options: ReportOptions | undefined,
+  depth: number
+): JsonReport {
+  const risks: string[] = [];
+  const innerRisks: string[] = [];
+  const simulation = emptySimulation();
+  let calldataGrant = false;
+  const paymasters: string[] = [];
+  for (const op of decoded.ops) {
+    if (op.paymaster) pushUnique(paymasters, [op.paymaster]);
+  }
+  if (paymasters.length > 0) pushUnique(risks, [ERC4337_PAYMASTER_RISK]);
+  for (const paymaster of paymasters) {
+    pushUnique(risks, [
+      ...blocklistedSpenderRisks(paymaster, options?.lists),
+      ...phishingSpenderRisks(paymaster, options?.phishingIndex),
+    ]);
+  }
+  const ops: UserOpReport[] = decoded.ops.map((op) => {
+    const innerOptions: ReportOptions = {
+      ...options,
+      from: op.sender,
+      currentAllowance: undefined,
+    };
+    const calls: UserOpCallReport[] = op.innerCalls.map((call) => {
+      let report: JsonReport | null = null;
+      if (depth + 1 < MAX_MULTICALL_DEPTH) {
+        try {
+          report = generateJsonReportAt(call.data, innerOptions, depth + 1);
+        } catch {
+          report = null;
+        }
+      }
+      if (report) {
+        pushUnique(innerRisks, report.risks);
+        if (grantsAccess(report)) calldataGrant = true;
+        mergeSimulation(simulation, report.simulation);
+      }
+      return {
+        target: call.target,
+        value: call.value.toString(),
+        data: call.data,
+        report,
+      };
+    });
+    return {
+      sender: op.sender,
+      nonce: op.nonce.toString(),
+      initCode: op.initCode,
+      callData: op.callData,
+      callGasLimit: op.callGasLimit.toString(),
+      verificationGasLimit: op.verificationGasLimit.toString(),
+      preVerificationGas: op.preVerificationGas.toString(),
+      maxFeePerGas: op.maxFeePerGas.toString(),
+      maxPriorityFeePerGas: op.maxPriorityFeePerGas.toString(),
+      paymasterAndData: op.paymasterAndData,
+      paymaster: op.paymaster,
+      signature: op.signature,
+      calls,
+    };
+  });
+  if (calldataGrant) pushUnique(risks, [ERC4337_CALLDATA_APPROVAL_RISK]);
+  pushUnique(risks, innerRisks);
+  pushUnique(simulation.notes, [
+    'ERC-4337 handleOps runs each UserOperation from the account sender; a paymaster, if present, only sponsors gas.',
+  ]);
+  return {
+    type: 'erc4337_userop',
+    payload: {
+      version: decoded.version,
+      beneficiary: decoded.beneficiary,
+      ops,
     },
     risks,
     riskDetails: describeRisks(risks),
@@ -633,6 +773,11 @@ function generateJsonReportAt(
     };
   }
 
+  const handleOps = decodeHandleOps(data);
+  if (handleOps) {
+    return userOpReport(handleOps, options, depth);
+  }
+
   // Calls without a dedicated risk rule (transferFrom, safeTransferFrom,
   // batch transfers, ...) still get decoded through the generic ABI path.
   const generic = decodeCommonAbi(data);
@@ -765,6 +910,21 @@ export function formatReportFooter(report: JsonReport): string[] {
       break;
     case 'multicall':
       lines.push(...formatMulticallCallLines(report.payload.calls, ''));
+      break;
+    case 'erc4337_userop':
+      lines.push(`EntryPoint: ${report.payload.version}`);
+      lines.push(`User operations: ${report.payload.ops.length}`);
+      for (const [opIndex, op] of report.payload.ops.entries()) {
+        lines.push(
+          `Op [${opIndex}] sender=${op.sender} paymaster=${op.paymaster ?? 'none'}`
+        );
+        for (const [callIndex, call] of op.calls.entries()) {
+          const target = call.target ?? 'callData';
+          lines.push(
+            `  Call [${callIndex}] target=${target} value=${call.value}: ${describeInnerReport(call.report)}`
+          );
+        }
+      }
       break;
     case 'abi_call':
       lines.push(`Standards: ${report.payload.standards.join(', ')}`);

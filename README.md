@@ -15,6 +15,7 @@ Features:
 - Decode ERC-20 approve, transfer, increaseAllowance, decreaseAllowance
 - Decode EIP-2612 and DAI-style `permit` signatures and flag unlimited permits (`unlimited_permit`)
 - Decode Uniswap Permit2 `approve` / `permit` / `permitTransferFrom`, and flag unlimited or never-expiring grants (`permit2_no_expiry`)
+- Split router `multicall` and Multicall3 `aggregate*` batches, run every inner call through the same rules, and flag grants hidden inside a batch (`multicall_batched_grant`)
 - Decode ERC-721 / ERC-1155 setApprovalForAll and flag operator grants
 - Flag unlimited approvals, burns to the zero address, phishing spenders, and grants to EOAs
 - Classify spenders/operators as EOA, contract, or unknown (bytecode or known-contract map)
@@ -101,7 +102,7 @@ Sample HTML gallery
 - Pushes to `main` deploy that gallery with GitHub Pages (see `.github/workflows/pages.yml`)
 
 Example dataset
-- `examples/dataset/cases.json` holds 27 labelled inputs (ERC-20 incl. permits and Permit2, NFT, raw EVM txs, Solana) with the report type, risks, and severity each should produce
+- `examples/dataset/cases.json` holds 29 labelled inputs (ERC-20 incl. permits and Permit2, multicall batches, NFT, raw EVM txs, Solana) with the report type, risks, and severity each should produce
 - Every case maps to CLI flags, e.g. `node dist/cli.js <input> --config examples/risk-lists.json --json`
 - `npm run dataset` rebuilds the file from `src/datasetCases.ts` and checks every case; tests fail if the file and the builder drift
 - Use it as a regression corpus or to compare another decoder: `checkDatasetFile('examples/dataset/cases.json')`

@@ -127,6 +127,23 @@ function permit2TransferFrom(to: string, amount: bigint): Hex {
   });
 }
 
+const BATCH_ABI = parseAbi([
+  'function multicall(bytes[] data)',
+  'function aggregate3((address target, bool allowFailure, bytes callData)[] calls)',
+]);
+
+function routerMulticall(calls: Hex[]): Hex {
+  return encodeFunctionData({ abi: BATCH_ABI, functionName: 'multicall', args: [calls] });
+}
+
+function multicall3(calls: Hex[]): Hex {
+  return encodeFunctionData({
+    abi: BATCH_ABI,
+    functionName: 'aggregate3',
+    args: [calls.map((callData) => ({ target: TOKEN, allowFailure: false, callData }))],
+  });
+}
+
 const TRANSFER_FROM_ABI = parseAbi([
   'function transferFrom(address from, address to, uint256 value)',
 ]);
@@ -299,6 +316,13 @@ export function buildExampleDataset(): Dataset {
     evm('permit2-phishing-transfer', 'Permit2 permitTransferFrom() to a phishing-listed recipient.',
       permit2TransferFrom(PHISHING_DRAINER, 80n),
       { type: 'permit2', risks: ['phishing_spender'], severity: 'high' }),
+    evm('multicall-hidden-unlimited-approve', 'Router multicall() that bundles a transfer with an unlimited approve.',
+      routerMulticall([transfer(RECIPIENT, 'ff'), approve(ROUTER, MAX_UINT)]),
+      { type: 'multicall', risks: ['unlimited_approval', 'multicall_batched_grant'], severity: 'high' },
+      { from: SENDER }),
+    evm('multicall3-plain-transfers', 'Multicall3 aggregate3() with two plain transfers and no grants.',
+      multicall3([transfer(RECIPIENT, '1'), transfer(RECIPIENT, '2')]),
+      { type: 'multicall', risks: [], severity: 'info' }),
     evm('erc20-plain-transfer', 'transfer() of 255 units from a named sender.',
       transfer(RECIPIENT, 'ff'),
       { type: 'erc20_transfer', risks: [], severity: 'info' },

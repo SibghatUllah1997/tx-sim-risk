@@ -14,6 +14,7 @@ export * from './evm/permit';
 export * from './evm/permit2';
 export * from './evm/multicall';
 export * from './evm/userOp';
+export * from './evm/eip7702';
 export * from './risks';
 export * from './config';
 export * from './sim';

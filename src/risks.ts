@@ -12,6 +12,10 @@ import {
   ERC4337_CALLDATA_APPROVAL_RISK,
   ERC4337_PAYMASTER_RISK,
 } from './evm/userOp';
+import {
+  EIP7702_BROAD_DELEGATE_RISK,
+  EIP7702_DELEGATION_RISK,
+} from './evm/eip7702';
 import { PHISHING_SPENDER_RISK } from './evm/phishing';
 import { SOLANA_ATA_MISMATCH_RISK } from './solana/ata';
 import { SOLANA_SUSPICIOUS_CPI_RISK } from './solana/cpi';
@@ -38,6 +42,8 @@ export const KNOWN_RISK_IDS = [
   MULTICALL_DEPTH_LIMIT_RISK,
   ERC4337_PAYMASTER_RISK,
   ERC4337_CALLDATA_APPROVAL_RISK,
+  EIP7702_DELEGATION_RISK,
+  EIP7702_BROAD_DELEGATE_RISK,
 ] as const;
 
 export type KnownRiskId = (typeof KNOWN_RISK_IDS)[number];
@@ -85,6 +91,8 @@ export const RISK_SEVERITIES: Readonly<Record<KnownRiskId, RiskSeverity>> =
     [MULTICALL_DEPTH_LIMIT_RISK]: 'warn',
     [ERC4337_PAYMASTER_RISK]: 'warn',
     [ERC4337_CALLDATA_APPROVAL_RISK]: 'high',
+    [EIP7702_DELEGATION_RISK]: 'high',
+    [EIP7702_BROAD_DELEGATE_RISK]: 'high',
   });
 
 /**
@@ -144,6 +152,10 @@ export const RISK_REASONS: Readonly<Record<KnownRiskId, string>> = Object.freeze
     'The UserOperation names a paymaster, so a third party sponsors gas and can apply its own policy to whether the operation is included.',
   [ERC4337_CALLDATA_APPROVAL_RISK]:
     'The UserOperation callData grants a token allowance or NFT operator, which can be easy to miss inside an account-abstraction envelope.',
+  [EIP7702_DELEGATION_RISK]:
+    'The type-4 transaction designates a contract whose code will run in place of the sender EOA for later calls, until the designation is cleared.',
+  [EIP7702_BROAD_DELEGATE_RISK]:
+    'An authorization uses chain id 0, so the delegate designation is valid on every chain rather than the chain this transaction is sent on.',
 });
 
 export function isKnownRiskId(id: string): id is KnownRiskId {

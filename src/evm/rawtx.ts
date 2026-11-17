@@ -1,8 +1,10 @@
 import { stripHexPrefix } from './hex';
+import { parseEip7702 } from './eip7702';
 import { rlpDecodeItem, bytesToBigInt, type RlpValue } from './rlp';
 
 export type ParsedRawTx =
   | { txType: 'eip1559'; chainId: bigint; data: string }
+  | { txType: 'eip7702'; chainId: bigint; data: string }
   | { txType: 'legacy'; chainId: bigint | null; data: string };
 
 /**
@@ -13,6 +15,14 @@ export type ParsedRawTx =
 export function extractDataAndChainIdFromRawTx(raw: string): ParsedRawTx | null {
   const hex = stripHexPrefix(raw).toLowerCase();
   if (hex.length < 2) return null;
+
+  // Typed transaction (0x04 = EIP-7702). Parse before the generic
+  // fallback so a type-4 payload is not treated as unknown calldata.
+  if (hex.startsWith('04')) {
+    const parsed = parseEip7702(`0x${hex}`);
+    if (!parsed) return null;
+    return { txType: 'eip7702', chainId: parsed.chainId, data: parsed.data };
+  }
 
   // Typed transaction (0x02 = EIP-1559)
   if (hex.startsWith('02')) {

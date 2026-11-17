@@ -67,6 +67,27 @@ export function formatDetectedHeader(report: JsonReport): string[] {
       lines.push(`Unlimited: ${p.isUnlimited ? 'yes' : 'no'}`);
       return lines;
     }
+    case 'eip7702': {
+      const p = report.payload;
+      const lines = [
+        'Detected: EIP-7702 type-4 transaction',
+        `Chain ID: ${p.chainId}`,
+        `Authorizations: ${p.authorizations.length}`,
+      ];
+      if (p.to) lines.push(`To: ${p.to}`);
+      if (p.value !== '0') lines.push(`Value: ${p.value}`);
+      p.authorizations.forEach((item, index) => {
+        const scope = item.isRevocation
+          ? 'revoke'
+          : item.isAnyChain
+            ? 'any-chain'
+            : `chain ${item.chainId}`;
+        lines.push(
+          `  [${index}] delegate=${item.address} ${scope}`
+        );
+      });
+      return lines;
+    }
     case 'erc4337_userop': {
       const lines = [
         `Detected: ERC-4337 handleOps (${report.payload.version})`,

@@ -13,6 +13,7 @@ const REQUIRED_DEFS = [
   'permit2Report',
   'multicallReport',
   'erc4337UserOpReport',
+  'eip7702Report',
   'erc20TransferReport',
   'erc20IncreaseAllowanceReport',
   'erc20DecreaseAllowanceReport',
@@ -34,7 +35,7 @@ describe('report JSON Schema', () => {
     expect(String(schema.$id)).toMatch(/report\.schema\.json$/);
     expect(schema.title).toBe('tx-sim-risk JSON report');
     expect(Array.isArray(schema.oneOf)).toBe(true);
-    expect((schema.oneOf as unknown[]).length).toBe(13);
+    expect((schema.oneOf as unknown[]).length).toBe(14);
   });
 
   it('defines a $defs entry for every report type the decoder can emit', () => {

@@ -9,6 +9,7 @@
     { "$ref": "#/$defs/permit2Report" },
     { "$ref": "#/$defs/multicallReport" },
     { "$ref": "#/$defs/erc4337UserOpReport" },
+    { "$ref": "#/$defs/eip7702Report" },
     { "$ref": "#/$defs/erc20TransferReport" },
     { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },
     { "$ref": "#/$defs/erc20DecreaseAllowanceReport" },
@@ -426,6 +427,68 @@
         }
       }
     },
+    "eip7702Authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chainId",
+        "address",
+        "nonce",
+        "yParity",
+        "r",
+        "s",
+        "isAnyChain",
+        "isRevocation",
+        "delegateKind"
+      ],
+      "properties": {
+        "chainId": { "$ref": "#/$defs/unsignedDecimalString" },
+        "address": { "$ref": "#/$defs/evmAddress" },
+        "nonce": { "$ref": "#/$defs/unsignedDecimalString" },
+        "yParity": { "$ref": "#/$defs/unsignedDecimalString" },
+        "r": { "$ref": "#/$defs/hexBytes" },
+        "s": { "$ref": "#/$defs/hexBytes" },
+        "isAnyChain": { "type": "boolean" },
+        "isRevocation": { "type": "boolean" },
+        "delegateKind": { "$ref": "#/$defs/addressKind" }
+      }
+    },
+    "eip7702Payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chainId",
+        "nonce",
+        "to",
+        "value",
+        "data",
+        "authorizations",
+        "innerReport"
+      ],
+      "properties": {
+        "chainId": { "$ref": "#/$defs/unsignedDecimalString" },
+        "nonce": { "$ref": "#/$defs/unsignedDecimalString" },
+        "to": {
+          "anyOf": [
+            { "$ref": "#/$defs/evmAddress" },
+            { "type": "null" }
+          ]
+        },
+        "value": { "$ref": "#/$defs/unsignedDecimalString" },
+        "data": { "$ref": "#/$defs/hexBytes" },
+        "authorizations": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/eip7702Authorization" }
+        },
+        "innerReport": {
+          "anyOf": [
+            { "$ref": "#/$defs/decodedEvmReport" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
     "erc4337UserOpPayload": {
       "type": "object",
       "additionalProperties": false,
@@ -779,6 +842,20 @@
         }
       ]
     },
+    "eip7702Report": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "eip7702" },
+            "payload": { "$ref": "#/$defs/eip7702Payload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
     "decodedEvmReport": {
       "description": "Any report the EVM calldata decoder can emit; used for calls nested inside a multicall batch.",
       "oneOf": [
@@ -787,6 +864,7 @@
         { "$ref": "#/$defs/permit2Report" },
         { "$ref": "#/$defs/multicallReport" },
         { "$ref": "#/$defs/erc4337UserOpReport" },
+        { "$ref": "#/$defs/eip7702Report" },
         { "$ref": "#/$defs/erc20TransferReport" },
         { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },
         { "$ref": "#/$defs/erc20DecreaseAllowanceReport" },

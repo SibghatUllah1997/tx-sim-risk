@@ -41,6 +41,28 @@ function payloadRows(report: JsonReport): string[] {
       ...args.map((arg) => row(`${arg.name} (${arg.type})`, formatValue(arg.value))),
     ];
   }
+  if (report.type === 'eip7702') {
+    const payload = report.payload;
+    return [
+      row('chainId', payload.chainId),
+      row('nonce', payload.nonce),
+      row('to', payload.to ?? ''),
+      row('value', payload.value),
+      row('authorizations', String(payload.authorizations.length)),
+      ...payload.authorizations.map((item, index) =>
+        row(
+          `authorization ${index}`,
+          `delegate=${item.address} chainId=${item.chainId} ${item.isRevocation ? 'revoke' : item.isAnyChain ? 'any-chain' : 'chain-bound'} kind=${item.delegateKind}`
+        )
+      ),
+      row(
+        'inner',
+        payload.innerReport
+          ? `${payload.innerReport.type} risks=${payload.innerReport.risks.join(',')}`
+          : 'none'
+      ),
+    ];
+  }
   if (report.type === 'erc4337_userop') {
     const payload = report.payload;
     const rows = [

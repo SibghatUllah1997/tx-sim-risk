@@ -30,6 +30,14 @@ import {
   type UserOpVersion,
 } from './evm/userOp';
 import {
+  EIP7702_BROAD_DELEGATE_RISK,
+  EIP7702_DELEGATION_RISK,
+  hasEip7702BroadDelegate,
+  hasEip7702Delegation,
+  parseEip7702,
+  type Eip7702Decoded,
+} from './evm/eip7702';
+import {
   decodeErc20IncreaseAllowance,
   decodeErc20DecreaseAllowance,
 } from './evm/allowance';
@@ -228,6 +236,28 @@ export type JsonReport =
         version: UserOpVersion;
         beneficiary: string;
         ops: UserOpReport[];
+      };
+    })
+  | (ReportMeta & {
+      type: 'eip7702';
+      payload: {
+        chainId: string;
+        nonce: string;
+        to: string | null;
+        value: string;
+        data: string;
+        authorizations: {
+          chainId: string;
+          address: string;
+          nonce: string;
+          yParity: string;
+          r: string;
+          s: string;
+          isAnyChain: boolean;
+          isRevocation: boolean;
+          delegateKind: AddressKind;
+        }[];
+        innerReport: JsonReport | null;
       };
     })
   | (ReportMeta & {
@@ -439,6 +469,8 @@ function grantsAccess(report: JsonReport): boolean {
       return report.payload.ops.some((op) =>
         op.calls.some((call) => call.report != null && grantsAccess(call.report))
       );
+    case 'eip7702':
+      return report.payload.innerReport != null && grantsAccess(report.payload.innerReport);
     default:
       return false;
   }
@@ -617,6 +649,69 @@ function userOpReport(
       version: decoded.version,
       beneficiary: decoded.beneficiary,
       ops,
+    },
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
+    simulation,
+  };
+}
+
+function eip7702Report(
+  decoded: Eip7702Decoded,
+  options: ReportOptions | undefined,
+  depth: number
+): JsonReport {
+  const risks: string[] = [];
+  const simulation = emptySimulation();
+  if (hasEip7702Delegation(decoded)) {
+    pushUnique(risks, [EIP7702_DELEGATION_RISK]);
+  }
+  if (hasEip7702BroadDelegate(decoded)) {
+    pushUnique(risks, [EIP7702_BROAD_DELEGATE_RISK]);
+  }
+  for (const item of decoded.authorizations) {
+    if (item.isRevocation) continue;
+    pushUnique(
+      risks,
+      approvalGrantRisks(item.address, true, options)
+    );
+  }
+  let innerReport: JsonReport | null = null;
+  if (decoded.data !== '0x' && depth + 1 < MAX_MULTICALL_DEPTH) {
+    try {
+      innerReport = generateJsonReportAt(decoded.data, options, depth + 1);
+    } catch {
+      innerReport = null;
+    }
+  }
+  if (innerReport) {
+    pushUnique(risks, innerReport.risks);
+    mergeSimulation(simulation, innerReport.simulation);
+  }
+  pushUnique(simulation.notes, [
+    'EIP-7702 sets the sender EOA code to the designated contract until a later type-4 transaction clears it.',
+  ]);
+  return {
+    type: 'eip7702',
+    payload: {
+      chainId: decoded.chainId.toString(),
+      nonce: decoded.nonce.toString(),
+      to: decoded.to,
+      value: decoded.value.toString(),
+      data: decoded.data,
+      authorizations: decoded.authorizations.map((item) => ({
+        chainId: item.chainId.toString(),
+        address: item.address,
+        nonce: item.nonce.toString(),
+        yParity: item.yParity.toString(),
+        r: item.r,
+        s: item.s,
+        isAnyChain: item.isAnyChain,
+        isRevocation: item.isRevocation,
+        delegateKind: spenderKindFor(item.address, options),
+      })),
+      innerReport,
     },
     risks,
     riskDetails: describeRisks(risks),
@@ -911,6 +1006,19 @@ export function formatReportFooter(report: JsonReport): string[] {
     case 'multicall':
       lines.push(...formatMulticallCallLines(report.payload.calls, ''));
       break;
+    case 'eip7702':
+      lines.push(`Authorizations: ${report.payload.authorizations.length}`);
+      for (const [index, item] of report.payload.authorizations.entries()) {
+        const kind = item.isRevocation
+          ? 'revoke'
+          : item.isAnyChain
+            ? 'any-chain'
+            : `chain ${item.chainId}`;
+        lines.push(
+          `Delegate [${index}] ${item.address} (${kind}, ${item.delegateKind})`
+        );
+      }
+      break;
     case 'erc4337_userop':
       lines.push(`EntryPoint: ${report.payload.version}`);
       lines.push(`User operations: ${report.payload.ops.length}`);
@@ -1016,6 +1124,14 @@ export const EVM_DECODER: ChainDecoderPlugin<JsonReport> = defineChainDecoder({
   name: 'Ethereum',
   tryDecode(input, options) {
     const reportOptions = options as ReportOptions | undefined;
+    try {
+      const type4 = parseEip7702(input);
+      if (type4) {
+        return eip7702Report(type4, reportOptions, 0);
+      }
+    } catch {
+      // Malformed type-4 bytes fall through like other typed prefixes.
+    }
     try {
       const unwrapped = extractDataAndChainIdFromRawTx(input);
       if (unwrapped) {

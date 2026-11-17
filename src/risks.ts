@@ -3,6 +3,10 @@ import { APPROVAL_TO_EOA_RISK } from './evm/addressKind';
 import { ERC1155_APPROVE_ALL_RISK } from './evm/erc1155';
 import { ERC721_APPROVE_ALL_RISK } from './evm/erc721';
 import { UNLIMITED_PERMIT_RISK } from './evm/permit';
+import {
+  MULTICALL_BATCHED_GRANT_RISK,
+  MULTICALL_DEPTH_LIMIT_RISK,
+} from './evm/multicall';
 import { PERMIT2_NO_EXPIRY_RISK } from './evm/permit2';
 import { PHISHING_SPENDER_RISK } from './evm/phishing';
 import { SOLANA_ATA_MISMATCH_RISK } from './solana/ata';
@@ -26,6 +30,8 @@ export const KNOWN_RISK_IDS = [
   SOLANA_SUSPICIOUS_CPI_RISK,
   UNLIMITED_PERMIT_RISK,
   PERMIT2_NO_EXPIRY_RISK,
+  MULTICALL_BATCHED_GRANT_RISK,
+  MULTICALL_DEPTH_LIMIT_RISK,
 ] as const;
 
 export type KnownRiskId = (typeof KNOWN_RISK_IDS)[number];
@@ -69,6 +75,8 @@ export const RISK_SEVERITIES: Readonly<Record<KnownRiskId, RiskSeverity>> =
     [SOLANA_SUSPICIOUS_CPI_RISK]: 'high',
     [UNLIMITED_PERMIT_RISK]: 'high',
     [PERMIT2_NO_EXPIRY_RISK]: 'warn',
+    [MULTICALL_BATCHED_GRANT_RISK]: 'warn',
+    [MULTICALL_DEPTH_LIMIT_RISK]: 'warn',
   });
 
 /**
@@ -120,6 +128,10 @@ export const RISK_REASONS: Readonly<Record<KnownRiskId, string>> = Object.freeze
     "A signed permit grants the spender the maximum allowance, so anyone holding the signature can let it move the owner's entire token balance.",
   [PERMIT2_NO_EXPIRY_RISK]:
     'The Permit2 allowance or signature deadline never expires, so a granted spender can keep using it until it is revoked.',
+  [MULTICALL_BATCHED_GRANT_RISK]:
+    'An approval, permit, or operator grant is bundled inside a multicall batch, where wallets that only show the outer call can hide it.',
+  [MULTICALL_DEPTH_LIMIT_RISK]:
+    'The batch nests further multicalls deeper than the analyzer follows, so some inner calls were not checked.',
 });
 
 export function isKnownRiskId(id: string): id is KnownRiskId {

@@ -15,6 +15,14 @@ import {
   type Permit2Variant,
 } from './evm/permit2';
 import {
+  decodeMulticall,
+  MAX_MULTICALL_DEPTH,
+  MULTICALL_BATCHED_GRANT_RISK,
+  MULTICALL_DEPTH_LIMIT_RISK,
+  type MulticallDecoded,
+  type MulticallVariant,
+} from './evm/multicall';
+import {
   decodeErc20IncreaseAllowance,
   decodeErc20DecreaseAllowance,
 } from './evm/allowance';
@@ -196,6 +204,18 @@ export type JsonReport =
       };
     })
   | (ReportMeta & {
+      type: 'multicall';
+      payload: {
+        variant: MulticallVariant;
+        signature: string;
+        forwardsAsContract: boolean;
+        deadline: string | null;
+        previousBlockhash: string | null;
+        totalValue: string;
+        calls: MulticallCallReport[];
+      };
+    })
+  | (ReportMeta & {
       type: 'erc20_transfer';
       payload: {
         to: string;
@@ -255,6 +275,20 @@ export type JsonReport =
         fields: Record<string, string | number | boolean | null>;
       };
     });
+
+/** One inner call of a `multicall` report with its own nested report. */
+export type MulticallCallReport = {
+  index: number;
+  target: string | null;
+  allowFailure: boolean | null;
+  value: string | null;
+  /** First four bytes of the inner calldata, or null when shorter. */
+  selector: string | null;
+  /** Report for the inner calldata, or null when nothing decodes it. */
+  report: JsonReport | null;
+  /** True when the inner call is a batch nested past the depth limit. */
+  depthLimited: boolean;
+};
 
 function reportMeta(
   risks: string[],
@@ -333,9 +367,140 @@ function permit2Payload(
   };
 }
 
+/**
+ * Canonical Multicall3 deployment (same address on most EVM chains). Inner
+ * Multicall3 calls run with this contract as `msg.sender`, so the stub
+ * simulation records their effects against it rather than the signer.
+ */
+export const MULTICALL3_ADDRESS = '0xca11bde05977b3631167028862be2a173976ca11';
+
+/** True when the report grants an allowance, permit, or operator approval. */
+function grantsAccess(report: JsonReport): boolean {
+  switch (report.type) {
+    case 'erc20_approve':
+      return report.payload.amount !== '0';
+    case 'erc20_permit':
+      return report.payload.value !== '0' || report.payload.allowed === true;
+    case 'permit2':
+      return (
+        report.payload.spender != null &&
+        (report.payload.amount !== '0' ||
+          report.payload.allowances.some((item) => item.amount !== '0'))
+      );
+    case 'erc20_increaseAllowance':
+      return report.payload.amountDelta !== '0';
+    case 'nft_setApprovalForAll':
+      return report.payload.approved;
+    default:
+      return false;
+  }
+}
+
+function isBatch(data: string): boolean {
+  try {
+    return decodeMulticall(data) != null;
+  } catch {
+    return true;
+  }
+}
+
+function pushUnique(target: string[], items: readonly string[]): void {
+  for (const item of items) {
+    if (!target.includes(item)) target.push(item);
+  }
+}
+
+function multicallReport(
+  decoded: MulticallDecoded,
+  options: ReportOptions | undefined,
+  depth: number
+): JsonReport {
+  // Router multicall delegatecalls into itself, so the signer stays the
+  // owner. Multicall3 calls each target as itself. A known prior allowance
+  // only describes one (owner, spender) pair, so it is not reused inside
+  // a batch.
+  const innerOptions: ReportOptions = {
+    ...options,
+    from: decoded.forwardsAsContract ? MULTICALL3_ADDRESS : options?.from,
+    currentAllowance: undefined,
+  };
+  const risks: string[] = [];
+  const simulation = emptySimulation();
+  let batchedGrant = false;
+  let depthLimited = false;
+  const calls = decoded.calls.map((call, index): MulticallCallReport => {
+    const hexBody = call.data.slice(2);
+    const selector = hexBody.length >= 8 ? `0x${hexBody.slice(0, 8)}` : null;
+    const tooDeep = depth + 1 >= MAX_MULTICALL_DEPTH && isBatch(call.data);
+    let report: JsonReport | null = null;
+    if (tooDeep) {
+      depthLimited = true;
+    } else {
+      try {
+        report = generateJsonReportAt(call.data, innerOptions, depth + 1);
+      } catch {
+        report = null;
+      }
+    }
+    if (report) {
+      pushUnique(risks, report.risks);
+      if (grantsAccess(report)) batchedGrant = true;
+      simulation.balances.push(...report.simulation.balances);
+      simulation.allowances.push(...report.simulation.allowances);
+      simulation.operators.push(...report.simulation.operators);
+      pushUnique(simulation.notes, report.simulation.notes);
+    }
+    return {
+      index,
+      target: call.target,
+      allowFailure: call.allowFailure,
+      value: call.value != null ? call.value.toString() : null,
+      selector,
+      report,
+      depthLimited: tooDeep,
+    };
+  });
+  if (batchedGrant) pushUnique(risks, [MULTICALL_BATCHED_GRANT_RISK]);
+  if (depthLimited) pushUnique(risks, [MULTICALL_DEPTH_LIMIT_RISK]);
+  if (decoded.forwardsAsContract) {
+    pushUnique(simulation.notes, [
+      'Multicall3 makes each inner call as itself, so approvals and transfers act on the Multicall3 contract unless a smart account executes the batch on your behalf.',
+    ]);
+  }
+  return {
+    type: 'multicall',
+    payload: {
+      variant: decoded.variant,
+      signature: decoded.signature,
+      forwardsAsContract: decoded.forwardsAsContract,
+      deadline: stringifyNullable(decoded.deadline),
+      previousBlockhash: decoded.previousBlockhash,
+      totalValue: decoded.totalValue.toString(),
+      calls,
+    },
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
+    simulation,
+  };
+}
+
+/**
+ * Decode EVM calldata into a report. Batches (`multicall`, Multicall3
+ * `aggregate*`) are split and every inner call is analyzed with the same
+ * rules, up to `MAX_MULTICALL_DEPTH` levels of nesting.
+ */
 export function generateJsonReport(
   data: string,
   options?: ReportOptions
+): JsonReport | null {
+  return generateJsonReportAt(data, options, 0);
+}
+
+function generateJsonReportAt(
+  data: string,
+  options: ReportOptions | undefined,
+  depth: number
 ): JsonReport | null {
   const approve = decodeErc20Approve(data);
   if (approve) {
@@ -392,6 +557,11 @@ export function generateJsonReport(
       payload: permit2Payload(permit2, options),
       ...reportMeta(permit2Risks(permit2, options), data, options),
     };
+  }
+
+  const batch = decodeMulticall(data);
+  if (batch) {
+    return multicallReport(batch, options, depth);
   }
 
   const transfer = decodeErc20Transfer(data);
@@ -542,6 +712,35 @@ export function formatCpiLine(hit: SolanaCpiHit): string {
   return `CPI [${hit.instructionIndex}] ${role} ${hit.label} (${hit.category}): ${hit.programId}`;
 }
 
+function describeInnerReport(report: JsonReport | null): string {
+  if (!report) return 'unrecognized';
+  return report.risks.length > 0
+    ? `${report.type} [${report.severity}: ${report.risks.join(', ')}]`
+    : report.type;
+}
+
+/** One line per inner call, indented for nested batches. */
+export function formatMulticallCallLines(
+  calls: readonly MulticallCallReport[],
+  indent: string
+): string[] {
+  const lines: string[] = [];
+  for (const call of calls) {
+    const parts = [`Call [${call.index}]`];
+    if (call.target) parts.push(`target=${call.target}`);
+    if (call.value != null && call.value !== '0') parts.push(`value=${call.value}`);
+    if (call.allowFailure) parts.push('allowFailure');
+    const what = call.depthLimited
+      ? 'nested batch not analyzed (depth limit)'
+      : describeInnerReport(call.report);
+    lines.push(`${indent}${parts.join(' ')}: ${what}`);
+    if (call.report?.type === 'multicall') {
+      lines.push(...formatMulticallCallLines(call.report.payload.calls, `${indent}  `));
+    }
+  }
+  return lines;
+}
+
 /**
  * Extra plain-text lines for CLI output: spender/operator kind, collected
  * risk ids with reasons, and stub balance/allowance deltas. Empty when
@@ -563,6 +762,9 @@ export function formatReportFooter(report: JsonReport): string[] {
       break;
     case 'nft_setApprovalForAll':
       lines.push(`Operator kind: ${report.payload.operatorKind}`);
+      break;
+    case 'multicall':
+      lines.push(...formatMulticallCallLines(report.payload.calls, ''));
       break;
     case 'abi_call':
       lines.push(`Standards: ${report.payload.standards.join(', ')}`);

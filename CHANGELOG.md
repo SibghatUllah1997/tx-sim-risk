@@ -1,3 +1,9 @@
+## 2026-11-17
+
+- Decode router `multicall(bytes[])` (plus the deadline and previous-block-hash variants) and Multicall3 `aggregate`, `tryAggregate`, `aggregate3`, `aggregate3Value`, `blockAndAggregate`, and `tryBlockAndAggregate` into a new `multicall` report. Each inner call carries its own nested report, and inner risks roll up to the batch.
+- New warnings: `multicall_batched_grant` when an approval, permit, or operator grant sits inside a batch, and `multicall_depth_limit` when batches nest deeper than four levels. Batches over 256 calls are rejected.
+- Multicall3 inner calls are simulated against the Multicall3 contract (it is `msg.sender` there); router multicall keeps the signer. The JSON Schema and example dataset (now 29 cases) cover the new report.
+
 ## 2026-11-16
 
 - Decode Uniswap Permit2 `approve`, `permit` (single and batch), and `permitTransferFrom` into a `permit2` report. Unlimited amounts (`type(uint160).max` or `type(uint256).max`) reuse the existing high-severity allowance/permit risks, and a never-expiring grant (`type(uint48).max` or a max deadline) adds the new `permit2_no_expiry` warning. Spenders, and transfer recipients, get the same phishing, block-list, and EOA checks as `approve`.

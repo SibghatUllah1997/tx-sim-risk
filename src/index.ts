@@ -12,6 +12,7 @@ export * from './evm/eip1559';
 export * from './evm/rawtx';
 export * from './evm/permit';
 export * from './evm/permit2';
+export * from './evm/multicall';
 export * from './risks';
 export * from './config';
 export * from './sim';
@@ -28,8 +29,10 @@ export {
   formatReportFooter,
   formatAtaLine,
   formatCpiLine,
+  formatMulticallCallLines,
+  MULTICALL3_ADDRESS,
 } from './report';
-export type { JsonReport, ReportOptions } from './report';
+export type { JsonReport, MulticallCallReport, ReportOptions } from './report';
 export * from './samples';
 export * from './pages';
 export * from './solana/skeleton';

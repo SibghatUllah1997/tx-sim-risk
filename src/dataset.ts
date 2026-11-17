@@ -47,6 +47,7 @@ const REPORT_TYPES: readonly JsonReport['type'][] = [
   'erc20_approve',
   'erc20_permit',
   'permit2',
+  'multicall',
   'erc20_transfer',
   'erc20_increaseAllowance',
   'erc20_decreaseAllowance',

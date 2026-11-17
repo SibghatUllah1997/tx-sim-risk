@@ -67,6 +67,19 @@ export function formatDetectedHeader(report: JsonReport): string[] {
       lines.push(`Unlimited: ${p.isUnlimited ? 'yes' : 'no'}`);
       return lines;
     }
+    case 'multicall': {
+      const p = report.payload;
+      const lines = [`Detected: ${p.signature} batch`, `Calls: ${p.calls.length}`];
+      if (p.deadline != null) lines.push(`Deadline: ${p.deadline}`);
+      if (p.previousBlockhash != null) {
+        lines.push(`Previous block hash: ${p.previousBlockhash}`);
+      }
+      if (p.totalValue !== '0') lines.push(`Total value: ${p.totalValue}`);
+      lines.push(
+        `Inner calls run as: ${p.forwardsAsContract ? 'Multicall3 contract' : 'original sender'}`
+      );
+      return lines;
+    }
     case 'erc20_transfer':
       return [
         'Detected: ERC-20 transfer(address,uint256)',

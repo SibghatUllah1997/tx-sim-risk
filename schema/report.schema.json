@@ -7,6 +7,7 @@
     { "$ref": "#/$defs/erc20ApproveReport" },
     { "$ref": "#/$defs/erc20PermitReport" },
     { "$ref": "#/$defs/permit2Report" },
+    { "$ref": "#/$defs/multicallReport" },
     { "$ref": "#/$defs/erc20TransferReport" },
     { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },
     { "$ref": "#/$defs/erc20DecreaseAllowanceReport" },
@@ -284,6 +285,80 @@
             { "$ref": "#/$defs/addressKind" },
             { "type": "null" }
           ]
+        }
+      }
+    },
+    "multicallCall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "target", "allowFailure", "value", "selector", "report", "depthLimited"],
+      "properties": {
+        "index": { "$ref": "#/$defs/uint" },
+        "target": {
+          "anyOf": [
+            { "$ref": "#/$defs/evmAddress" },
+            { "type": "null" }
+          ]
+        },
+        "allowFailure": { "type": ["boolean", "null"] },
+        "value": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "selector": {
+          "anyOf": [
+            { "$ref": "#/$defs/selector" },
+            { "type": "null" }
+          ]
+        },
+        "report": {
+          "anyOf": [
+            { "$ref": "#/$defs/decodedEvmReport" },
+            { "type": "null" }
+          ]
+        },
+        "depthLimited": { "type": "boolean" }
+      }
+    },
+    "multicallPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["variant", "signature", "forwardsAsContract", "deadline", "previousBlockhash", "totalValue", "calls"],
+      "properties": {
+        "variant": {
+          "type": "string",
+          "enum": [
+            "multicall",
+            "multicall_deadline",
+            "multicall_blockhash",
+            "aggregate",
+            "try_aggregate",
+            "aggregate3",
+            "aggregate3_value",
+            "block_and_aggregate",
+            "try_block_and_aggregate"
+          ]
+        },
+        "signature": { "$ref": "#/$defs/nonEmptyString" },
+        "forwardsAsContract": { "type": "boolean" },
+        "deadline": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "previousBlockhash": {
+          "anyOf": [
+            { "type": "string", "pattern": "^0x[0-9a-f]{64}$" },
+            { "type": "null" }
+          ]
+        },
+        "totalValue": { "$ref": "#/$defs/unsignedDecimalString" },
+        "calls": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/multicallCall" }
         }
       }
     },
@@ -596,6 +671,34 @@
           },
           "required": ["type", "payload"]
         }
+      ]
+    },
+    "multicallReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "multicall" },
+            "payload": { "$ref": "#/$defs/multicallPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
+    "decodedEvmReport": {
+      "description": "Any report the EVM calldata decoder can emit; used for calls nested inside a multicall batch.",
+      "oneOf": [
+        { "$ref": "#/$defs/erc20ApproveReport" },
+        { "$ref": "#/$defs/erc20PermitReport" },
+        { "$ref": "#/$defs/permit2Report" },
+        { "$ref": "#/$defs/multicallReport" },
+        { "$ref": "#/$defs/erc20TransferReport" },
+        { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },
+        { "$ref": "#/$defs/erc20DecreaseAllowanceReport" },
+        { "$ref": "#/$defs/nftSetApprovalForAllReport" },
+        { "$ref": "#/$defs/abiCallReport" }
       ]
     },
     "erc20TransferReport": {

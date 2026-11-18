@@ -22,6 +22,7 @@ describe('CLI e2e: EVM calldata', () => {
     expect(stderr).toBe('');
     expect(stdout).toContain('Detected: ERC-20 approve(address,uint256)');
     expect(stdout).toContain(`Spender: 0x${ROUTER}`);
+    expect(stdout).toContain('Spender label: Uniswap V2 Router (router)');
     expect(stdout).toContain('Unlimited approval: yes');
     expect(stdout).toContain('Severity: high');
     expect(stdout).toMatch(/^Risks: unlimited_approval$/m);

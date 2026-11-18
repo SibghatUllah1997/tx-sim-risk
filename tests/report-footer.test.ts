@@ -40,6 +40,7 @@ describe('plain-text report footer', () => {
     const report = generateJsonReport(encodeApprove(ROUTER, 'f'.repeat(64)))!;
     expect(formatReportFooter(report)).toEqual([
       'Spender kind: contract',
+      'Spender label: Uniswap V2 Router (router)',
       'Severity: high',
       `Risks: ${UNLIMITED_APPROVAL_RISK}`,
       `Reason: ${UNLIMITED_APPROVAL_RISK} [high]: ${RISK_REASONS[UNLIMITED_APPROVAL_RISK]}`,
@@ -87,6 +88,7 @@ describe('plain-text report footer', () => {
     const report = generateJsonReport(encodeApprove(ROUTER, '1'))!;
     expect(formatReportFooter(report)).toEqual([
       'Spender kind: contract',
+      'Spender label: Uniswap V2 Router (router)',
       `Allowance (0x${ROUTER}): set to 1`,
     ]);
   });

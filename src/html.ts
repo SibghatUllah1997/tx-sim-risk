@@ -49,6 +49,12 @@ function payloadRows(report: JsonReport): string[] {
       row('to', payload.to ?? 'contract creation'),
       row('value (wei)', payload.value),
       row('recipientKind', payload.recipientKind ?? 'n/a'),
+      row(
+        'recipientLabel',
+        payload.recipientLabel
+          ? `${payload.recipientLabel.name} (${payload.recipientLabel.kind})`
+          : ''
+      ),
     ];
   }
   if (report.type === 'eip7702') {
@@ -62,7 +68,7 @@ function payloadRows(report: JsonReport): string[] {
       ...payload.authorizations.map((item, index) =>
         row(
           `authorization ${index}`,
-          `delegate=${item.address} chainId=${item.chainId} ${item.isRevocation ? 'revoke' : item.isAnyChain ? 'any-chain' : 'chain-bound'} kind=${item.delegateKind}`
+          `delegate=${item.address} chainId=${item.chainId} ${item.isRevocation ? 'revoke' : item.isAnyChain ? 'any-chain' : 'chain-bound'} kind=${item.delegateKind}${item.delegateLabel ? ` label=${item.delegateLabel.name}` : ''}`
         )
       ),
       row(

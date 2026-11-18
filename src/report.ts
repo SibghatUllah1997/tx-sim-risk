@@ -62,6 +62,12 @@ import {
   type AddressKindHints,
 } from './evm/addressKind';
 import {
+  formatAddressLabel,
+  lookupAddressLabel,
+  type AddressLabel,
+  type CatalogEntry,
+} from './evm/catalog';
+import {
   blocklistedSpenderRisks,
   isAllowlisted,
   type AddressLists,
@@ -116,6 +122,8 @@ export type ReportOptions = SimOptions & {
   suspiciousPrograms?: ReadonlyMap<string, SuspiciousProgramEntry>;
   /** Override the built-in EVM + Solana decoder registry. */
   decoders?: DecoderRegistry<JsonReport>;
+  /** Override the built-in router / bridge / token label catalog. */
+  catalog?: ReadonlyMap<string, CatalogEntry>;
 };
 
 function kindHintsFor(
@@ -139,6 +147,13 @@ function spenderKindFor(
   options?: ReportOptions
 ): AddressKind {
   return classifyAddressKind(address, kindHintsFor(address, options));
+}
+
+function labelFor(
+  address: string | null | undefined,
+  options?: ReportOptions
+): AddressLabel | null {
+  return lookupAddressLabel(address, options?.catalog);
 }
 
 /**
@@ -179,6 +194,7 @@ export type JsonReport =
         amount: string;
         isUnlimitedApproval: boolean;
         spenderKind: AddressKind;
+        spenderLabel: AddressLabel | null;
       };
     })
   | (ReportMeta & {
@@ -194,6 +210,7 @@ export type JsonReport =
         isUnlimitedPermit: boolean;
         hasNoExpiry: boolean;
         spenderKind: AddressKind;
+        spenderLabel: AddressLabel | null;
       };
     })
   | (ReportMeta & {
@@ -218,6 +235,8 @@ export type JsonReport =
         isUnlimited: boolean;
         hasNoExpiry: boolean;
         spenderKind: AddressKind | null;
+        spenderLabel: AddressLabel | null;
+        toLabel: AddressLabel | null;
       };
     })
   | (ReportMeta & {
@@ -258,6 +277,7 @@ export type JsonReport =
           isAnyChain: boolean;
           isRevocation: boolean;
           delegateKind: AddressKind;
+          delegateLabel: AddressLabel | null;
         }[];
         innerReport: JsonReport | null;
       };
@@ -272,6 +292,7 @@ export type JsonReport =
         /** Native value in wei. */
         value: string;
         recipientKind: AddressKind | null;
+        recipientLabel: AddressLabel | null;
         isToZeroAddress: boolean;
       };
     })
@@ -281,6 +302,7 @@ export type JsonReport =
         to: string;
         amount: string;
         isToZeroAddress: boolean;
+        toLabel: AddressLabel | null;
       };
     })
   | (ReportMeta & {
@@ -289,6 +311,7 @@ export type JsonReport =
         spender: string;
         amountDelta: string;
         spenderKind: AddressKind;
+        spenderLabel: AddressLabel | null;
       };
     })
   | (ReportMeta & {
@@ -297,6 +320,7 @@ export type JsonReport =
         spender: string;
         amountDelta: string;
         spenderKind: AddressKind;
+        spenderLabel: AddressLabel | null;
       };
     })
   | (ReportMeta & {
@@ -307,6 +331,7 @@ export type JsonReport =
         isApproveAll: boolean;
         standards: ['erc721', 'erc1155'];
         operatorKind: AddressKind;
+        operatorLabel: AddressLabel | null;
       };
     })
   | (ReportMeta & {
@@ -449,6 +474,8 @@ function permit2Payload(
     spenderKind: decoded.spender
       ? spenderKindFor(decoded.spender, options)
       : null,
+    spenderLabel: labelFor(decoded.spender, options),
+    toLabel: labelFor(decoded.to, options),
   };
 }
 
@@ -707,6 +734,7 @@ function nativeTransferReport(
       to: tx.to,
       value: tx.value.toString(),
       recipientKind: tx.to ? spenderKindFor(tx.to, options) : null,
+      recipientLabel: labelFor(tx.to, options),
       isToZeroAddress: toZero,
     },
     risks,
@@ -797,6 +825,7 @@ function eip7702Report(
         isAnyChain: item.isAnyChain,
         isRevocation: item.isRevocation,
         delegateKind: spenderKindFor(item.address, options),
+        delegateLabel: labelFor(item.address, options),
       })),
       innerReport,
     },
@@ -838,6 +867,7 @@ function generateJsonReportAt(
         amount: approve.amount.toString(),
         isUnlimitedApproval: approve.isUnlimitedApproval,
         spenderKind: spenderKindFor(approve.spender, options),
+        spenderLabel: labelFor(approve.spender, options),
       },
       ...reportMeta(risks, data, options),
     };
@@ -860,6 +890,7 @@ function generateJsonReportAt(
         isUnlimitedPermit: permit.isUnlimitedPermit,
         hasNoExpiry: permit.hasNoExpiry,
         spenderKind: spenderKindFor(permit.spender, options),
+        spenderLabel: labelFor(permit.spender, options),
       },
       ...reportMeta(
         [
@@ -896,6 +927,7 @@ function generateJsonReportAt(
         to: transfer.to,
         amount: transfer.amount.toString(),
         isToZeroAddress: transfer.isToZeroAddress,
+        toLabel: labelFor(transfer.to, options),
       },
       ...reportMeta(risks, data, options),
     };
@@ -909,6 +941,7 @@ function generateJsonReportAt(
         spender: inc.spender,
         amountDelta: inc.amountDelta.toString(),
         spenderKind: spenderKindFor(inc.spender, options),
+        spenderLabel: labelFor(inc.spender, options),
       },
       ...reportMeta(
         approvalGrantRisks(inc.spender, inc.amountDelta > 0n, options),
@@ -926,6 +959,7 @@ function generateJsonReportAt(
         spender: dec.spender,
         amountDelta: dec.amountDelta.toString(),
         spenderKind: spenderKindFor(dec.spender, options),
+        spenderLabel: labelFor(dec.spender, options),
       },
       ...reportMeta([], data, options),
     };
@@ -942,6 +976,7 @@ function generateJsonReportAt(
         isApproveAll: nft.isApproveAll,
         standards: ['erc721', 'erc1155'],
         operatorKind: spenderKindFor(nft.operator, options),
+        operatorLabel: labelFor(nft.operator, options),
       },
       ...reportMeta(
         [
@@ -1079,17 +1114,38 @@ export function formatReportFooter(report: JsonReport): string[] {
     case 'erc20_approve':
     case 'erc20_permit':
     case 'erc20_increaseAllowance':
-    case 'erc20_decreaseAllowance':
+    case 'erc20_decreaseAllowance': {
       lines.push(`Spender kind: ${report.payload.spenderKind}`);
+      const spender = formatAddressLabel(report.payload.spenderLabel);
+      if (spender) lines.push(`Spender label: ${spender}`);
       break;
-    case 'permit2':
+    }
+    case 'permit2': {
       if (report.payload.spenderKind) {
         lines.push(`Spender kind: ${report.payload.spenderKind}`);
       }
+      const spender = formatAddressLabel(report.payload.spenderLabel);
+      if (spender) lines.push(`Spender label: ${spender}`);
+      const to = formatAddressLabel(report.payload.toLabel);
+      if (to) lines.push(`Recipient label: ${to}`);
       break;
-    case 'nft_setApprovalForAll':
+    }
+    case 'nft_setApprovalForAll': {
       lines.push(`Operator kind: ${report.payload.operatorKind}`);
+      const operator = formatAddressLabel(report.payload.operatorLabel);
+      if (operator) lines.push(`Operator label: ${operator}`);
       break;
+    }
+    case 'erc20_transfer': {
+      const to = formatAddressLabel(report.payload.toLabel);
+      if (to) lines.push(`Recipient label: ${to}`);
+      break;
+    }
+    case 'native_transfer': {
+      const named = formatAddressLabel(report.payload.recipientLabel);
+      if (named) lines.push(`Recipient label: ${named}`);
+      break;
+    }
     case 'multicall':
       lines.push(...formatMulticallCallLines(report.payload.calls, ''));
       break;
@@ -1101,8 +1157,9 @@ export function formatReportFooter(report: JsonReport): string[] {
           : item.isAnyChain
             ? 'any-chain'
             : `chain ${item.chainId}`;
+        const named = formatAddressLabel(item.delegateLabel);
         lines.push(
-          `Delegate [${index}] ${item.address} (${kind}, ${item.delegateKind})`
+          `Delegate [${index}] ${item.address} (${kind}, ${item.delegateKind}${named ? `, ${named}` : ''})`
         );
       }
       break;

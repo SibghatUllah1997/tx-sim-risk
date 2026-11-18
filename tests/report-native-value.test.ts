@@ -60,6 +60,7 @@ describe('native value transfers', () => {
       to: FRIEND,
       value: ONE_ETH.toString(),
       recipientKind: 'unknown',
+      recipientLabel: null,
       isToZeroAddress: false,
     });
     expect(report.risks).toEqual([]);

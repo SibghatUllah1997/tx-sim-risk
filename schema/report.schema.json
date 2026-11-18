@@ -29,6 +29,25 @@
       "type": "string",
       "enum": ["eoa", "contract", "unknown"]
     },
+    "catalogKind": {
+      "type": "string",
+      "enum": ["router", "bridge", "token", "permit"]
+    },
+    "addressLabel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "kind"],
+      "properties": {
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "kind": { "$ref": "#/$defs/catalogKind" }
+      }
+    },
+    "nullableAddressLabel": {
+      "anyOf": [
+        { "$ref": "#/$defs/addressLabel" },
+        { "type": "null" }
+      ]
+    },
     "evmAddress": {
       "type": "string",
       "pattern": "^0x[0-9a-fA-F]{40}$"
@@ -155,12 +174,13 @@
     "erc20ApprovePayload": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["spender", "amount", "isUnlimitedApproval", "spenderKind"],
+      "required": ["spender", "amount", "isUnlimitedApproval", "spenderKind", "spenderLabel"],
       "properties": {
         "spender": { "$ref": "#/$defs/evmAddress" },
         "amount": { "$ref": "#/$defs/unsignedDecimalString" },
         "isUnlimitedApproval": { "type": "boolean" },
-        "spenderKind": { "$ref": "#/$defs/addressKind" }
+        "spenderKind": { "$ref": "#/$defs/addressKind" },
+        "spenderLabel": { "$ref": "#/$defs/nullableAddressLabel" }
       }
     },
     "erc20PermitPayload": {
@@ -176,7 +196,8 @@
         "allowed",
         "isUnlimitedPermit",
         "hasNoExpiry",
-        "spenderKind"
+        "spenderKind",
+        "spenderLabel"
       ],
       "properties": {
         "variant": { "type": "string", "enum": ["eip2612", "dai"] },
@@ -193,7 +214,8 @@
         "allowed": { "type": ["boolean", "null"] },
         "isUnlimitedPermit": { "type": "boolean" },
         "hasNoExpiry": { "type": "boolean" },
-        "spenderKind": { "$ref": "#/$defs/addressKind" }
+        "spenderKind": { "$ref": "#/$defs/addressKind" },
+        "spenderLabel": { "$ref": "#/$defs/nullableAddressLabel" }
       }
     },
     "permit2Allowance": {
@@ -229,7 +251,9 @@
         "allowances",
         "isUnlimited",
         "hasNoExpiry",
-        "spenderKind"
+        "spenderKind",
+        "spenderLabel",
+        "toLabel"
       ],
       "properties": {
         "variant": { "type": "string", "enum": ["approve", "permit", "permit_batch", "permit_transfer_from"] },
@@ -288,7 +312,9 @@
             { "$ref": "#/$defs/addressKind" },
             { "type": "null" }
           ]
-        }
+        },
+        "spenderLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "toLabel": { "$ref": "#/$defs/nullableAddressLabel" }
       }
     },
     "multicallCall": {
@@ -440,7 +466,8 @@
         "s",
         "isAnyChain",
         "isRevocation",
-        "delegateKind"
+        "delegateKind",
+        "delegateLabel"
       ],
       "properties": {
         "chainId": { "$ref": "#/$defs/unsignedDecimalString" },
@@ -451,7 +478,8 @@
         "s": { "$ref": "#/$defs/hexBytes" },
         "isAnyChain": { "type": "boolean" },
         "isRevocation": { "type": "boolean" },
-        "delegateKind": { "$ref": "#/$defs/addressKind" }
+        "delegateKind": { "$ref": "#/$defs/addressKind" },
+        "delegateLabel": { "$ref": "#/$defs/nullableAddressLabel" }
       }
     },
     "eip7702Payload": {
@@ -507,7 +535,7 @@
     "nativeTransferPayload": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["txType", "chainId", "to", "value", "recipientKind", "isToZeroAddress"],
+      "required": ["txType", "chainId", "to", "value", "recipientKind", "recipientLabel", "isToZeroAddress"],
       "properties": {
         "txType": { "type": "string", "enum": ["legacy", "eip1559", "eip7702"] },
         "chainId": {
@@ -529,33 +557,36 @@
             { "type": "null" }
           ]
         },
+        "recipientLabel": { "$ref": "#/$defs/nullableAddressLabel" },
         "isToZeroAddress": { "type": "boolean" }
       }
     },
     "erc20TransferPayload": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["to", "amount", "isToZeroAddress"],
+      "required": ["to", "amount", "isToZeroAddress", "toLabel"],
       "properties": {
         "to": { "$ref": "#/$defs/evmAddress" },
         "amount": { "$ref": "#/$defs/unsignedDecimalString" },
-        "isToZeroAddress": { "type": "boolean" }
+        "isToZeroAddress": { "type": "boolean" },
+        "toLabel": { "$ref": "#/$defs/nullableAddressLabel" }
       }
     },
     "erc20AllowanceDeltaPayload": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["spender", "amountDelta", "spenderKind"],
+      "required": ["spender", "amountDelta", "spenderKind", "spenderLabel"],
       "properties": {
         "spender": { "$ref": "#/$defs/evmAddress" },
         "amountDelta": { "$ref": "#/$defs/unsignedDecimalString" },
-        "spenderKind": { "$ref": "#/$defs/addressKind" }
+        "spenderKind": { "$ref": "#/$defs/addressKind" },
+        "spenderLabel": { "$ref": "#/$defs/nullableAddressLabel" }
       }
     },
     "nftSetApprovalForAllPayload": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["operator", "approved", "isApproveAll", "standards", "operatorKind"],
+      "required": ["operator", "approved", "isApproveAll", "standards", "operatorKind", "operatorLabel"],
       "properties": {
         "operator": { "$ref": "#/$defs/evmAddress" },
         "approved": { "type": "boolean" },
@@ -570,7 +601,8 @@
           ],
           "items": false
         },
-        "operatorKind": { "$ref": "#/$defs/addressKind" }
+        "operatorKind": { "$ref": "#/$defs/addressKind" },
+        "operatorLabel": { "$ref": "#/$defs/nullableAddressLabel" }
       }
     },
     "abiStandard": {

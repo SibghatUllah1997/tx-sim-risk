@@ -125,6 +125,16 @@ export function formatDetectedHeader(report: JsonReport): string[] {
       );
       return lines;
     }
+    case 'native_transfer': {
+      const p = report.payload;
+      return [
+        `Detected: native ETH transfer (${p.txType} tx, no calldata)`,
+        `Chain ID: ${p.chainId ?? 'unknown'}`,
+        `To: ${p.to ?? 'contract creation'}`,
+        `Value (wei): ${p.value}`,
+        `Recipient kind: ${p.recipientKind ?? 'n/a'}`,
+      ];
+    }
     case 'erc20_transfer':
       return [
         'Detected: ERC-20 transfer(address,uint256)',

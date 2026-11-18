@@ -367,6 +367,30 @@
       }
     },
     {
+      "id": "rawtx-native-transfer",
+      "chain": "evm",
+      "description": "EIP-1559 tx sending 0.5 ETH with empty calldata.",
+      "input": "0x02f0010784773594008506fc23ac0082ea6094aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa8806f05b59d3b2000080c0",
+      "expect": {
+        "type": "native_transfer",
+        "risks": [],
+        "severity": "info"
+      }
+    },
+    {
+      "id": "rawtx-value-on-approve",
+      "chain": "evm",
+      "description": "EIP-1559 tx attaching 1 ETH to a non-payable approve.",
+      "input": "0x02f875010784773594008506fc23ac0082ea6094cccccccccccccccccccccccccccccccccccccccc880de0b6b3a7640000b844095ea7b30000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488d0000000000000000000000000000000000000000000000000000000000000064c0",
+      "expect": {
+        "type": "erc20_approve",
+        "risks": [
+          "native_value_nonpayable_call"
+        ],
+        "severity": "warn"
+      }
+    },
+    {
       "id": "solana-system-transfer",
       "chain": "solana",
       "description": "Signed legacy SOL transfer with no risks.",

@@ -10,6 +10,7 @@
     { "$ref": "#/$defs/multicallReport" },
     { "$ref": "#/$defs/erc4337UserOpReport" },
     { "$ref": "#/$defs/eip7702Report" },
+    { "$ref": "#/$defs/nativeTransferReport" },
     { "$ref": "#/$defs/erc20TransferReport" },
     { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },
     { "$ref": "#/$defs/erc20DecreaseAllowanceReport" },
@@ -503,6 +504,34 @@
         }
       }
     },
+    "nativeTransferPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["txType", "chainId", "to", "value", "recipientKind", "isToZeroAddress"],
+      "properties": {
+        "txType": { "type": "string", "enum": ["legacy", "eip1559", "eip7702"] },
+        "chainId": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "to": {
+          "anyOf": [
+            { "$ref": "#/$defs/evmAddress" },
+            { "type": "null" }
+          ]
+        },
+        "value": { "$ref": "#/$defs/unsignedDecimalString" },
+        "recipientKind": {
+          "anyOf": [
+            { "$ref": "#/$defs/addressKind" },
+            { "type": "null" }
+          ]
+        },
+        "isToZeroAddress": { "type": "boolean" }
+      }
+    },
     "erc20TransferPayload": {
       "type": "object",
       "additionalProperties": false,
@@ -870,6 +899,21 @@
         { "$ref": "#/$defs/erc20DecreaseAllowanceReport" },
         { "$ref": "#/$defs/nftSetApprovalForAllReport" },
         { "$ref": "#/$defs/abiCallReport" }
+      ]
+    },
+    "nativeTransferReport": {
+      "description": "A raw EVM transaction with empty calldata: a plain native-value transfer.",
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "native_transfer" },
+            "payload": { "$ref": "#/$defs/nativeTransferPayload" }
+          },
+          "required": ["type", "payload"]
+        }
       ]
     },
     "erc20TransferReport": {

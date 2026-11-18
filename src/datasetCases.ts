@@ -218,7 +218,7 @@ function eip7702Tx(chainId: number, delegate: Hex): Hex {
   });
 }
 
-function eip1559Tx(data: Hex, chainId: number): Hex {
+function eip1559Tx(data: Hex, chainId: number, value = 0n, to: Hex = TX_TARGET): Hex {
   return serializeTransaction({
     type: 'eip1559',
     chainId,
@@ -226,8 +226,8 @@ function eip1559Tx(data: Hex, chainId: number): Hex {
     gas: 60_000n,
     maxPriorityFeePerGas: 2_000_000_000n,
     maxFeePerGas: 30_000_000_000n,
-    to: TX_TARGET,
-    value: 0n,
+    to,
+    value,
     data,
   });
 }
@@ -440,6 +440,12 @@ export function buildExampleDataset(): Dataset {
     evm('rawtx-legacy-burn', 'Legacy EIP-155 tx on chain 137 wrapping a burn transfer.',
       legacyTx(transfer('0'.repeat(40), '01'), 137),
       { type: 'erc20_transfer', risks: ['burn_to_zero_address'], severity: 'warn' }),
+    evm('rawtx-native-transfer', 'EIP-1559 tx sending 0.5 ETH with empty calldata.',
+      eip1559Tx('0x', 1, 500_000_000_000_000_000n, `0x${RECIPIENT}`),
+      { type: 'native_transfer', risks: [], severity: 'info' }),
+    evm('rawtx-value-on-approve', 'EIP-1559 tx attaching 1 ETH to a non-payable approve.',
+      eip1559Tx(approve(ROUTER, '64'), 1, 1_000_000_000_000_000_000n),
+      { type: 'erc20_approve', risks: ['native_value_nonpayable_call'], severity: 'warn' }),
     solana('solana-system-transfer', 'Signed legacy SOL transfer with no risks.',
       solanaTransfer(),
       { type: 'solana_tx', risks: [], severity: 'info' }),

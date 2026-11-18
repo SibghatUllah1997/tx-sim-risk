@@ -2,14 +2,39 @@ import { stripHexPrefix } from './hex';
 import { parseEip7702 } from './eip7702';
 import { rlpDecodeItem, bytesToBigInt, type RlpValue } from './rlp';
 
+type RawTxFields = {
+  /** Recipient, or null for a contract-creation transaction. */
+  to: string | null;
+  /** Native value in wei. */
+  value: bigint;
+  data: string;
+};
+
 export type ParsedRawTx =
-  | { txType: 'eip1559'; chainId: bigint; data: string }
-  | { txType: 'eip7702'; chainId: bigint; data: string }
-  | { txType: 'legacy'; chainId: bigint | null; data: string };
+  | ({ txType: 'eip1559'; chainId: bigint } & RawTxFields)
+  | ({ txType: 'eip7702'; chainId: bigint } & RawTxFields)
+  | ({ txType: 'legacy'; chainId: bigint | null } & RawTxFields);
+
+function fieldBytes(value: RlpValue | undefined, label: string): string {
+  if (value == null) return '';
+  if (typeof value !== 'string') {
+    throw new Error(`Invalid transaction: ${label} must be bytes`);
+  }
+  return value;
+}
+
+/** RLP `to` field: empty bytes mean contract creation. */
+function toAddress(value: RlpValue | undefined): string | null {
+  const hex = fieldBytes(value, 'to');
+  if (hex.length === 0) return null;
+  if (hex.length !== 40) throw new Error('Invalid transaction: to must be 20 bytes');
+  return `0x${hex.toLowerCase()}`;
+}
 
 /**
  * Attempts to parse a raw Ethereum transaction (legacy or EIP-1559 typed-2).
- * On success, returns the extracted calldata as a 0x-prefixed hex string and the chainId when available.
+ * On success, returns the calldata as a 0x-prefixed hex string, the recipient
+ * (null for contract creation), the native value in wei, and the chainId when available.
  * Returns null when the input does not appear to be a raw transaction.
  */
 export function extractDataAndChainIdFromRawTx(raw: string): ParsedRawTx | null {
@@ -21,7 +46,13 @@ export function extractDataAndChainIdFromRawTx(raw: string): ParsedRawTx | null 
   if (hex.startsWith('04')) {
     const parsed = parseEip7702(`0x${hex}`);
     if (!parsed) return null;
-    return { txType: 'eip7702', chainId: parsed.chainId, data: parsed.data };
+    return {
+      txType: 'eip7702',
+      chainId: parsed.chainId,
+      to: parsed.to,
+      value: parsed.value,
+      data: parsed.data,
+    };
   }
 
   // Typed transaction (0x02 = EIP-1559)
@@ -35,7 +66,13 @@ export function extractDataAndChainIdFromRawTx(raw: string): ParsedRawTx | null 
     const chainId = bytesToBigInt((fields[0] as string) || '');
     const dataHex = (fields[7] as string) || '';
     const data = '0x' + dataHex;
-    return { txType: 'eip1559', chainId, data };
+    return {
+      txType: 'eip1559',
+      chainId,
+      to: toAddress(fields[5]),
+      value: bytesToBigInt(fieldBytes(fields[6], 'value')),
+      data,
+    };
   }
 
   // Legacy transaction (untyped RLP list of 9 elements)
@@ -58,7 +95,13 @@ export function extractDataAndChainIdFromRawTx(raw: string): ParsedRawTx | null 
       chainId = null;
     }
     const data = '0x' + dataHex;
-    return { txType: 'legacy', chainId, data };
+    return {
+      txType: 'legacy',
+      chainId,
+      to: toAddress(fields[3]),
+      value: bytesToBigInt(fieldBytes(fields[4], 'value')),
+      data,
+    };
   } catch {
     return null;
   }

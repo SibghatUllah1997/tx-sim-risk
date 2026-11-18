@@ -74,6 +74,8 @@ describe('raw transaction parser', () => {
     expect(parsed.txType).toBe('eip1559');
     expect(parsed.chainId).toBe(chainId);
     expect(parsed.data).toBe('0x' + calldata);
+    expect(parsed.to).toBe('0x' + to);
+    expect(parsed.value).toBe(value);
   });
 
   it('extracts calldata and chainId from legacy EIP-155 tx', () => {
@@ -108,6 +110,8 @@ describe('raw transaction parser', () => {
     expect(parsed.txType).toBe('legacy');
     expect(parsed.chainId).toBe(chainId);
     expect(parsed.data).toBe('0x' + calldata);
+    expect(parsed.to).toBe('0x' + to);
+    expect(parsed.value).toBe(value);
   });
 });
 

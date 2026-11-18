@@ -437,6 +437,30 @@
         ],
         "severity": "warn"
       }
+    },
+    {
+      "id": "solana-spl-transfer-checked",
+      "chain": "solana",
+      "description": "SPL Token TransferChecked of 1.5 tokens with 6 decimals.",
+      "input": "AcH/Bj6FmL+m2t+l+QxNN3QPxcwf9I0mCAaxuSueZa88hgjS+OIpFuz1UFCXXLgKvFtC+ysHTggB2/eJC/CJXgcBAAIFns8DLT2dh6hXlS+F61EoyJ0GOD6rwq8ysRV4hnyRFlxgCBM/fhWFeViQp1qOPNqUICqiKIxOKVqb0vW2J1hn8Ny20xp2siNczwh3jzfetuQ6FTQJxXrHQ1iEk5hLzlfBBBJvZOWEEf1+kV/f5iedmmLQhG4FbGzboRt1A0jQjYoG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQQEAQMCAAoMYOMWAAAAAAAG",
+      "expect": {
+        "type": "solana_tx",
+        "risks": [],
+        "severity": "info"
+      }
+    },
+    {
+      "id": "solana-spl-set-authority",
+      "chain": "solana",
+      "description": "SPL Token SetAuthority reassigning account owner.",
+      "input": "AV2M5cdak3wWK/w/309WhAmlBX5BZKRDTxjwlaO/pF5dsVTn9Rd7xTPA53bLC+W0Uz1uM8kKlGWsFjnxOKBLSg8BAAEDUkdvZCH9SR/9jX7My8OuOeDybjqgiMS/vGO9hN+DnaIy2DHz2V/rCXJ7PCKLfd/t9pPijJELRrLLFIFfGLNEzgbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCpAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAgIBACMGAgH3ok/jsMDGszL5/YnmSCWNqNrg5UCKWYLFogbSj5H2iw==",
+      "expect": {
+        "type": "solana_tx",
+        "risks": [
+          "solana_authority_change"
+        ],
+        "severity": "high"
+      }
     }
   ]
 }

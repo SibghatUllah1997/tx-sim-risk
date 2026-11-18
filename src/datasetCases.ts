@@ -7,7 +7,10 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import {
+  AuthorityType,
   createAssociatedTokenAccountIdempotentInstruction,
+  createSetAuthorityInstruction,
+  createTransferCheckedInstruction,
   getAssociatedTokenAddressSync,
 } from '@solana/spl-token';
 import { DATASET_VERSION, type Dataset, type DatasetCase } from './dataset';
@@ -320,6 +323,34 @@ function solanaAta(useWrongAccount: boolean): string {
   );
 }
 
+function solanaSplTransferChecked(): string {
+  const payer = fixtureKey('spl-transfer-payer');
+  return signedSolanaTx(
+    payer,
+    createTransferCheckedInstruction(
+      fixtureKey('spl-transfer-source').publicKey,
+      fixtureKey('spl-transfer-mint').publicKey,
+      fixtureKey('spl-transfer-dest').publicKey,
+      payer.publicKey,
+      1_500_000n,
+      6
+    )
+  );
+}
+
+function solanaSplSetAuthority(): string {
+  const payer = fixtureKey('spl-authority-payer');
+  return signedSolanaTx(
+    payer,
+    createSetAuthorityInstruction(
+      fixtureKey('spl-authority-account').publicKey,
+      payer.publicKey,
+      AuthorityType.AccountOwner,
+      fixtureKey('spl-authority-next').publicKey
+    )
+  );
+}
+
 function evm(
   id: string,
   description: string,
@@ -458,6 +489,12 @@ export function buildExampleDataset(): Dataset {
     solana('solana-ata-mismatch', 'createIdempotent naming an account that is not the derived ATA.',
       solanaAta(true),
       { type: 'solana_tx', risks: ['solana_ata_mismatch'], severity: 'warn' }),
+    solana('solana-spl-transfer-checked', 'SPL Token TransferChecked of 1.5 tokens with 6 decimals.',
+      solanaSplTransferChecked(),
+      { type: 'solana_tx', risks: [], severity: 'info' }),
+    solana('solana-spl-set-authority', 'SPL Token SetAuthority reassigning account owner.',
+      solanaSplSetAuthority(),
+      { type: 'solana_tx', risks: ['solana_authority_change'], severity: 'high' }),
   ];
   return { version: DATASET_VERSION, cases };
 }

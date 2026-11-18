@@ -22,6 +22,7 @@ Features:
 - Decode ERC-721 / ERC-1155 setApprovalForAll and flag operator grants
 - Flag unlimited approvals, burns to the zero address, phishing spenders, and grants to EOAs
 - Classify spenders/operators as EOA, contract, or unknown (bytecode or known-contract map)
+- Label well-known routers, bridges, and tokens in reports (Uniswap, Sushi, 1inch, 0x, WETH/USDC/USDT/DAI/WBTC, Permit2, common L1 bridges)
 - Human-readable reason strings for each risk id (JSON `riskDetails` and CLI footer)
 - Config-driven allow/block lists (`--config`) for trusted and banned spenders
 - info/warn/high severity on each risk and on the report as a whole
@@ -30,6 +31,7 @@ Features:
 - Parse EIP-1559 fee fields and chainId from raw transactions (legacy, type-2, and type-4)
 - Parse Solana legacy and v0 transaction skeletons (hex or base64)
 - Flag Solana CPI to known-bad program ids (`solana_suspicious_cpi`)
+- Decode Solana SPL Token Transfer, TransferChecked, and SetAuthority, and flag authority changes (`solana_authority_change`)
 - Plugin interface for additional chain decoders (`defineChainDecoder`)
 - Address checksum utilities
 - Sample HTML report gallery, published with GitHub Pages
@@ -105,7 +107,7 @@ Sample HTML gallery
 - Pushes to `main` deploy that gallery with GitHub Pages (see `.github/workflows/pages.yml`)
 
 Example dataset
-- `examples/dataset/cases.json` holds 35 labelled inputs (ERC-20 incl. permits and Permit2, multicall, ERC-4337, EIP-7702, NFT, raw EVM txs incl. native ETH value, Solana) with the report type, risks, and severity each should produce
+- `examples/dataset/cases.json` holds 37 labelled inputs (ERC-20 incl. permits and Permit2, multicall, ERC-4337, EIP-7702, NFT, raw EVM txs incl. native ETH value, Solana SPL token) with the report type, risks, and severity each should produce
 - Every case maps to CLI flags, e.g. `node dist/cli.js <input> --config examples/risk-lists.json --json`
 - `npm run dataset` rebuilds the file from `src/datasetCases.ts` and checks every case; tests fail if the file and the builder drift
 - Use it as a regression corpus or to compare another decoder: `checkDatasetFile('examples/dataset/cases.json')`

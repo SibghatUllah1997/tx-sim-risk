@@ -2,7 +2,10 @@
 
 - Raw EVM transactions now carry their recipient and native value. A raw tx with empty calldata becomes a new `native_transfer` report (chain id, recipient, wei, recipient kind); ETH sent to the zero address, a phishing-listed, or block-listed recipient is flagged.
 - New warning `native_value_nonpayable_call` when a raw or type-4 tx attaches ETH to a call the standard defines as non-payable (ERC-20 approve/transfer/allowance, permits, Permit2, setApprovalForAll, `handleOps`). Payable router multicall and unknown ABI calls are not flagged. Any attached value is noted in the simulation.
-- The JSON Schema and example dataset (now 35 cases) cover the new report. Marked Day 36 done.
+- The JSON Schema and example dataset cover the native-value report. Marked Day 36 done.
+- Reports now name well-known routers, bridges, and tokens (Uniswap, Sushi, 1inch, 0x, WETH/USDC/USDT/DAI/WBTC, Permit2, common L1 bridges) next to spenders, recipients, operators, and EIP-7702 delegates.
+- Solana SPL Token Transfer, TransferChecked, and SetAuthority are decoded in JSON, CLI, and HTML reports. Reassigning or clearing mint, freeze, owner, or close authority raises the high-severity `solana_authority_change` risk.
+- The example dataset now has 37 cases. Marked Days 37–38 done.
 
 ## 2026-11-17
 

@@ -64,6 +64,7 @@ describe('example dataset file', () => {
       'erc1155_approve_all',
       'solana_suspicious_cpi',
       'solana_ata_mismatch',
+      'solana_authority_change',
       'erc4337_paymaster',
       'erc4337_calldata_approval',
       'eip7702_delegation',

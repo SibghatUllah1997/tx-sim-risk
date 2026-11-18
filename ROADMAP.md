@@ -40,7 +40,7 @@ More decoders and report formats, still one small shippable step per day. Defaul
 - [x] Day 33: Decode `multicall` / `multicall3` and recursively analyze inner calls for the same risks
 - [x] Day 34: Parse ERC-4337 UserOperation fields and flag a paymaster or a callData approval
 - [x] Day 35: Parse EIP-7702 authorization lists on type-4 transactions and flag broad delegate designations
-- [ ] Day 36: Decode native ETH value transfers (empty vs non-empty calldata) and flag surprise contract calls with value
+- [x] Day 36: Decode native ETH value transfers (empty vs non-empty calldata) and flag surprise contract calls with value
 - [ ] Day 37: Add a known-router / bridge / token label catalog so reports can name common spenders
 - [ ] Day 38: Decode Solana SPL token Transfer / TransferChecked / SetAuthority and flag authority changes
 - [ ] Day 39: Optional live `eth_call` simulation behind an explicit RPC flag, keeping the default fully offline

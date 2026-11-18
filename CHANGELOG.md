@@ -1,3 +1,9 @@
+## 2026-11-18
+
+- Raw EVM transactions now carry their recipient and native value. A raw tx with empty calldata becomes a new `native_transfer` report (chain id, recipient, wei, recipient kind); ETH sent to the zero address, a phishing-listed, or block-listed recipient is flagged.
+- New warning `native_value_nonpayable_call` when a raw or type-4 tx attaches ETH to a call the standard defines as non-payable (ERC-20 approve/transfer/allowance, permits, Permit2, setApprovalForAll, `handleOps`). Payable router multicall and unknown ABI calls are not flagged. Any attached value is noted in the simulation.
+- The JSON Schema and example dataset (now 35 cases) cover the new report. Marked Day 36 done.
+
 ## 2026-11-17
 
 - Decode router `multicall(bytes[])` (plus the deadline and previous-block-hash variants) and Multicall3 `aggregate`, `tryAggregate`, `aggregate3`, `aggregate3Value`, `blockAndAggregate`, and `tryBlockAndAggregate` into a new `multicall` report. Each inner call carries its own nested report, and inner risks roll up to the batch.

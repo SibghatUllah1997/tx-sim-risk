@@ -18,6 +18,7 @@ Features:
 - Split router `multicall` and Multicall3 `aggregate*` batches, run every inner call through the same rules, and flag grants hidden inside a batch (`multicall_batched_grant`)
 - Parse ERC-4337 `handleOps` UserOperations, unwrap account `execute`, and flag a paymaster or a callData approval
 - Parse EIP-7702 type-4 authorization lists and flag delegate designations, including any-chain (`chain_id = 0`) grants
+- Report raw txs with empty calldata as native ETH transfers, and flag ETH attached to a non-payable token or wallet call (`native_value_nonpayable_call`)
 - Decode ERC-721 / ERC-1155 setApprovalForAll and flag operator grants
 - Flag unlimited approvals, burns to the zero address, phishing spenders, and grants to EOAs
 - Classify spenders/operators as EOA, contract, or unknown (bytecode or known-contract map)
@@ -104,7 +105,7 @@ Sample HTML gallery
 - Pushes to `main` deploy that gallery with GitHub Pages (see `.github/workflows/pages.yml`)
 
 Example dataset
-- `examples/dataset/cases.json` holds 33 labelled inputs (ERC-20 incl. permits and Permit2, multicall, ERC-4337, EIP-7702, NFT, raw EVM txs, Solana) with the report type, risks, and severity each should produce
+- `examples/dataset/cases.json` holds 35 labelled inputs (ERC-20 incl. permits and Permit2, multicall, ERC-4337, EIP-7702, NFT, raw EVM txs incl. native ETH value, Solana) with the report type, risks, and severity each should produce
 - Every case maps to CLI flags, e.g. `node dist/cli.js <input> --config examples/risk-lists.json --json`
 - `npm run dataset` rebuilds the file from `src/datasetCases.ts` and checks every case; tests fail if the file and the builder drift
 - Use it as a regression corpus or to compare another decoder: `checkDatasetFile('examples/dataset/cases.json')`

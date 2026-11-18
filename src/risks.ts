@@ -16,6 +16,7 @@ import {
   EIP7702_BROAD_DELEGATE_RISK,
   EIP7702_DELEGATION_RISK,
 } from './evm/eip7702';
+import { NATIVE_VALUE_NONPAYABLE_CALL_RISK } from './evm/nativeValue';
 import { PHISHING_SPENDER_RISK } from './evm/phishing';
 import { SOLANA_ATA_MISMATCH_RISK } from './solana/ata';
 import { SOLANA_SUSPICIOUS_CPI_RISK } from './solana/cpi';
@@ -44,6 +45,7 @@ export const KNOWN_RISK_IDS = [
   ERC4337_CALLDATA_APPROVAL_RISK,
   EIP7702_DELEGATION_RISK,
   EIP7702_BROAD_DELEGATE_RISK,
+  NATIVE_VALUE_NONPAYABLE_CALL_RISK,
 ] as const;
 
 export type KnownRiskId = (typeof KNOWN_RISK_IDS)[number];
@@ -93,6 +95,7 @@ export const RISK_SEVERITIES: Readonly<Record<KnownRiskId, RiskSeverity>> =
     [ERC4337_CALLDATA_APPROVAL_RISK]: 'high',
     [EIP7702_DELEGATION_RISK]: 'high',
     [EIP7702_BROAD_DELEGATE_RISK]: 'high',
+    [NATIVE_VALUE_NONPAYABLE_CALL_RISK]: 'warn',
   });
 
 /**
@@ -156,6 +159,8 @@ export const RISK_REASONS: Readonly<Record<KnownRiskId, string>> = Object.freeze
     'The type-4 transaction designates a contract whose code will run in place of the sender EOA for later calls, until the designation is cleared.',
   [EIP7702_BROAD_DELEGATE_RISK]:
     'An authorization uses chain id 0, so the delegate designation is valid on every chain rather than the chain this transaction is sent on.',
+  [NATIVE_VALUE_NONPAYABLE_CALL_RISK]:
+    'The transaction sends native ETH with a call that the token or wallet standard defines as non-payable, so a genuine contract would revert and the value is either a mistake or the target is not what it claims.',
 });
 
 export function isKnownRiskId(id: string): id is KnownRiskId {

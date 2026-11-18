@@ -47,7 +47,9 @@ import {
 } from './evm/erc721';
 import { erc1155ApproveAllRisks } from './evm/erc1155';
 import { decodeCommonAbi, type AbiDecodedArg, type AbiStandard } from './evm/abi';
-import { extractDataAndChainIdFromRawTx } from './evm/rawtx';
+import { extractDataAndChainIdFromRawTx, type ParsedRawTx } from './evm/rawtx';
+import { nativeValueCallRisks } from './evm/nativeValue';
+import { isZeroAddress } from './evm/hex';
 import {
   normalizeAddressKey,
   phishingSpenderRisks,
@@ -258,6 +260,19 @@ export type JsonReport =
           delegateKind: AddressKind;
         }[];
         innerReport: JsonReport | null;
+      };
+    })
+  | (ReportMeta & {
+      type: 'native_transfer';
+      payload: {
+        txType: ParsedRawTx['txType'];
+        chainId: string | null;
+        /** Recipient, or null when the tx creates a contract. */
+        to: string | null;
+        /** Native value in wei. */
+        value: string;
+        recipientKind: AddressKind | null;
+        isToZeroAddress: boolean;
       };
     })
   | (ReportMeta & {
@@ -657,6 +672,74 @@ function userOpReport(
   };
 }
 
+function nativeValueNote(value: bigint, to: string | null): string {
+  return to
+    ? `Sends ${value} wei of native ETH to ${to}.`
+    : `Sends ${value} wei of native ETH into the contract being created.`;
+}
+
+/**
+ * Report for a raw tx with empty calldata: a plain native-value transfer
+ * (or a zero-value self-cancel). The recipient gets the block-list and
+ * phishing checks a spender would get.
+ */
+function nativeTransferReport(
+  tx: ParsedRawTx,
+  options?: ReportOptions
+): JsonReport {
+  const risks: string[] = [];
+  const toZero = tx.to != null && isZeroAddress(tx.to);
+  if (tx.value > 0n && toZero) risks.push(BURN_TO_ZERO_ADDRESS_RISK);
+  if (tx.value > 0n && tx.to) {
+    pushUnique(risks, [
+      ...blocklistedSpenderRisks(tx.to, options?.lists),
+      ...phishingSpenderRisks(tx.to, options?.phishingIndex),
+    ]);
+  }
+  const simulation = emptySimulation();
+  if (tx.value > 0n) simulation.notes.push(nativeValueNote(tx.value, tx.to));
+  else simulation.notes.push('No value and no calldata: the transaction only consumes a nonce.');
+  return {
+    type: 'native_transfer',
+    payload: {
+      txType: tx.txType,
+      chainId: tx.chainId != null ? tx.chainId.toString() : null,
+      to: tx.to,
+      value: tx.value.toString(),
+      recipientKind: tx.to ? spenderKindFor(tx.to, options) : null,
+      isToZeroAddress: toZero,
+    },
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
+    simulation,
+  };
+}
+
+/**
+ * Decode a raw tx's calldata and attach its native value: a note in the
+ * simulation, plus a warning when the call is non-payable by standard.
+ */
+function rawTxReport(
+  tx: ParsedRawTx,
+  options?: ReportOptions
+): JsonReport | null {
+  if (tx.data === '0x') return nativeTransferReport(tx, options);
+  const report = generateJsonReport(tx.data, options);
+  if (!report || tx.value === 0n) return report;
+  const risks = [...report.risks];
+  pushUnique(risks, nativeValueCallRisks(report.type, tx.value));
+  const notes = [...report.simulation.notes];
+  pushUnique(notes, [nativeValueNote(tx.value, tx.to)]);
+  return {
+    ...report,
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
+    simulation: { ...report.simulation, notes },
+  } as JsonReport;
+}
+
 function eip7702Report(
   decoded: Eip7702Decoded,
   options: ReportOptions | undefined,
@@ -687,7 +770,11 @@ function eip7702Report(
   }
   if (innerReport) {
     pushUnique(risks, innerReport.risks);
+    pushUnique(risks, nativeValueCallRisks(innerReport.type, decoded.value));
     mergeSimulation(simulation, innerReport.simulation);
+  }
+  if (decoded.value > 0n) {
+    pushUnique(simulation.notes, [nativeValueNote(decoded.value, decoded.to)]);
   }
   pushUnique(simulation.notes, [
     'EIP-7702 sets the sender EOA code to the designated contract until a later type-4 transaction clears it.',
@@ -1135,7 +1222,7 @@ export const EVM_DECODER: ChainDecoderPlugin<JsonReport> = defineChainDecoder({
     try {
       const unwrapped = extractDataAndChainIdFromRawTx(input);
       if (unwrapped) {
-        return generateJsonReport(unwrapped.data, reportOptions);
+        return rawTxReport(unwrapped, reportOptions);
       }
     } catch {
       // Typed-prefix bytes that are not a well-formed EVM tx fall through.

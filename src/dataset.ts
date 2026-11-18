@@ -50,6 +50,7 @@ const REPORT_TYPES: readonly JsonReport['type'][] = [
   'multicall',
   'erc4337_userop',
   'eip7702',
+  'native_transfer',
   'erc20_transfer',
   'erc20_increaseAllowance',
   'erc20_decreaseAllowance',

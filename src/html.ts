@@ -41,6 +41,16 @@ function payloadRows(report: JsonReport): string[] {
       ...args.map((arg) => row(`${arg.name} (${arg.type})`, formatValue(arg.value))),
     ];
   }
+  if (report.type === 'native_transfer') {
+    const payload = report.payload;
+    return [
+      row('txType', payload.txType),
+      row('chainId', payload.chainId ?? 'unknown'),
+      row('to', payload.to ?? 'contract creation'),
+      row('value (wei)', payload.value),
+      row('recipientKind', payload.recipientKind ?? 'n/a'),
+    ];
+  }
   if (report.type === 'eip7702') {
     const payload = report.payload;
     return [

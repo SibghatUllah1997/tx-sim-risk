@@ -41,6 +41,7 @@ export * from './samples';
 export * from './pages';
 export * from './solana/skeleton';
 export * from './solana/ata';
+export * from './solana/splToken';
 export * from './solana/programs';
 export * from './solana/cpi';
 export * from './plugins';

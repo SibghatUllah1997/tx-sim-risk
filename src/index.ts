@@ -8,6 +8,7 @@ export * from './evm/erc721';
 export * from './evm/erc1155';
 export * from './evm/phishing';
 export * from './evm/addressKind';
+export * from './evm/catalog';
 export * from './evm/eip1559';
 export * from './evm/rawtx';
 export * from './evm/permit';

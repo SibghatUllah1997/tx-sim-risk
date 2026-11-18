@@ -1,4 +1,5 @@
 import { isAddressHexLike } from './address';
+import { CATALOG_CONTRACT_ADDRESSES } from './catalog';
 import { isHexString, stripHexPrefix } from './hex';
 
 export type AddressKind = 'eoa' | 'contract' | 'unknown';
@@ -25,13 +26,7 @@ function toAddressKey(address: string): string | null {
  * spenders (routers, permit vaults, wrapped native). Offline hint only:
  * anything not listed stays `unknown` unless bytecode is supplied.
  */
-export const DEFAULT_KNOWN_CONTRACTS: readonly string[] = Object.freeze([
-  '0x7a250d5630b4cf539739df2c5dacb4c659f2488d',
-  '0xe592427a0aece92de3edee1f18e0157c05861564',
-  '0x3fc91a3afd70395cd496c647d5a6cc9d4b2b7fad',
-  '0x000000000022d473030f116ddee9f6b43ac78ba3',
-  '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
-]);
+export const DEFAULT_KNOWN_CONTRACTS: readonly string[] = CATALOG_CONTRACT_ADDRESSES;
 
 /**
  * Build an address-kind map. `eoas` overwrite `contracts` on collision.

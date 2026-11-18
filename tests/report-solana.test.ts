@@ -15,9 +15,15 @@ import { SOLANA_ATA_MISMATCH_RISK } from '../src/solana/ata';
 import { SOLANA_SUSPICIOUS_CPI_RISK } from '../src/solana/cpi';
 import { SEED_DRAINER_PROGRAM_ID } from '../src/solana/programs';
 import {
+  AuthorityType,
   createAssociatedTokenAccountIdempotentInstruction,
+  createSetAuthorityInstruction,
+  createTransferCheckedInstruction,
+  createTransferInstruction,
   getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
 } from '@solana/spl-token';
+import { SOLANA_AUTHORITY_CHANGE_RISK } from '../src/solana/splToken';
 
 const BLOCKHASH = PublicKey.default.toBase58();
 
@@ -61,6 +67,7 @@ describe('Solana reports', () => {
       SystemProgram.programId.toBase58()
     );
     expect(report.payload.suspiciousCpi).toEqual([]);
+    expect(report.payload.splTokenInstructions).toEqual([]);
     expect(report.risks).toEqual([]);
     expect(report.severity).toBe('info');
     expect(() => JSON.stringify(report)).not.toThrow();
@@ -195,5 +202,109 @@ describe('Solana suspicious CPI reports', () => {
     expect(html).toContain('cpi 0');
     expect(html).toContain(SOLANA_SUSPICIOUS_CPI_RISK);
     expect(html).toContain(programId);
+  });
+});
+
+describe('Solana SPL token reports', () => {
+  it('lists Transfer and TransferChecked in JSON, footer, and HTML with no risk', () => {
+    const payer = Keypair.generate();
+    const source = Keypair.generate().publicKey;
+    const dest = Keypair.generate().publicKey;
+    const mint = Keypair.generate().publicKey;
+    const tx = new Transaction({
+      feePayer: payer.publicKey,
+      recentBlockhash: BLOCKHASH,
+    }).add(
+      createTransferInstruction(source, dest, payer.publicKey, 50n),
+      createTransferCheckedInstruction(
+        source,
+        mint,
+        dest,
+        payer.publicKey,
+        80n,
+        6
+      )
+    );
+    tx.sign(payer);
+    const encoded = Buffer.from(tx.serialize()).toString('base64');
+    const report = generateJsonReportFromAny(encoded)!;
+    if (report.type !== 'solana_tx') throw new Error('expected solana_tx');
+    expect(report.payload.splTokenInstructions).toHaveLength(2);
+    expect(report.payload.splTokenInstructions[0]).toMatchObject({
+      kind: 'transfer',
+      amount: '50',
+      source: source.toBase58(),
+      destination: dest.toBase58(),
+    });
+    expect(report.payload.splTokenInstructions[1]).toMatchObject({
+      kind: 'transfer_checked',
+      amount: '80',
+      decimals: 6,
+      mint: mint.toBase58(),
+    });
+    expect(report.risks).toEqual([]);
+    expect(report.severity).toBe('info');
+    const footer = formatReportFooter(report).join('\n');
+    expect(footer).toContain('SPL [0] transfer (token): 50 from');
+    expect(footer).toContain('SPL [1] transfer_checked (token): 80 (6 decimals)');
+    const html = renderHtmlReport(report);
+    expect(html).toContain('spl 0');
+    expect(html).toContain('spl 1');
+  });
+
+  it('flags SetAuthority as a high-severity risk, including a Token-2022 revoke', () => {
+    const payer = Keypair.generate();
+    const account = Keypair.generate().publicKey;
+    const next = Keypair.generate().publicKey;
+    const mint = Keypair.generate().publicKey;
+    const tx = new Transaction({
+      feePayer: payer.publicKey,
+      recentBlockhash: BLOCKHASH,
+    }).add(
+      createSetAuthorityInstruction(
+        account,
+        payer.publicKey,
+        AuthorityType.AccountOwner,
+        next
+      ),
+      createSetAuthorityInstruction(
+        mint,
+        payer.publicKey,
+        AuthorityType.MintTokens,
+        null,
+        [],
+        TOKEN_2022_PROGRAM_ID
+      )
+    );
+    tx.sign(payer);
+    const encoded = Buffer.from(tx.serialize()).toString('base64');
+    const report = generateJsonReportFromAny(encoded)!;
+    if (report.type !== 'solana_tx') throw new Error('expected solana_tx');
+    expect(report.payload.splTokenInstructions).toHaveLength(2);
+    expect(report.payload.splTokenInstructions[0]).toMatchObject({
+      kind: 'set_authority',
+      authorityType: 'account_owner',
+      newAuthority: next.toBase58(),
+      isAuthorityRevoked: false,
+    });
+    expect(report.payload.splTokenInstructions[1]).toMatchObject({
+      kind: 'set_authority',
+      authorityType: 'mint_tokens',
+      newAuthority: null,
+      isAuthorityRevoked: true,
+      isToken2022: true,
+    });
+    expect(report.risks).toEqual([SOLANA_AUTHORITY_CHANGE_RISK]);
+    expect(report.severity).toBe('high');
+    const footer = formatReportFooter(report).join('\n');
+    expect(footer).toContain(
+      `SPL [0] set_authority (token) account_owner: account=${account.toBase58()} current=${payer.publicKey.toBase58()} new=${next.toBase58()}`
+    );
+    expect(footer).toContain('SPL [1] set_authority (token-2022) mint_tokens:');
+    expect(footer).toContain('revoked');
+    expect(footer).toContain(`Risks: ${SOLANA_AUTHORITY_CHANGE_RISK}`);
+    const html = renderHtmlReport(report);
+    expect(html).toContain('spl 0');
+    expect(html).toContain(SOLANA_AUTHORITY_CHANGE_RISK);
   });
 });

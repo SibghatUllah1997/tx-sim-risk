@@ -757,6 +757,63 @@
         }
       }
     },
+    "solanaSplInstruction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instructionIndex",
+        "kind",
+        "programId",
+        "isToken2022",
+        "source",
+        "destination",
+        "mint",
+        "owner",
+        "amount",
+        "decimals",
+        "account",
+        "currentAuthority",
+        "newAuthority",
+        "authorityType",
+        "isAuthorityRevoked"
+      ],
+      "properties": {
+        "instructionIndex": { "$ref": "#/$defs/uint" },
+        "kind": {
+          "type": "string",
+          "enum": ["transfer", "transfer_checked", "set_authority"]
+        },
+        "programId": { "$ref": "#/$defs/nonEmptyString" },
+        "isToken2022": { "type": "boolean" },
+        "source": { "$ref": "#/$defs/nullableString" },
+        "destination": { "$ref": "#/$defs/nullableString" },
+        "mint": { "$ref": "#/$defs/nullableString" },
+        "owner": { "$ref": "#/$defs/nullableString" },
+        "amount": { "$ref": "#/$defs/nullableString" },
+        "decimals": {
+          "anyOf": [{ "$ref": "#/$defs/uint" }, { "type": "null" }]
+        },
+        "account": { "$ref": "#/$defs/nullableString" },
+        "currentAuthority": { "$ref": "#/$defs/nullableString" },
+        "newAuthority": { "$ref": "#/$defs/nullableString" },
+        "authorityType": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "mint_tokens",
+                "freeze_account",
+                "account_owner",
+                "close_account",
+                "other"
+              ]
+            },
+            { "type": "null" }
+          ]
+        },
+        "isAuthorityRevoked": { "type": "boolean" }
+      }
+    },
     "solanaTxPayload": {
       "type": "object",
       "additionalProperties": false,
@@ -770,6 +827,7 @@
         "instructions",
         "addressTableLookups",
         "associatedTokenAccounts",
+        "splTokenInstructions",
         "suspiciousCpi"
       ],
       "properties": {
@@ -796,6 +854,10 @@
         "associatedTokenAccounts": {
           "type": "array",
           "items": { "$ref": "#/$defs/solanaAtaInstruction" }
+        },
+        "splTokenInstructions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/solanaSplInstruction" }
         },
         "suspiciousCpi": {
           "type": "array",

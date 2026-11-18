@@ -20,6 +20,7 @@ import { NATIVE_VALUE_NONPAYABLE_CALL_RISK } from './evm/nativeValue';
 import { PHISHING_SPENDER_RISK } from './evm/phishing';
 import { SOLANA_ATA_MISMATCH_RISK } from './solana/ata';
 import { SOLANA_SUSPICIOUS_CPI_RISK } from './solana/cpi';
+import { SOLANA_AUTHORITY_CHANGE_RISK } from './solana/splToken';
 
 /** Risk id emitted when an ERC-20 approve uses the maximum uint256 amount. */
 export const UNLIMITED_APPROVAL_RISK = 'unlimited_approval';
@@ -37,6 +38,7 @@ export const KNOWN_RISK_IDS = [
   BLOCKLISTED_SPENDER_RISK,
   SOLANA_ATA_MISMATCH_RISK,
   SOLANA_SUSPICIOUS_CPI_RISK,
+  SOLANA_AUTHORITY_CHANGE_RISK,
   UNLIMITED_PERMIT_RISK,
   PERMIT2_NO_EXPIRY_RISK,
   MULTICALL_BATCHED_GRANT_RISK,
@@ -87,6 +89,7 @@ export const RISK_SEVERITIES: Readonly<Record<KnownRiskId, RiskSeverity>> =
     [BLOCKLISTED_SPENDER_RISK]: 'high',
     [SOLANA_ATA_MISMATCH_RISK]: 'warn',
     [SOLANA_SUSPICIOUS_CPI_RISK]: 'high',
+    [SOLANA_AUTHORITY_CHANGE_RISK]: 'high',
     [UNLIMITED_PERMIT_RISK]: 'high',
     [PERMIT2_NO_EXPIRY_RISK]: 'warn',
     [MULTICALL_BATCHED_GRANT_RISK]: 'warn',
@@ -143,6 +146,8 @@ export const RISK_REASONS: Readonly<Record<KnownRiskId, string>> = Object.freeze
     'An associated token account instruction names an account that is not the address derived from its wallet, mint, and token program.',
   [SOLANA_SUSPICIOUS_CPI_RISK]:
     'The transaction invokes, or can cross-program-invoke into, a program on the built-in list of known-bad Solana program ids.',
+  [SOLANA_AUTHORITY_CHANGE_RISK]:
+    'An SPL Token SetAuthority instruction reassigns or clears mint, freeze, owner, or close authority, which can lock or steal the token account.',
   [UNLIMITED_PERMIT_RISK]:
     "A signed permit grants the spender the maximum allowance, so anyone holding the signature can let it move the owner's entire token balance.",
   [PERMIT2_NO_EXPIRY_RISK]:

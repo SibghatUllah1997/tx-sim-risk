@@ -97,6 +97,11 @@ import {
   type SolanaAtaInstruction,
 } from './solana/ata';
 import {
+  detectSplTokenInstructions,
+  splTokenRisks,
+  type SolanaSplInstruction,
+} from './solana/splToken';
+import {
   detectSuspiciousCpi,
   suspiciousCpiRisks,
   type SolanaCpiHit,
@@ -348,6 +353,7 @@ export type JsonReport =
       type: 'solana_tx';
       payload: SolanaTxSkeleton & {
         associatedTokenAccounts: SolanaAtaInstruction[];
+        splTokenInstructions: SolanaSplInstruction[];
         suspiciousCpi: SolanaCpiHit[];
       };
     })
@@ -1020,17 +1026,24 @@ function solanaReport(
   options?: ReportOptions
 ): JsonReport {
   const associatedTokenAccounts = detectAssociatedTokenAccounts(skeleton);
+  const splTokenInstructions = detectSplTokenInstructions(skeleton);
   const suspiciousCpi = detectSuspiciousCpi(
     skeleton,
     options?.suspiciousPrograms
   );
   const risks = [
     ...associatedTokenAccountRisks(associatedTokenAccounts),
+    ...splTokenRisks(splTokenInstructions),
     ...suspiciousCpiRisks(suspiciousCpi),
   ];
   return {
     type: 'solana_tx',
-    payload: { ...skeleton, associatedTokenAccounts, suspiciousCpi },
+    payload: {
+      ...skeleton,
+      associatedTokenAccounts,
+      splTokenInstructions,
+      suspiciousCpi,
+    },
     risks,
     riskDetails: describeRisks(risks),
     severity: highestSeverity(risks),
@@ -1066,6 +1079,24 @@ export function formatAtaLine(ata: SolanaAtaInstruction): string {
         ? 'derivation ok'
         : `MISMATCH expected ${ata.expectedAddress}`;
   return `ATA [${ata.instructionIndex}] ${ata.kind}: account=${ata.associatedAccount ?? 'unknown'} wallet=${ata.wallet ?? 'unknown'} mint=${ata.mint ?? 'unknown'} (${check})`;
+}
+
+/** One plain-text line describing a decoded SPL Token instruction. */
+export function formatSplTokenLine(ix: SolanaSplInstruction): string {
+  const program = ix.isToken2022 ? 'token-2022' : 'token';
+  const prefix = `SPL [${ix.instructionIndex}] ${ix.kind} (${program})`;
+  if (ix.kind === 'transfer' || ix.kind === 'transfer_checked') {
+    const amount =
+      ix.decimals == null
+        ? (ix.amount ?? '?')
+        : `${ix.amount ?? '?'} (${ix.decimals} decimals)`;
+    const mint = ix.mint ? ` mint=${ix.mint}` : '';
+    return `${prefix}: ${amount} from ${ix.source ?? 'unknown'} to ${ix.destination ?? 'unknown'} owner=${ix.owner ?? 'unknown'}${mint}`;
+  }
+  const next = ix.isAuthorityRevoked
+    ? 'revoked'
+    : `new=${ix.newAuthority ?? 'unknown'}`;
+  return `${prefix} ${ix.authorityType ?? 'other'}: account=${ix.account ?? 'unknown'} current=${ix.currentAuthority ?? 'unknown'} ${next}`;
 }
 
 /** One plain-text line describing a suspicious Solana CPI hit. */
@@ -1187,6 +1218,9 @@ export function formatReportFooter(report: JsonReport): string[] {
       lines.push(`Instructions: ${report.payload.instructions.length}`);
       for (const ata of report.payload.associatedTokenAccounts) {
         lines.push(formatAtaLine(ata));
+      }
+      for (const spl of report.payload.splTokenInstructions) {
+        lines.push(formatSplTokenLine(spl));
       }
       for (const hit of report.payload.suspiciousCpi) {
         lines.push(formatCpiLine(hit));

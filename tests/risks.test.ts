@@ -20,6 +20,7 @@ import {
   RISK_SEVERITIES,
   SOLANA_ATA_MISMATCH_RISK,
   SOLANA_SUSPICIOUS_CPI_RISK,
+  SOLANA_AUTHORITY_CHANGE_RISK,
   UNLIMITED_APPROVAL_RISK,
   describeRisks,
   highestSeverity,
@@ -41,6 +42,7 @@ describe('risk reason catalog', () => {
         BLOCKLISTED_SPENDER_RISK,
         SOLANA_ATA_MISMATCH_RISK,
         SOLANA_SUSPICIOUS_CPI_RISK,
+        SOLANA_AUTHORITY_CHANGE_RISK,
         UNLIMITED_PERMIT_RISK,
         PERMIT2_NO_EXPIRY_RISK,
         MULTICALL_BATCHED_GRANT_RISK,
@@ -120,6 +122,7 @@ describe('risk severity catalog', () => {
     expect(severityForRisk(PHISHING_SPENDER_RISK)).toBe('high');
     expect(severityForRisk(BLOCKLISTED_SPENDER_RISK)).toBe('high');
     expect(severityForRisk(SOLANA_SUSPICIOUS_CPI_RISK)).toBe('high');
+    expect(severityForRisk(SOLANA_AUTHORITY_CHANGE_RISK)).toBe('high');
   });
 
   it('marks heuristic EOA grants and burns as warn', () => {

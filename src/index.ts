@@ -33,6 +33,7 @@ export {
   formatReportFooter,
   formatAtaLine,
   formatCpiLine,
+  formatSplTokenLine,
   formatMulticallCallLines,
   MULTICALL3_ADDRESS,
 } from './report';

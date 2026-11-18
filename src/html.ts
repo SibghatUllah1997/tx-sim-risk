@@ -1,4 +1,9 @@
-import { formatAtaLine, formatCpiLine, type JsonReport } from './report';
+import {
+  formatAtaLine,
+  formatCpiLine,
+  formatSplTokenLine,
+  type JsonReport,
+} from './report';
 import type { SimulationSnapshot } from './sim';
 
 const HTML_ESCAPES: Readonly<Record<string, string>> = Object.freeze({
@@ -137,6 +142,9 @@ function payloadRows(report: JsonReport): string[] {
       ),
       ...payload.associatedTokenAccounts.map((ata) =>
         row(`ata ${ata.instructionIndex}`, formatAtaLine(ata))
+      ),
+      ...payload.splTokenInstructions.map((spl) =>
+        row(`spl ${spl.instructionIndex}`, formatSplTokenLine(spl))
       ),
       ...payload.suspiciousCpi.map((hit) =>
         row(`cpi ${hit.instructionIndex}`, formatCpiLine(hit))

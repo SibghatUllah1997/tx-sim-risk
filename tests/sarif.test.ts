@@ -89,6 +89,19 @@ describe('reportToSarif', () => {
     ).toBe('examples/dataset/cases.json');
   });
 
+  it('can emit only a subset of risks for --diff --sarif', () => {
+    const report = generateJsonReport(approve(ROUTER, 'f'.repeat(64)))!;
+    expect(report.risks.length).toBeGreaterThan(0);
+    const log = reportToSarif(report, { onlyRiskIds: [] });
+    expect(log.runs[0]!.results).toEqual([]);
+    const filtered = reportToSarif(report, {
+      onlyRiskIds: [UNLIMITED_APPROVAL_RISK],
+    });
+    expect(filtered.runs[0]!.results.every((r) => r.ruleId === UNLIMITED_APPROVAL_RISK)).toBe(
+      true
+    );
+  });
+
   it('returns an empty results array for a clean report so CI still gets a log', () => {
     const report = generateJsonReport(approve(ROUTER, '1'))!;
     expect(report.risks).toEqual([]);

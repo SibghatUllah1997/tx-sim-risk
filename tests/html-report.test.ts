@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { escapeHtml, renderHtmlReport } from '../src/html';
+import { escapeHtml, renderHtmlReport, renderHtmlTxDiff } from '../src/html';
+import { diffReports } from '../src/diff';
 import { generateJsonReport, type JsonReport } from '../src/report';
 
 function pad32(hexNoPrefix: string): string {
@@ -49,6 +50,16 @@ describe('renderHtmlReport', () => {
     expect(html).not.toContain('<img');
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
     expect(html).toContain('<title>T &lt;b&gt;</title>');
+  });
+
+  it('renders a diff page with added risks and amount changes', () => {
+    const baseline = generateJsonReport(encodeApprove(ROUTER, '1'))!;
+    const candidate = generateJsonReport(encodeApprove(ROUTER, 'f'.repeat(64)))!;
+    const html = renderHtmlTxDiff(diffReports(baseline, candidate));
+    expect(html.startsWith('<!doctype html>')).toBe(true);
+    expect(html).toContain('unlimited_approval');
+    expect(html).toContain('amount');
+    expect(html).not.toContain('<script');
   });
 
   it('inserts trusted preamble markup at the top of the body', () => {

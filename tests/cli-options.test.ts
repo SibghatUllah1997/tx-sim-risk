@@ -68,6 +68,7 @@ describe('CLI_USAGE_LINES', () => {
     expect(CLI_USAGE_LINES.join('\n')).toContain('--help');
     expect(CLI_USAGE_LINES.join('\n')).toContain('--sarif');
     expect(CLI_USAGE_LINES.join('\n')).toContain('--sarif-uri <path>');
+    expect(CLI_USAGE_LINES.join('\n')).toContain('--diff');
   });
 });
 

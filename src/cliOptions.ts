@@ -9,6 +9,7 @@ import {
 /** Help text printed by `--help` (stdout) and by a missing-payload error (stderr). */
 export const CLI_USAGE_LINES = [
   'Usage: tx-sim-risk <hexData | solanaTx> | --data <payload> [options]',
+  '       tx-sim-risk --diff <baseline> <candidate> [options]',
   '       tx-sim-risk --schema',
   '       tx-sim-risk --version',
   '       tx-sim-risk --help',
@@ -19,6 +20,7 @@ export const CLI_USAGE_LINES = [
   '  --html             Print a standalone HTML report',
   '  --sarif            Print a SARIF 2.1.0 report for CI annotations',
   '  --sarif-uri <path> Artifact URI used by --sarif (default: transaction)',
+  '  --diff             Compare two payloads (baseline then candidate)',
   '  --from <addr>      Sender address used in simulation deltas',
   '  --config <file>    Allow/block list JSON',
   '  --fees             Parse EIP-1559 fee fields from a raw tx',
@@ -38,6 +40,7 @@ export const BOOLEAN_FLAGS = [
   '--json',
   '--html',
   '--sarif',
+  '--diff',
   '--fees',
   '--solana',
   '--schema',

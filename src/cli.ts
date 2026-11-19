@@ -20,7 +20,8 @@ import {
   type JsonReport,
   type ReportOptions,
 } from './report';
-import { renderHtmlReport } from './html';
+import { diffReports, formatTxDiff } from './diff';
+import { renderHtmlReport, renderHtmlTxDiff } from './html';
 import { reportToSarif } from './sarif';
 import {
   formatChainIdLine,
@@ -67,6 +68,27 @@ function tryPayloadFromToken(token: string | null | undefined): string | null {
     return classified.value;
   }
   return null;
+}
+
+/** Every `--data` value and positional payload, in argv order. */
+function collectPayloads(argv: readonly string[]): string[] {
+  const payloads: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]!;
+    if (arg === '--data' && argv[i + 1]) {
+      payloads.push(payloadFromToken(argv[i + 1]!));
+      i++;
+      continue;
+    }
+    if (arg.startsWith('--data=')) {
+      payloads.push(payloadFromToken(arg.slice('--data='.length)));
+      continue;
+    }
+    if (isReservedArg(argv, i)) continue;
+    const payload = tryPayloadFromToken(arg);
+    if (payload) payloads.push(payload);
+  }
+  return payloads;
 }
 
 async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
@@ -154,14 +176,10 @@ async function main() {
   const wantJson = hasFlag(argv, ['--json']);
   const wantHtml = hasFlag(argv, ['--html']);
   const wantSarif = hasFlag(argv, ['--sarif']);
+  const wantDiff = hasFlag(argv, ['--diff']);
   const wantFees = hasFlag(argv, ['--fees']);
   const wantChainId = hasFlag(argv, ['--chainId', '--chainid']);
   const sarifUri = flagValue(argv, ['--sarif-uri']);
-  if (!isPayloadLike(data)) {
-    printUsage();
-    process.exit(1);
-    return;
-  }
 
   let reportOptions: ReportOptions | undefined;
   let liveOptions: LiveCallCliOptions | undefined;
@@ -170,6 +188,71 @@ async function main() {
     liveOptions = liveCallOptionsFromArgv(argv);
   } catch (err) {
     console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+    return;
+  }
+
+  if (wantDiff) {
+    let payloads: string[];
+    try {
+      payloads = collectPayloads(argv);
+    } catch (err) {
+      console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+      return;
+    }
+    if (payloads.length !== 2) {
+      console.error('Error: --diff needs two payloads (baseline then candidate)');
+      process.exit(1);
+      return;
+    }
+    try {
+      const baseline = await buildReport(payloads[0]!, reportOptions, liveOptions);
+      const candidate = await buildReport(payloads[1]!, reportOptions, liveOptions);
+      const diff = diffReports(baseline, candidate);
+      if (wantHtml) {
+        process.stdout.write(renderHtmlTxDiff(diff));
+        process.exit(0);
+        return;
+      }
+      if (wantSarif) {
+        if (!candidate) {
+          console.error('Error: no supported call found; cannot build a SARIF report.');
+          process.exit(1);
+          return;
+        }
+        console.log(
+          JSON.stringify(
+            reportToSarif(candidate, {
+              uri: sarifUri,
+              onlyRiskIds: diff.addedRisks,
+            }),
+            null,
+            2
+          )
+        );
+        process.exit(0);
+        return;
+      }
+      if (wantJson) {
+        console.log(JSON.stringify(diff, null, 2));
+        process.exit(0);
+        return;
+      }
+      printLines(formatTxDiff(diff));
+      process.exit(0);
+      return;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Unknown error during analysis';
+      console.error(`Error: ${message}`);
+      process.exit(1);
+      return;
+    }
+  }
+
+  if (!isPayloadLike(data)) {
+    printUsage();
     process.exit(1);
     return;
   }

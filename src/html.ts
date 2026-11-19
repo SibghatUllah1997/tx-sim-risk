@@ -1,3 +1,4 @@
+import type { TxDiff } from './diff';
 import {
   formatAtaLine,
   formatCpiLine,
@@ -240,6 +241,56 @@ export function renderHtmlReport(
     report.liveCall
       ? `<h2>Live call</h2>\n<p>${escapeHtml(formatLiveCallLine(report.liveCall))}</p>`
       : '',
+    '</body>',
+    '</html>',
+    '',
+  ].join('\n');
+}
+
+function listOrNone(items: readonly string[]): string {
+  if (items.length === 0) return '<p>None.</p>';
+  return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+}
+
+/** Standalone HTML page for a `--diff` comparison. */
+export function renderHtmlTxDiff(
+  diff: TxDiff,
+  title = 'tx-sim-risk diff'
+): string {
+  const amountRows =
+    diff.amountChanges.length === 0
+      ? '<p>None.</p>'
+      : `<table>${diff.amountChanges
+          .map(
+            (change) =>
+              row(
+                change.field,
+                `${change.before ?? 'n/a'} -> ${change.after ?? 'n/a'}`
+              )
+          )
+          .join('')}</table>`;
+  return [
+    '<!doctype html>',
+    '<html lang="en">',
+    '<head>',
+    '<meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    `<title>${escapeHtml(title)}</title>`,
+    `<style>${STYLE}</style>`,
+    '</head>',
+    '<body>',
+    `<h1>${escapeHtml(title)}</h1>`,
+    `<p>Type: <code>${escapeHtml(diff.baseline.type ?? 'unknown')}</code> -> <code>${escapeHtml(diff.candidate.type ?? 'unknown')}</code> &middot; Severity: ${escapeHtml(diff.baseline.severity ?? 'n/a')} -> ${escapeHtml(diff.candidate.severity ?? 'n/a')}</p>`,
+    '<h2>Added risks</h2>',
+    listOrNone(diff.addedRisks),
+    '<h2>Removed risks</h2>',
+    listOrNone(diff.removedRisks),
+    '<h2>Added addresses</h2>',
+    listOrNone(diff.addedAddresses.map((hit) => `${hit.role} ${hit.address}`)),
+    '<h2>Removed addresses</h2>',
+    listOrNone(diff.removedAddresses.map((hit) => `${hit.role} ${hit.address}`)),
+    '<h2>Amount changes</h2>',
+    amountRows,
     '</body>',
     '</html>',
     '',

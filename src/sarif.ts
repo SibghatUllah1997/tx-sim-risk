@@ -72,6 +72,11 @@ export type ReportToSarifOptions = {
   uri?: string;
   /** Override the package version recorded on the tool driver. */
   version?: string;
+  /**
+   * If set, only these risk ids become SARIF results. Used by `--diff
+   * --sarif` so CI annotates new findings, not ones already on baseline.
+   */
+  onlyRiskIds?: readonly string[];
 };
 
 /**
@@ -138,8 +143,10 @@ export function reportToSarif(
   options?: ReportToSarifOptions
 ): SarifLog {
   const uri = (options?.uri && options.uri.trim()) || DEFAULT_SARIF_URI;
-  const details = detailsFor(report);
-  const rules = ruleCatalog(details);
+  const details = detailsFor(report).filter((detail) =>
+    options?.onlyRiskIds ? options.onlyRiskIds.includes(detail.id) : true
+  );
+  const rules = ruleCatalog(detailsFor(report));
   const indexById = new Map(rules.map((rule, index) => [rule.id, index]));
   const results: SarifResult[] = details.map((detail) => ({
     ruleId: detail.id,

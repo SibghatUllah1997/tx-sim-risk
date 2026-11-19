@@ -66,6 +66,8 @@ describe('CLI_USAGE_LINES', () => {
     expect(CLI_USAGE_LINES[0]).toMatch(/^Usage: tx-sim-risk /);
     expect(CLI_USAGE_LINES.join('\n')).toContain('--version');
     expect(CLI_USAGE_LINES.join('\n')).toContain('--help');
+    expect(CLI_USAGE_LINES.join('\n')).toContain('--sarif');
+    expect(CLI_USAGE_LINES.join('\n')).toContain('--sarif-uri <path>');
   });
 });
 

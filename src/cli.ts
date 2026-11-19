@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import {
   CLI_USAGE_LINES,
+  flagValue,
   hasFlag,
   isReservedArg,
   liveCallOptionsFromArgv,
@@ -20,6 +21,7 @@ import {
   type ReportOptions,
 } from './report';
 import { renderHtmlReport } from './html';
+import { reportToSarif } from './sarif';
 import {
   formatChainIdLine,
   formatFeeAnalysis,
@@ -151,8 +153,10 @@ async function main() {
   }
   const wantJson = hasFlag(argv, ['--json']);
   const wantHtml = hasFlag(argv, ['--html']);
+  const wantSarif = hasFlag(argv, ['--sarif']);
   const wantFees = hasFlag(argv, ['--fees']);
   const wantChainId = hasFlag(argv, ['--chainId', '--chainid']);
+  const sarifUri = flagValue(argv, ['--sarif-uri']);
   if (!isPayloadLike(data)) {
     printUsage();
     process.exit(1);
@@ -185,6 +189,18 @@ async function main() {
         return;
       }
       process.stdout.write(renderHtmlReport(report));
+      process.exit(0);
+      return;
+    }
+
+    if (wantSarif) {
+      const report = await buildReport(data, reportOptions, liveOptions);
+      if (!report) {
+        console.error('Error: no supported call found; cannot build a SARIF report.');
+        process.exit(1);
+        return;
+      }
+      console.log(JSON.stringify(reportToSarif(report, { uri: sarifUri }), null, 2));
       process.exit(0);
       return;
     }

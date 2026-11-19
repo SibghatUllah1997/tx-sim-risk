@@ -17,6 +17,8 @@ export const CLI_USAGE_LINES = [
   '  --data <payload>   Hex calldata, raw EVM tx, or Solana tx (also positional)',
   '  --json             Print a JSON report',
   '  --html             Print a standalone HTML report',
+  '  --sarif            Print a SARIF 2.1.0 report for CI annotations',
+  '  --sarif-uri <path> Artifact URI used by --sarif (default: transaction)',
   '  --from <addr>      Sender address used in simulation deltas',
   '  --config <file>    Allow/block list JSON',
   '  --fees             Parse EIP-1559 fee fields from a raw tx',
@@ -35,6 +37,7 @@ export const CLI_USAGE_LINES = [
 export const BOOLEAN_FLAGS = [
   '--json',
   '--html',
+  '--sarif',
   '--fees',
   '--solana',
   '--schema',
@@ -54,6 +57,7 @@ export const VALUE_FLAGS = [
   '--rpc',
   '--to',
   '--block',
+  '--sarif-uri',
 ] as const;
 
 /**

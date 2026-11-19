@@ -19,6 +19,7 @@ export * from './evm/eip7702';
 export * from './evm/nativeValue';
 export * from './evm/liveCall';
 export * from './liveCallReport';
+export * from './sarif';
 export * from './risks';
 export * from './config';
 export * from './sim';

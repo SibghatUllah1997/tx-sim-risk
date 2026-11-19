@@ -20,6 +20,7 @@ export * from './evm/nativeValue';
 export * from './evm/liveCall';
 export * from './liveCallReport';
 export * from './sarif';
+export * from './diff';
 export * from './risks';
 export * from './config';
 export * from './sim';

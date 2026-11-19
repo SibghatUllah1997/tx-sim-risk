@@ -27,6 +27,7 @@ Features:
 - Config-driven allow/block lists (`--config`) for trusted and banned spenders
 - info/warn/high severity on each risk and on the report as a whole
 - Offline simulation stub for token-balance and allowance deltas (`--from` names the sender)
+- Optional live `eth_call` against your own RPC (`--rpc`, plus `--to` for bare calldata and `--block`), with decoded revert reasons and a `live_call_reverted` warning; nothing touches the network without `--rpc`
 - JSON report mode for downstream tooling
 - Parse EIP-1559 fee fields and chainId from raw transactions (legacy, type-2, and type-4)
 - Parse Solana legacy and v0 transaction skeletons (hex or base64)
@@ -70,6 +71,10 @@ node dist/cli.js --html 0x095ea7b3... > report.html
 
 # Solana skeleton from a base64-serialized transaction
 node dist/cli.js --json <solanaTxBase64>
+
+# Opt-in live eth_call on your RPC (raw txs carry their own to/value; checks the chain id)
+node dist/cli.js --rpc https://your-rpc.example --to 0xTOKEN --from 0xSENDER --json 0x095ea7b3...
+node dist/cli.js --rpc https://your-rpc.example --block finalized 0x02f8...
 
 # Print the JSON Schema for --json reports
 node dist/cli.js --schema

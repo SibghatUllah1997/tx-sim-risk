@@ -1,5 +1,10 @@
 import { loadAddressLists } from './config';
 import type { ReportOptions } from './report';
+import {
+  parseLiveCallBlock,
+  parseRpcUrl,
+  type LiveCallInputOptions,
+} from './evm/liveCall';
 
 /** Help text printed by `--help` (stdout) and by a missing-payload error (stderr). */
 export const CLI_USAGE_LINES = [
@@ -16,6 +21,9 @@ export const CLI_USAGE_LINES = [
   '  --config <file>    Allow/block list JSON',
   '  --fees             Parse EIP-1559 fee fields from a raw tx',
   '  --chainId          Print the EIP-155 chain id from a raw tx',
+  '  --rpc <url>        Also run a live eth_call on this RPC (off by default)',
+  '  --to <addr>        Call target for bare calldata with --rpc',
+  '  --block <tag|n>    Block for --rpc: latest (default), pending, safe, finalized, or a number',
   '  --schema           Print the JSON Schema for --json reports',
   '  --version          Print the package version',
   '  --help             Show this help',
@@ -39,7 +47,14 @@ export const BOOLEAN_FLAGS = [
 ] as const;
 
 /** Flags whose next argv token is a value, not a payload. */
-export const VALUE_FLAGS = ['--data', '--from', '--config'] as const;
+export const VALUE_FLAGS = [
+  '--data',
+  '--from',
+  '--config',
+  '--rpc',
+  '--to',
+  '--block',
+] as const;
 
 /**
  * True when argv contains one of `names` as a bare token. `--name=value`
@@ -116,5 +131,33 @@ export function reportOptionsFromArgv(
   const options: ReportOptions = {};
   if (from) options.from = from;
   if (lists) options.lists = lists;
+  return options;
+}
+
+export type LiveCallCliOptions = LiveCallInputOptions & { rpcUrl: string };
+
+/**
+ * Read `--rpc`, `--to`, and `--block`. Returns undefined when `--rpc` is
+ * absent, so the default run never touches the network. `--to` or
+ * `--block` without `--rpc` is an error rather than being silently ignored.
+ */
+export function liveCallOptionsFromArgv(
+  argv: readonly string[]
+): LiveCallCliOptions | undefined {
+  const rpc = flagValue(argv, ['--rpc']);
+  const to = flagValue(argv, ['--to']);
+  const block = flagValue(argv, ['--block']);
+  if (rpc == null) {
+    if (to != null || block != null) {
+      throw new Error('--to and --block need --rpc');
+    }
+    return undefined;
+  }
+  const options: LiveCallCliOptions = { rpcUrl: parseRpcUrl(rpc) };
+  if (to != null) options.to = to;
+  if (block != null) {
+    parseLiveCallBlock(block);
+    options.block = block;
+  }
   return options;
 }

@@ -1,3 +1,9 @@
+## 2026-11-19
+
+- Optional live `eth_call` behind `--rpc <url>`. Raw EVM txs supply their own recipient, value, data, and chain id; bare calldata needs `--to`. `--from` sets the caller and `--block` picks a tag or height. Without `--rpc` the tool stays fully offline.
+- The call checks `eth_chainId` first and refuses to run when the RPC is on a different chain than the raw tx. Reverts decode `Error(string)` and `Panic(uint256)` reasons and add the `live_call_reverted` warning; RPC failures are reported but never raise a risk.
+- JSON reports carry an optional `liveCall` block (covered by the JSON Schema); text and HTML reports show a one-line outcome. Marked Day 39 done.
+
 ## 2026-11-18
 
 - Raw EVM transactions now carry their recipient and native value. A raw tx with empty calldata becomes a new `native_transfer` report (chain id, recipient, wei, recipient kind); ETH sent to the zero address, a phishing-listed, or block-listed recipient is flagged.

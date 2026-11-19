@@ -13,6 +13,7 @@ import {
   flagValue,
   hasFlag,
   isReservedArg,
+  liveCallOptionsFromArgv,
   reportOptionsFromArgv,
 } from '../src/cliOptions';
 import { generateJsonReport } from '../src/report';
@@ -107,5 +108,41 @@ describe('example risk-lists.json', () => {
     const lists = loadAddressLists(EXAMPLE_CONFIG);
     expect(isAllowlisted(`0x${ROUTER}`, lists)).toBe(true);
     expect(isBlocklisted(`0x${BLOCKED}`, lists)).toBe(true);
+  });
+});
+
+describe('liveCallOptionsFromArgv', () => {
+  it('stays offline unless --rpc is given', () => {
+    expect(liveCallOptionsFromArgv(['--json', '0xabc'])).toBeUndefined();
+  });
+
+  it('reads --rpc, --to, and --block', () => {
+    expect(
+      liveCallOptionsFromArgv([
+        '--rpc',
+        'http://127.0.0.1:8545',
+        '--to=0x' + 'cc'.repeat(20),
+        '--block',
+        'finalized',
+      ])
+    ).toEqual({
+      rpcUrl: 'http://127.0.0.1:8545/',
+      to: '0x' + 'cc'.repeat(20),
+      block: 'finalized',
+    });
+  });
+
+  it('rejects --to or --block without --rpc, a bad URL, and a bad block', () => {
+    expect(() => liveCallOptionsFromArgv(['--to', '0x' + 'cc'.repeat(20)])).toThrow(/need --rpc/);
+    expect(() => liveCallOptionsFromArgv(['--block', 'latest'])).toThrow(/need --rpc/);
+    expect(() => liveCallOptionsFromArgv(['--rpc', 'ws://x'])).toThrow(/http\(s\)/);
+    expect(() => liveCallOptionsFromArgv(['--rpc', 'http://x', '--block', 'soon'])).toThrow(/--block/);
+  });
+
+  it('reserves the live-call flag values so they are not read as calldata', () => {
+    const argv = ['--to', '0x' + 'cc'.repeat(20), '--block', '0x10', '0xab'];
+    expect(isReservedArg(argv, 1)).toBe(true);
+    expect(isReservedArg(argv, 3)).toBe(true);
+    expect(isReservedArg(argv, 4)).toBe(false);
   });
 });

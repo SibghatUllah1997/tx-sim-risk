@@ -5,20 +5,25 @@ import {
   CLI_USAGE_LINES,
   hasFlag,
   isReservedArg,
+  liveCallOptionsFromArgv,
   reportOptionsFromArgv,
+  type LiveCallCliOptions,
 } from './cliOptions';
+import { liveCallRequestFromPayload, runLiveCall } from './evm/liveCall';
+import { withLiveCall } from './liveCallReport';
 import { classifyCliInput, isPayloadLike } from './payload';
 import { formatPackageIdentity } from './packageInfo';
 import { defaultReportSchemaPath } from './schema';
 import {
   generateJsonReportFromAny,
+  type JsonReport,
   type ReportOptions,
 } from './report';
 import { renderHtmlReport } from './html';
 import {
   formatChainIdLine,
   formatFeeAnalysis,
-  formatPlainTextAnalysis,
+  formatPlainTextReport,
 } from './textReport';
 
 function printUsage(stream: NodeJS.WritableStream = process.stderr): void {
@@ -94,6 +99,25 @@ async function getHexFromArgsOrStdin(argv: string[]): Promise<string | null> {
   return null;
 }
 
+/**
+ * Decode offline, then, only when `--rpc` was given, run one live
+ * eth_call and attach its outcome. Without `--rpc` no request is made.
+ */
+async function buildReport(
+  data: string,
+  reportOptions: ReportOptions | undefined,
+  live: LiveCallCliOptions | undefined
+): Promise<JsonReport | null> {
+  const report = generateJsonReportFromAny(data, reportOptions);
+  if (!report || !live) return report;
+  const request = liveCallRequestFromPayload(data, {
+    to: live.to,
+    from: reportOptions?.from,
+    block: live.block,
+  });
+  return withLiveCall(report, await runLiveCall(live.rpcUrl, request));
+}
+
 function printLines(lines: readonly string[]): void {
   for (const line of lines) {
     console.log(line);
@@ -136,8 +160,10 @@ async function main() {
   }
 
   let reportOptions: ReportOptions | undefined;
+  let liveOptions: LiveCallCliOptions | undefined;
   try {
     reportOptions = reportOptionsFromArgv(argv);
+    liveOptions = liveCallOptionsFromArgv(argv);
   } catch (err) {
     console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
@@ -152,7 +178,7 @@ async function main() {
     }
 
     if (wantHtml) {
-      const report = generateJsonReportFromAny(data, reportOptions);
+      const report = await buildReport(data, reportOptions, liveOptions);
       if (!report) {
         console.error('Error: no supported call found; cannot build an HTML report.');
         process.exit(1);
@@ -164,7 +190,7 @@ async function main() {
     }
 
     if (wantJson) {
-      const report = generateJsonReportFromAny(data, reportOptions);
+      const report = await buildReport(data, reportOptions, liveOptions);
       if (report) {
         console.log(JSON.stringify(report, null, 2));
       } else {
@@ -178,9 +204,9 @@ async function main() {
       console.log(formatChainIdLine(data));
     }
 
-    const lines = formatPlainTextAnalysis(data, reportOptions);
-    if (lines) {
-      printLines(lines);
+    const report = await buildReport(data, reportOptions, liveOptions);
+    if (report) {
+      printLines(formatPlainTextReport(report));
     } else {
       console.log('Unsupported or unknown transaction data for current decoders.');
     }

@@ -107,6 +107,7 @@ import {
   type SolanaCpiHit,
 } from './solana/cpi';
 import type { SuspiciousProgramEntry } from './solana/programs';
+import { formatLiveCallLine, type LiveCallResult } from './evm/liveCall';
 import {
   createDecoderRegistry,
   defineChainDecoder,
@@ -189,6 +190,8 @@ type ReportMeta = {
   /** Highest severity among `risks`, or `info` when the list is empty. */
   severity: RiskSeverity;
   simulation: SimulationSnapshot;
+  /** Present only when a live `eth_call` was requested with `--rpc`. */
+  liveCall?: LiveCallResult;
 };
 
 export type JsonReport =
@@ -1261,6 +1264,9 @@ export function formatReportFooter(report: JsonReport): string[] {
   }
   for (const note of report.simulation.notes) {
     lines.push(`Sim note: ${note}`);
+  }
+  if (report.liveCall) {
+    lines.push(formatLiveCallLine(report.liveCall));
   }
   return lines;
 }

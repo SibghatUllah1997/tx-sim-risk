@@ -5,6 +5,7 @@ import {
   type JsonReport,
 } from './report';
 import type { SimulationSnapshot } from './sim';
+import { formatLiveCallLine } from './evm/liveCall';
 
 const HTML_ESCAPES: Readonly<Record<string, string>> = Object.freeze({
   '&': '&amp;',
@@ -236,6 +237,9 @@ export function renderHtmlReport(
     risks,
     '<h2>Simulation</h2>',
     simHtml,
+    report.liveCall
+      ? `<h2>Live call</h2>\n<p>${escapeHtml(formatLiveCallLine(report.liveCall))}</p>`
+      : '',
     '</body>',
     '</html>',
     '',

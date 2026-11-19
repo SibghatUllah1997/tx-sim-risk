@@ -3,6 +3,8 @@
 - Optional live `eth_call` behind `--rpc <url>`. Raw EVM txs supply their own recipient, value, data, and chain id; bare calldata needs `--to`. `--from` sets the caller and `--block` picks a tag or height. Without `--rpc` the tool stays fully offline.
 - The call checks `eth_chainId` first and refuses to run when the RPC is on a different chain than the raw tx. Reverts decode `Error(string)` and `Panic(uint256)` reasons and add the `live_call_reverted` warning; RPC failures are reported but never raise a risk.
 - JSON reports carry an optional `liveCall` block (covered by the JSON Schema); text and HTML reports show a one-line outcome. Marked Day 39 done.
+- `--sarif` prints a SARIF 2.1.0 log so CI can annotate findings on a pull request. `--sarif-uri` names the file GitHub should highlight.
+- `--diff` compares two payloads and lists new spenders, amounts, and risks. Combined with `--sarif` it annotates only the new findings. Marked Days 40–41 done.
 
 ## 2026-11-18
 

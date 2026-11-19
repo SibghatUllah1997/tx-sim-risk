@@ -29,6 +29,8 @@ Features:
 - Offline simulation stub for token-balance and allowance deltas (`--from` names the sender)
 - Optional live `eth_call` against your own RPC (`--rpc`, plus `--to` for bare calldata and `--block`), with decoded revert reasons and a `live_call_reverted` warning; nothing touches the network without `--rpc`
 - JSON report mode for downstream tooling
+- SARIF 2.1.0 output (`--sarif`) so CI can annotate findings on a pull request
+- Tx diff mode (`--diff`) that compares two inputs and highlights new spenders, amounts, and risks
 - Parse EIP-1559 fee fields and chainId from raw transactions (legacy, type-2, and type-4)
 - Parse Solana legacy and v0 transaction skeletons (hex or base64)
 - Flag Solana CPI to known-bad program ids (`solana_suspicious_cpi`)
@@ -75,6 +77,12 @@ node dist/cli.js --json <solanaTxBase64>
 # Opt-in live eth_call on your RPC (raw txs carry their own to/value; checks the chain id)
 node dist/cli.js --rpc https://your-rpc.example --to 0xTOKEN --from 0xSENDER --json 0x095ea7b3...
 node dist/cli.js --rpc https://your-rpc.example --block finalized 0x02f8...
+
+# SARIF 2.1.0 for GitHub code scanning (point --sarif-uri at a repo file)
+node dist/cli.js --sarif --sarif-uri fixtures/tx.hex 0x095ea7b3... > results.sarif
+
+# Compare two payloads: new spenders, amounts, and risks
+node dist/cli.js --diff 0x095ea7b3...limited 0x095ea7b3...unlimited
 
 # Print the JSON Schema for --json reports
 node dist/cli.js --schema
@@ -173,15 +181,17 @@ flowchart TD
     R --> G[Plain text stdout]
     R --> H[JSON report (--json)]
     H --> SCH[JSON Schema\nschema/report.schema.json]
+    R --> SARIF[SARIF 2.1.0 (--sarif)]
+    R --> DIFF[Tx diff (--diff)]
     S --> G
     S --> H
     R --> W[HTML report (--html)]
     S --> W
-    W --> P[Sample gallery\nnpm run pages]
+    W --> GALLERY[Sample gallery\nnpm run pages]
 ```
 
 Testing
-- `npm test` runs unit tests with Vitest, plus end-to-end CLI tests under `tests/e2e/` that compile the CLI once and run it as a child process (text, `--json`, `--html`, stdin, raw tx, Solana, `--schema`, and error exit codes), plus a replay of every example dataset case
+- `npm test` runs unit tests with Vitest, plus end-to-end CLI tests under `tests/e2e/` that compile the CLI once and run it as a child process (text, `--json`, `--html`, `--sarif`, `--diff`, stdin, raw tx, Solana, `--schema`, and error exit codes), plus a replay of every example dataset case
 - Dataset JSON reports are checked against `schema/report.schema.json`
 - `npm run pages` regenerates the sample HTML gallery under `site/`
 - `npm run examples` regenerates the README terminal screenshots under `docs/examples/`

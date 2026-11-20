@@ -156,11 +156,16 @@ const EXECUTE_ABI = parseAbi([
 const HANDLE_OPS_V06_ABI = parseAbi([
   'function handleOps((address sender, uint256 nonce, bytes initCode, bytes callData, uint256 callGasLimit, uint256 verificationGasLimit, uint256 preVerificationGas, uint256 maxFeePerGas, uint256 maxPriorityFeePerGas, bytes paymasterAndData, bytes signature)[] ops, address beneficiary)',
 ]);
+const SAFE_EXEC_ABI = parseAbi([
+  'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures)',
+]);
 
 const BENEFICIARY: Hex = `0x${'22'.repeat(20)}`;
 const PAYMASTER: Hex = `0x${'33'.repeat(20)}`;
 const DELEGATE: Hex = `0x${'aa'.repeat(20)}`;
 const USEROP_SIGNATURE: Hex = `0x${'ab'.repeat(65)}`;
+const SAFE_SIGNATURE: Hex = `0x${'ab'.repeat(65)}`;
+const ZERO_ADDR: Hex = `0x${'0'.repeat(40)}`;
 const AUTH_R: Hex = `0x${'11'.repeat(32)}`;
 const AUTH_S: Hex = `0x${'22'.repeat(32)}`;
 
@@ -169,6 +174,14 @@ function execute(dest: Hex, func: Hex): Hex {
     abi: EXECUTE_ABI,
     functionName: 'execute',
     args: [dest, 0n, func],
+  });
+}
+
+function safeExec(data: Hex, operation = 0, signatures: Hex = SAFE_SIGNATURE): Hex {
+  return encodeFunctionData({
+    abi: SAFE_EXEC_ABI,
+    functionName: 'execTransaction',
+    args: [TOKEN, 0n, data, operation, 0n, 0n, 0n, ZERO_ADDR, ZERO_ADDR, signatures],
   });
 }
 
@@ -436,6 +449,15 @@ export function buildExampleDataset(): Dataset {
     evm('eip7702-broad-delegate', 'Type-4 transaction with chain_id 0, valid on every chain.',
       eip7702Tx(0, DELEGATE),
       { type: 'eip7702', risks: ['eip7702_delegation', 'eip7702_broad_delegate'], severity: 'high' }),
+    evm('safe-hidden-unlimited-approve', 'Safe execTransaction whose inner calldata is an unlimited approve.',
+      safeExec(approve(ROUTER, MAX_UINT)),
+      { type: 'safe_exec', risks: ['unlimited_approval', 'safe_hidden_grant'], severity: 'high' }),
+    evm('safe-delegatecall', 'Safe execTransaction with DelegateCall and empty inner data.',
+      safeExec('0x', 1),
+      { type: 'safe_exec', risks: ['safe_delegatecall'], severity: 'high' }),
+    evm('safe-unsigned-transfer', 'Safe execTransaction with no packed signatures wrapping a transfer.',
+      safeExec(transfer(RECIPIENT, '0a'), 0, '0x'),
+      { type: 'safe_exec', risks: ['safe_missing_signatures'], severity: 'warn' }),
     evm('erc20-plain-transfer', 'transfer() of 255 units from a named sender.',
       transfer(RECIPIENT, 'ff'),
       { type: 'erc20_transfer', risks: [], severity: 'info' },

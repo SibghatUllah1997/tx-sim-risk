@@ -69,6 +69,9 @@ describe('example dataset file', () => {
       'erc4337_calldata_approval',
       'eip7702_delegation',
       'eip7702_broad_delegate',
+      'safe_delegatecall',
+      'safe_hidden_grant',
+      'safe_missing_signatures',
     ]) {
       expect(risks, id).toContain(id);
     }

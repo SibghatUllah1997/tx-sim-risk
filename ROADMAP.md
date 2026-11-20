@@ -47,3 +47,10 @@ More decoders and report formats, still one small shippable step per day. Defaul
 - [x] Day 40: Add SARIF output so CI can annotate findings on a pull request
 - [x] Day 41: Add a tx diff mode that compares two inputs and highlights new spenders, amounts, and risks
 - [x] Day 42: Tag a v0.2.0 release with notes covering Permit2, multicall, and account-abstraction coverage
+
+### Phase 3
+
+More nested envelopes after v0.2.0. Default analysis stays offline. Use existing audited libraries (`viem`, `@solana/web3.js`) and do not hand-roll cryptography.
+
+- [x] Day 43: Decode Gnosis Safe `execTransaction` / `execTransactionFromModule` and recursively analyze inner calldata
+- [x] Day 44: Flag Safe `DELEGATECALL`, grants hidden inside the envelope, and unsigned or phishing-listed targets

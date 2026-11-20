@@ -3,6 +3,8 @@
 - Released v0.2.0: permits, Permit2, multicall, ERC-4337, EIP-7702, native value, SPL token decoding, plus `--rpc`, `--sarif`, and `--diff`. Notes are in `docs/RELEASE-NOTES.md`. Marked Day 42 done.
 - `npm run release:check` compares the version in `package.json`, the lockfile, the README status line, the release notes heading, and this changelog, and fails with one line per mismatch. A test runs the same check on the repo.
 - Fixed the lockfile, which still said `1.0.0`.
+- Decode Gnosis Safe `execTransaction` and both module variants, then run the inner calldata through the same risk rules (`safe_exec` reports).
+- Flag DelegateCall into the Safe (`safe_delegatecall`), an approval hidden inside the envelope (`safe_hidden_grant`), missing packed signatures, and phishing-listed DelegateCall or native-transfer targets. Marked Days 43–44 done.
 
 ## 2026-11-19
 

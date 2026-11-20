@@ -17,6 +17,7 @@ Features:
 - Decode Uniswap Permit2 `approve` / `permit` / `permitTransferFrom`, and flag unlimited or never-expiring grants (`permit2_no_expiry`)
 - Split router `multicall` and Multicall3 `aggregate*` batches, run every inner call through the same rules, and flag grants hidden inside a batch (`multicall_batched_grant`)
 - Parse ERC-4337 `handleOps` UserOperations, unwrap account `execute`, and flag a paymaster or a callData approval
+- Decode Gnosis Safe `execTransaction` / `execTransactionFromModule`, analyze the inner call, and flag DelegateCall, hidden grants, and unsigned owner-submitted txs
 - Parse EIP-7702 type-4 authorization lists and flag delegate designations, including any-chain (`chain_id = 0`) grants
 - Report raw txs with empty calldata as native ETH transfers, and flag ETH attached to a non-payable token or wallet call (`native_value_nonpayable_call`)
 - Decode ERC-721 / ERC-1155 setApprovalForAll and flag operator grants
@@ -120,7 +121,7 @@ Sample HTML gallery
 - Pushes to `main` deploy that gallery with GitHub Pages (see `.github/workflows/pages.yml`)
 
 Example dataset
-- `examples/dataset/cases.json` holds 37 labelled inputs (ERC-20 incl. permits and Permit2, multicall, ERC-4337, EIP-7702, NFT, raw EVM txs incl. native ETH value, Solana SPL token) with the report type, risks, and severity each should produce
+- `examples/dataset/cases.json` holds 40 labelled inputs (ERC-20 incl. permits and Permit2, multicall, ERC-4337, EIP-7702, Gnosis Safe, NFT, raw EVM txs incl. native ETH value, Solana SPL token) with the report type, risks, and severity each should produce
 - Every case maps to CLI flags, e.g. `node dist/cli.js <input> --config examples/risk-lists.json --json`
 - `npm run dataset` rebuilds the file from `src/datasetCases.ts` and checks every case; tests fail if the file and the builder drift
 - Use it as a regression corpus or to compare another decoder: `checkDatasetFile('examples/dataset/cases.json')`
@@ -169,11 +170,11 @@ flowchart TD
     A[CLI input\nhex calldata, raw EVM tx, or Solana tx] --> P[Decoder registry\n(EVM, Solana, plugins)]
     P --> B{EVM plugin}
     B -- raw tx --> C[unwrap data + chainId]
-    B -- calldata --> E[ERC-20 / NFT decoders]
+    B -- calldata --> E[ERC-20 / NFT / Safe decoders]
     C --> E
     P --> SOL[Solana plugin\nskeleton + ATA + CPI]
     E --> L[Allow/block lists\n(--config)]
-    E --> F[Risk rules\n(unlimited approval,\nzero-address burn,\nNFT approve-all,\nphishing spender,\napproval to EOA,\nblock-listed spender)]
+    E --> F[Risk rules\n(unlimited approval,\nzero-address burn,\nNFT approve-all,\nphishing spender,\napproval to EOA,\nblock-listed spender,\nSafe DelegateCall)]
     L --> F
     F --> R[Reason strings + severity]
     E --> S[Simulation stub\n(balance / allowance deltas)]

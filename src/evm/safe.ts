@@ -13,6 +13,15 @@ import { isHexString, stripHexPrefix } from './hex';
  */
 export const SAFE_PACKED_SIGNATURE_BYTES = 65;
 
+/** Risk id when the Safe uses DelegateCall, which can overwrite its storage. */
+export const SAFE_DELEGATECALL_RISK = 'safe_delegatecall';
+
+/** Risk id when an approval or operator grant is tucked inside a Safe tx. */
+export const SAFE_HIDDEN_GRANT_RISK = 'safe_hidden_grant';
+
+/** Risk id when owner-submitted execTransaction carries no packed signatures. */
+export const SAFE_MISSING_SIGNATURES_RISK = 'safe_missing_signatures';
+
 /** Which Safe execution ABI the calldata used. */
 export type SafeVariant =
   | 'exec_transaction'
@@ -115,6 +124,20 @@ export function packedSignatureCount(
 export function hasPackedSignatures(decoded: SafeDecoded): boolean {
   const count = packedSignatureCount(decoded.signatures);
   return count != null && count > 0;
+}
+
+/** Risks for a DelegateCall inner operation. */
+export function safeDelegatecallRisks(decoded: SafeDecoded): string[] {
+  return decoded.operation === 'delegatecall' ? [SAFE_DELEGATECALL_RISK] : [];
+}
+
+/**
+ * Risks when owner-submitted `execTransaction` has no packed signatures.
+ * Module paths do not use this field, so they are not flagged.
+ */
+export function safeMissingSignatureRisks(decoded: SafeDecoded): string[] {
+  if (decoded.variant !== 'exec_transaction') return [];
+  return hasPackedSignatures(decoded) ? [] : [SAFE_MISSING_SIGNATURES_RISK];
 }
 
 /**

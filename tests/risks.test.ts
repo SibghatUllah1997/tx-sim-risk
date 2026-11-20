@@ -12,6 +12,9 @@ import {
   MULTICALL_DEPTH_LIMIT_RISK,
   ERC4337_PAYMASTER_RISK,
   ERC4337_CALLDATA_APPROVAL_RISK,
+  SAFE_DELEGATECALL_RISK,
+  SAFE_HIDDEN_GRANT_RISK,
+  SAFE_MISSING_SIGNATURES_RISK,
   EIP7702_DELEGATION_RISK,
   EIP7702_BROAD_DELEGATE_RISK,
   NATIVE_VALUE_NONPAYABLE_CALL_RISK,
@@ -50,6 +53,9 @@ describe('risk reason catalog', () => {
         MULTICALL_DEPTH_LIMIT_RISK,
         ERC4337_PAYMASTER_RISK,
         ERC4337_CALLDATA_APPROVAL_RISK,
+        SAFE_DELEGATECALL_RISK,
+        SAFE_HIDDEN_GRANT_RISK,
+        SAFE_MISSING_SIGNATURES_RISK,
         EIP7702_DELEGATION_RISK,
         EIP7702_BROAD_DELEGATE_RISK,
         NATIVE_VALUE_NONPAYABLE_CALL_RISK,
@@ -125,11 +131,14 @@ describe('risk severity catalog', () => {
     expect(severityForRisk(BLOCKLISTED_SPENDER_RISK)).toBe('high');
     expect(severityForRisk(SOLANA_SUSPICIOUS_CPI_RISK)).toBe('high');
     expect(severityForRisk(SOLANA_AUTHORITY_CHANGE_RISK)).toBe('high');
+    expect(severityForRisk(SAFE_DELEGATECALL_RISK)).toBe('high');
   });
 
   it('marks heuristic EOA grants and burns as warn', () => {
     expect(severityForRisk(APPROVAL_TO_EOA_RISK)).toBe('warn');
     expect(severityForRisk(BURN_TO_ZERO_ADDRESS_RISK)).toBe('warn');
+    expect(severityForRisk(SAFE_HIDDEN_GRANT_RISK)).toBe('warn');
+    expect(severityForRisk(SAFE_MISSING_SIGNATURES_RISK)).toBe('warn');
   });
 
   it('defaults unknown ids to warn so they are not dropped as info', () => {

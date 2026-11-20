@@ -13,6 +13,11 @@ import {
   ERC4337_PAYMASTER_RISK,
 } from './evm/userOp';
 import {
+  SAFE_DELEGATECALL_RISK,
+  SAFE_HIDDEN_GRANT_RISK,
+  SAFE_MISSING_SIGNATURES_RISK,
+} from './evm/safe';
+import {
   EIP7702_BROAD_DELEGATE_RISK,
   EIP7702_DELEGATION_RISK,
 } from './evm/eip7702';
@@ -46,6 +51,9 @@ export const KNOWN_RISK_IDS = [
   MULTICALL_DEPTH_LIMIT_RISK,
   ERC4337_PAYMASTER_RISK,
   ERC4337_CALLDATA_APPROVAL_RISK,
+  SAFE_DELEGATECALL_RISK,
+  SAFE_HIDDEN_GRANT_RISK,
+  SAFE_MISSING_SIGNATURES_RISK,
   EIP7702_DELEGATION_RISK,
   EIP7702_BROAD_DELEGATE_RISK,
   NATIVE_VALUE_NONPAYABLE_CALL_RISK,
@@ -98,6 +106,9 @@ export const RISK_SEVERITIES: Readonly<Record<KnownRiskId, RiskSeverity>> =
     [MULTICALL_DEPTH_LIMIT_RISK]: 'warn',
     [ERC4337_PAYMASTER_RISK]: 'warn',
     [ERC4337_CALLDATA_APPROVAL_RISK]: 'high',
+    [SAFE_DELEGATECALL_RISK]: 'high',
+    [SAFE_HIDDEN_GRANT_RISK]: 'warn',
+    [SAFE_MISSING_SIGNATURES_RISK]: 'warn',
     [EIP7702_DELEGATION_RISK]: 'high',
     [EIP7702_BROAD_DELEGATE_RISK]: 'high',
     [NATIVE_VALUE_NONPAYABLE_CALL_RISK]: 'warn',
@@ -163,6 +174,12 @@ export const RISK_REASONS: Readonly<Record<KnownRiskId, string>> = Object.freeze
     'The UserOperation names a paymaster, so a third party sponsors gas and can apply its own policy to whether the operation is included.',
   [ERC4337_CALLDATA_APPROVAL_RISK]:
     'The UserOperation callData grants a token allowance or NFT operator, which can be easy to miss inside an account-abstraction envelope.',
+  [SAFE_DELEGATECALL_RISK]:
+    'The Safe transaction uses DelegateCall, so the target runs in the Safe\'s context and can overwrite owners, modules, or other storage.',
+  [SAFE_HIDDEN_GRANT_RISK]:
+    'An approval, permit, or operator grant is nested inside a Safe execTransaction, where wallets that only show the outer Safe call can hide it.',
+  [SAFE_MISSING_SIGNATURES_RISK]:
+    'The execTransaction carries no packed signatures, so it cannot meet the Safe threshold unless a hash was pre-approved on-chain.',
   [EIP7702_DELEGATION_RISK]:
     'The type-4 transaction designates a contract whose code will run in place of the sender EOA for later calls, until the designation is cleared.',
   [EIP7702_BROAD_DELEGATE_RISK]:

@@ -32,6 +32,9 @@ import {
 import {
   decodeSafeExec,
   packedSignatureCount,
+  SAFE_HIDDEN_GRANT_RISK,
+  safeDelegatecallRisks,
+  safeMissingSignatureRisks,
   type SafeDecoded,
   type SafeOperation,
   type SafeVariant,
@@ -666,6 +669,16 @@ function safeExecReport(
 ): JsonReport {
   const risks: string[] = [];
   const simulation = emptySimulation();
+  pushUnique(risks, safeMissingSignatureRisks(decoded));
+  pushUnique(risks, safeDelegatecallRisks(decoded));
+  if (decoded.operation === 'delegatecall') {
+    pushUnique(risks, approvalGrantRisks(decoded.to, true, options));
+  } else if (decoded.data === '0x' && decoded.value > 0n) {
+    pushUnique(risks, [
+      ...blocklistedSpenderRisks(decoded.to, options?.lists),
+      ...phishingSpenderRisks(decoded.to, options?.phishingIndex),
+    ]);
+  }
   let innerReport: JsonReport | null = null;
   const tooDeep =
     decoded.data !== '0x' && depth + 1 >= MAX_MULTICALL_DEPTH;
@@ -678,6 +691,9 @@ function safeExecReport(
   }
   if (innerReport) {
     pushUnique(risks, innerReport.risks);
+    if (grantsAccess(innerReport)) {
+      pushUnique(risks, [SAFE_HIDDEN_GRANT_RISK]);
+    }
     pushUnique(risks, nativeValueCallRisks(innerReport.type, decoded.value));
     mergeSimulation(simulation, innerReport.simulation);
   }

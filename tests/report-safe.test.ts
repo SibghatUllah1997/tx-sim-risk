@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { encodeFunctionData, parseAbi, type Hex } from 'viem';
 import {
+  PHISHING_SPENDER_RISK,
+  SAFE_DELEGATECALL_RISK,
+  SAFE_HIDDEN_GRANT_RISK,
+  SAFE_MISSING_SIGNATURES_RISK,
   SAFE_PACKED_SIGNATURE_BYTES,
   UNLIMITED_APPROVAL_RISK,
   diffReports,
@@ -12,6 +16,7 @@ import {
 const TOKEN: Hex = '0xcccccccccccccccccccccccccccccccccccccccc';
 const ROUTER: Hex = '0x7a250d5630b4cf539739df2c5dacb4c659f2488d';
 const RECIPIENT: Hex = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const PHISHING: Hex = '0xbad0000000000000000000000000000000000001';
 const ZERO: Hex = '0x0000000000000000000000000000000000000000';
 const SIG: Hex = `0x${'ab'.repeat(SAFE_PACKED_SIGNATURE_BYTES)}`;
 const MAX_UINT256 = (1n << 256n) - 1n;
@@ -79,7 +84,10 @@ describe('safe_exec reports', () => {
     expect(report.payload.signatureCount).toBe(1);
     expect(report.payload.innerReport?.type).toBe('erc20_approve');
     expect(report.payload.innerReport?.risks).toEqual([UNLIMITED_APPROVAL_RISK]);
-    expect(report.risks).toEqual([UNLIMITED_APPROVAL_RISK]);
+    expect(report.risks).toEqual([
+      UNLIMITED_APPROVAL_RISK,
+      SAFE_HIDDEN_GRANT_RISK,
+    ]);
     expect(report.severity).toBe('high');
     expect(report.payload.depthLimited).toBe(false);
     expect(isValidReport(report)).toBe(true);
@@ -152,5 +160,49 @@ describe('safe_exec reports', () => {
     expect(diff.amountChanges.some((c) => c.field === 'inner.amount')).toBe(
       true
     );
+  });
+
+  it('flags DelegateCall and a phishing-listed target', () => {
+    const report = generateJsonReport(
+      execTransaction({ to: PHISHING, data: '0x', operation: 1 })
+    )!;
+    expect(report.risks).toEqual([
+      SAFE_DELEGATECALL_RISK,
+      PHISHING_SPENDER_RISK,
+    ]);
+    expect(report.severity).toBe('high');
+    expect(isValidReport(report)).toBe(true);
+  });
+
+  it('flags missing signatures on owner-submitted execTransaction', () => {
+    const report = generateJsonReport(
+      execTransaction({ data: transfer(RECIPIENT, 1n), signatures: '0x' })
+    )!;
+    expect(report.risks).toEqual([SAFE_MISSING_SIGNATURES_RISK]);
+    expect(report.severity).toBe('warn');
+  });
+
+  it('does not treat a Call into a token as a phishing spender hit', () => {
+    const report = generateJsonReport(
+      execTransaction({ to: PHISHING, data: approve(ROUTER, 8n) })
+    )!;
+    expect(report.risks).toEqual([SAFE_HIDDEN_GRANT_RISK]);
+    expect(report.risks).not.toContain(PHISHING_SPENDER_RISK);
+  });
+
+  it('flags a phishing recipient on a native ETH transfer out of the Safe', () => {
+    const report = generateJsonReport(
+      execTransaction({ to: PHISHING, data: '0x', value: 10n })
+    )!;
+    expect(report.risks).toEqual([PHISHING_SPENDER_RISK]);
+    expect(report.payload).toMatchObject({ innerReport: null, operation: 'call' });
+  });
+
+  it('does not raise a hidden-grant warning for a revoke', () => {
+    const report = generateJsonReport(
+      execTransaction({ data: approve(ROUTER, 0n) })
+    )!;
+    expect(report.risks).toEqual([]);
+    expect(report.severity).toBe('info');
   });
 });

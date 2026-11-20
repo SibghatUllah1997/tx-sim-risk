@@ -46,4 +46,4 @@ More decoders and report formats, still one small shippable step per day. Defaul
 - [x] Day 39: Optional live `eth_call` simulation behind an explicit RPC flag, keeping the default fully offline
 - [x] Day 40: Add SARIF output so CI can annotate findings on a pull request
 - [x] Day 41: Add a tx diff mode that compares two inputs and highlights new spenders, amounts, and risks
-- [ ] Day 42: Tag a v0.2.0 release with notes covering Permit2, multicall, and account-abstraction coverage
+- [x] Day 42: Tag a v0.2.0 release with notes covering Permit2, multicall, and account-abstraction coverage

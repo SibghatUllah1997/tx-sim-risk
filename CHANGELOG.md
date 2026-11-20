@@ -1,3 +1,9 @@
+## 2026-11-20
+
+- Released v0.2.0: permits, Permit2, multicall, ERC-4337, EIP-7702, native value, SPL token decoding, plus `--rpc`, `--sarif`, and `--diff`. Notes are in `docs/RELEASE-NOTES.md`. Marked Day 42 done.
+- `npm run release:check` compares the version in `package.json`, the lockfile, the README status line, the release notes heading, and this changelog, and fails with one line per mismatch. A test runs the same check on the repo.
+- Fixed the lockfile, which still said `1.0.0`.
+
 ## 2026-11-19
 
 - Optional live `eth_call` behind `--rpc <url>`. Raw EVM txs supply their own recipient, value, data, and chain id; bare calldata needs `--to`. `--from` sets the caller and `--block` picks a tag or height. Without `--rpc` the tool stays fully offline.

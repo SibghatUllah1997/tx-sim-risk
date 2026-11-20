@@ -5,7 +5,7 @@
 
 One-liner: A tiny CLI and TypeScript library that decodes common ERC-20 calls and Solana transaction skeletons, and surfaces simple risk hints (like unlimited approvals) from raw calldata or full raw transactions.
 
-Status: **v0.1.0**. See `docs/RELEASE-NOTES.md` for the tagged release notes.
+Status: **v0.2.0**. See `docs/RELEASE-NOTES.md` for the tagged release notes.
 
 Why it matters:
 - Wallets often show hex data. It’s easy to miss risky approvals or burns.

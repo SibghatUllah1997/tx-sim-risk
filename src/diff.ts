@@ -76,6 +76,16 @@ function collectAddresses(report: JsonReport, out: DiffAddressHit[]): void {
         collectAddresses(report.payload.innerReport, out);
       }
       return;
+    case 'safe_exec':
+      if (report.payload.operation === 'delegatecall') {
+        pushAddress(out, report.payload.to, 'delegate');
+      } else if (report.payload.data === '0x') {
+        pushAddress(out, report.payload.to, 'recipient');
+      }
+      if (report.payload.innerReport) {
+        collectAddresses(report.payload.innerReport, out);
+      }
+      return;
     case 'erc4337_userop':
       for (const op of report.payload.ops) {
         pushAddress(out, op.paymaster, 'paymaster');
@@ -137,6 +147,12 @@ function collectAmounts(
       set('value', report.payload.value);
       return;
     case 'eip7702':
+      set('value', report.payload.value);
+      if (report.payload.innerReport) {
+        collectAmounts(report.payload.innerReport, out, field('inner'));
+      }
+      return;
+    case 'safe_exec':
       set('value', report.payload.value);
       if (report.payload.innerReport) {
         collectAmounts(report.payload.innerReport, out, field('inner'));

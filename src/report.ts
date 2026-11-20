@@ -30,6 +30,13 @@ import {
   type UserOpVersion,
 } from './evm/userOp';
 import {
+  decodeSafeExec,
+  packedSignatureCount,
+  type SafeDecoded,
+  type SafeOperation,
+  type SafeVariant,
+} from './evm/safe';
+import {
   EIP7702_BROAD_DELEGATE_RISK,
   EIP7702_DELEGATION_RISK,
   hasEip7702BroadDelegate,
@@ -265,6 +272,28 @@ export type JsonReport =
         version: UserOpVersion;
         beneficiary: string;
         ops: UserOpReport[];
+      };
+    })
+  | (ReportMeta & {
+      type: 'safe_exec';
+      payload: {
+        variant: SafeVariant;
+        signature: string;
+        to: string;
+        value: string;
+        data: string;
+        operation: SafeOperation;
+        safeTxGas: string | null;
+        baseGas: string | null;
+        gasPrice: string | null;
+        gasToken: string | null;
+        refundReceiver: string | null;
+        signatures: string | null;
+        signatureCount: number | null;
+        targetKind: AddressKind;
+        targetLabel: AddressLabel | null;
+        innerReport: JsonReport | null;
+        depthLimited: boolean;
       };
     })
   | (ReportMeta & {
@@ -522,6 +551,10 @@ function grantsAccess(report: JsonReport): boolean {
       );
     case 'eip7702':
       return report.payload.innerReport != null && grantsAccess(report.payload.innerReport);
+    case 'safe_exec':
+      return (
+        report.payload.innerReport != null && grantsAccess(report.payload.innerReport)
+      );
     default:
       return false;
   }
@@ -624,6 +657,62 @@ function mergeSimulation(
   into.allowances.push(...from.allowances);
   into.operators.push(...from.operators);
   pushUnique(into.notes, from.notes);
+}
+
+function safeExecReport(
+  decoded: SafeDecoded,
+  options: ReportOptions | undefined,
+  depth: number
+): JsonReport {
+  const risks: string[] = [];
+  const simulation = emptySimulation();
+  let innerReport: JsonReport | null = null;
+  const tooDeep =
+    decoded.data !== '0x' && depth + 1 >= MAX_MULTICALL_DEPTH;
+  if (decoded.data !== '0x' && !tooDeep) {
+    try {
+      innerReport = generateJsonReportAt(decoded.data, options, depth + 1);
+    } catch {
+      innerReport = null;
+    }
+  }
+  if (innerReport) {
+    pushUnique(risks, innerReport.risks);
+    pushUnique(risks, nativeValueCallRisks(innerReport.type, decoded.value));
+    mergeSimulation(simulation, innerReport.simulation);
+  }
+  if (decoded.value > 0n) {
+    pushUnique(simulation.notes, [nativeValueNote(decoded.value, decoded.to)]);
+  }
+  pushUnique(simulation.notes, [
+    'Inner call runs as the Safe contract, not the owner who submitted execTransaction.',
+  ]);
+  return {
+    type: 'safe_exec',
+    payload: {
+      variant: decoded.variant,
+      signature: decoded.signature,
+      to: decoded.to,
+      value: decoded.value.toString(),
+      data: decoded.data,
+      operation: decoded.operation,
+      safeTxGas: stringifyNullable(decoded.safeTxGas),
+      baseGas: stringifyNullable(decoded.baseGas),
+      gasPrice: stringifyNullable(decoded.gasPrice),
+      gasToken: decoded.gasToken,
+      refundReceiver: decoded.refundReceiver,
+      signatures: decoded.signatures,
+      signatureCount: packedSignatureCount(decoded.signatures),
+      targetKind: spenderKindFor(decoded.to, options),
+      targetLabel: labelFor(decoded.to, options),
+      innerReport,
+      depthLimited: tooDeep,
+    },
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
+    simulation,
+  };
 }
 
 function userOpReport(
@@ -847,8 +936,9 @@ function eip7702Report(
 
 /**
  * Decode EVM calldata into a report. Batches (`multicall`, Multicall3
- * `aggregate*`) are split and every inner call is analyzed with the same
- * rules, up to `MAX_MULTICALL_DEPTH` levels of nesting.
+ * `aggregate*`) and Safe `execTransaction` envelopes are split and every
+ * inner call is analyzed with the same rules, up to `MAX_MULTICALL_DEPTH`
+ * levels of nesting.
  */
 export function generateJsonReport(
   data: string,
@@ -1002,6 +1092,11 @@ function generateJsonReportAt(
   const handleOps = decodeHandleOps(data);
   if (handleOps) {
     return userOpReport(handleOps, options, depth);
+  }
+
+  const safe = decodeSafeExec(data);
+  if (safe) {
+    return safeExecReport(safe, options, depth);
   }
 
   // Calls without a dedicated risk rule (transferFrom, safeTransferFrom,

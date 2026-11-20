@@ -9,6 +9,7 @@
     { "$ref": "#/$defs/permit2Report" },
     { "$ref": "#/$defs/multicallReport" },
     { "$ref": "#/$defs/erc4337UserOpReport" },
+    { "$ref": "#/$defs/safeExecReport" },
     { "$ref": "#/$defs/eip7702Report" },
     { "$ref": "#/$defs/nativeTransferReport" },
     { "$ref": "#/$defs/erc20TransferReport" },
@@ -497,6 +498,91 @@
         "isRevocation": { "type": "boolean" },
         "delegateKind": { "$ref": "#/$defs/addressKind" },
         "delegateLabel": { "$ref": "#/$defs/nullableAddressLabel" }
+      }
+    },
+    "safeExecPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variant",
+        "signature",
+        "to",
+        "value",
+        "data",
+        "operation",
+        "safeTxGas",
+        "baseGas",
+        "gasPrice",
+        "gasToken",
+        "refundReceiver",
+        "signatures",
+        "signatureCount",
+        "targetKind",
+        "targetLabel",
+        "innerReport",
+        "depthLimited"
+      ],
+      "properties": {
+        "variant": {
+          "type": "string",
+          "enum": ["exec_transaction", "module", "module_return_data"]
+        },
+        "signature": { "$ref": "#/$defs/nonEmptyString" },
+        "to": { "$ref": "#/$defs/evmAddress" },
+        "value": { "$ref": "#/$defs/unsignedDecimalString" },
+        "data": { "$ref": "#/$defs/hexBytes" },
+        "operation": { "type": "string", "enum": ["call", "delegatecall"] },
+        "safeTxGas": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "baseGas": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "gasPrice": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "gasToken": {
+          "anyOf": [
+            { "$ref": "#/$defs/evmAddress" },
+            { "type": "null" }
+          ]
+        },
+        "refundReceiver": {
+          "anyOf": [
+            { "$ref": "#/$defs/evmAddress" },
+            { "type": "null" }
+          ]
+        },
+        "signatures": {
+          "anyOf": [
+            { "$ref": "#/$defs/hexBytes" },
+            { "type": "null" }
+          ]
+        },
+        "signatureCount": {
+          "anyOf": [
+            { "$ref": "#/$defs/uint" },
+            { "type": "null" }
+          ]
+        },
+        "targetKind": { "$ref": "#/$defs/addressKind" },
+        "targetLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "innerReport": {
+          "anyOf": [
+            { "$ref": "#/$defs/decodedEvmReport" },
+            { "type": "null" }
+          ]
+        },
+        "depthLimited": { "type": "boolean" }
       }
     },
     "eip7702Payload": {
@@ -996,6 +1082,20 @@
         }
       ]
     },
+    "safeExecReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "safe_exec" },
+            "payload": { "$ref": "#/$defs/safeExecPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
     "decodedEvmReport": {
       "description": "Any report the EVM calldata decoder can emit; used for calls nested inside a multicall batch.",
       "oneOf": [
@@ -1004,6 +1104,7 @@
         { "$ref": "#/$defs/permit2Report" },
         { "$ref": "#/$defs/multicallReport" },
         { "$ref": "#/$defs/erc4337UserOpReport" },
+        { "$ref": "#/$defs/safeExecReport" },
         { "$ref": "#/$defs/eip7702Report" },
         { "$ref": "#/$defs/erc20TransferReport" },
         { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },

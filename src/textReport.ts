@@ -88,6 +88,23 @@ export function formatDetectedHeader(report: JsonReport): string[] {
       });
       return lines;
     }
+    case 'safe_exec': {
+      const p = report.payload;
+      const lines = [
+        `Detected: Safe ${p.signature}`,
+        `To: ${p.to}`,
+        `Operation: ${p.operation}`,
+        `Value: ${p.value}`,
+      ];
+      if (p.innerReport) {
+        lines.push(`Inner: ${p.innerReport.type}`);
+      } else if (p.data === '0x') {
+        lines.push('Inner: native transfer');
+      } else if (p.depthLimited) {
+        lines.push('Inner: not analyzed (depth limit)');
+      }
+      return lines;
+    }
     case 'erc4337_userop': {
       const lines = [
         `Detected: ERC-4337 handleOps (${report.payload.version})`,

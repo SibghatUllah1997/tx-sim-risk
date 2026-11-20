@@ -49,6 +49,7 @@ const REPORT_TYPES: readonly JsonReport['type'][] = [
   'permit2',
   'multicall',
   'erc4337_userop',
+  'safe_exec',
   'eip7702',
   'native_transfer',
   'erc20_transfer',

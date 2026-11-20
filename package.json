@@ -20,7 +20,8 @@
     "build": "tsc -p tsconfig.json",
     "pages": "npm run build && node dist/generatePages.js",
     "dataset": "npm run build && node dist/generateDataset.js",
-    "examples": "npm run build && node dist/generateExampleDocs.js"
+    "examples": "npm run build && node dist/generateExampleDocs.js",
+    "release:check": "npm run build && node dist/checkRelease.js"
   },
   "bin": {
     "tx-sim-risk": "dist/cli.js"

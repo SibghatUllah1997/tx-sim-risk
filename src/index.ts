@@ -56,6 +56,7 @@ export * from './schemaValidate';
 export * from './exampleSnapshots';
 export * from './payload';
 export * from './packageInfo';
+export * from './releaseCheck';
 export {
   BOOLEAN_FLAGS,
   CLI_USAGE_LINES,

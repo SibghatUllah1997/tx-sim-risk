@@ -64,6 +64,39 @@ function payloadRows(report: JsonReport): string[] {
       ),
     ];
   }
+  if (report.type === 'safe_exec') {
+    const payload = report.payload;
+    return [
+      row('variant', payload.variant),
+      row('signature', payload.signature),
+      row('to', payload.to),
+      row('operation', payload.operation),
+      row('value', payload.value),
+      row('targetKind', payload.targetKind),
+      row(
+        'targetLabel',
+        payload.targetLabel
+          ? `${payload.targetLabel.name} (${payload.targetLabel.kind})`
+          : ''
+      ),
+      row(
+        'signatures',
+        payload.signatureCount == null
+          ? 'n/a'
+          : String(payload.signatureCount)
+      ),
+      row(
+        'inner',
+        payload.innerReport
+          ? `${payload.innerReport.type} risks=${payload.innerReport.risks.join(',')}`
+          : payload.data === '0x'
+            ? 'native transfer'
+            : payload.depthLimited
+              ? 'not analyzed (depth limit)'
+              : 'unknown'
+      ),
+    ];
+  }
   if (report.type === 'eip7702') {
     const payload = report.payload;
     return [

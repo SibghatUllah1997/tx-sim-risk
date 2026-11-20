@@ -1,4 +1,4 @@
-import { serializeTransaction, type Hex } from 'viem';
+import { encodeFunctionData, parseAbi, serializeTransaction, type Hex } from 'viem';
 import {
   Keypair,
   PublicKey,
@@ -35,6 +35,23 @@ export function setApprovalForAllCalldata(
   approved: boolean
 ): Hex {
   return `0xa22cb465${addressWord(operatorNo0x)}${word(approved ? '1' : '0')}`;
+}
+
+const SAFE_ABI = parseAbi([
+  'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures)',
+]);
+
+const ZERO: Hex = `0x${'0'.repeat(40)}`;
+const TOKEN: Hex = `0x${'cc'.repeat(20)}`;
+const SAFE_SIG: Hex = `0x${'ab'.repeat(65)}`;
+
+/** Gnosis Safe execTransaction wrapping `data` as a Call. */
+export function safeExecCalldata(data: Hex, operation = 0): Hex {
+  return encodeFunctionData({
+    abi: SAFE_ABI,
+    functionName: 'execTransaction',
+    args: [TOKEN, 0n, data, operation, 0n, 0n, 0n, ZERO, ZERO, SAFE_SIG],
+  });
 }
 
 /** Unsigned EIP-1559 transaction carrying `data`, serialized by viem. */

@@ -47,6 +47,12 @@ const RECIPIENT = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const TRANSFER_FROM_ABI = parseAbi([
   'function transferFrom(address from, address to, uint256 value)',
 ]);
+const SAFE_EXEC_ABI = parseAbi([
+  'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures)',
+]);
+const TOKEN = `0x${'cc'.repeat(20)}` as const;
+const ZERO = `0x${'0'.repeat(40)}` as const;
+const SAFE_SIG = `0x${'ab'.repeat(65)}` as const;
 
 /**
  * One published sample: hex calldata plus the title/summary shown on the
@@ -141,6 +147,28 @@ export const SAMPLE_SPECS: readonly SampleSpec[] = Object.freeze([
       abi: TRANSFER_FROM_ABI,
       functionName: 'transferFrom',
       args: [`0x${RECIPIENT}`, `0x${EOA_SPENDER}`, 500n],
+    }),
+  }),
+  Object.freeze({
+    id: 'safe-hidden-approve',
+    title: 'Unlimited approve hidden in a Safe transaction',
+    summary:
+      'Gnosis Safe execTransaction whose inner calldata is an unlimited ERC-20 approve.',
+    input: encodeFunctionData({
+      abi: SAFE_EXEC_ABI,
+      functionName: 'execTransaction',
+      args: [
+        TOKEN,
+        0n,
+        encodeApprove(UNISWAP_V2_ROUTER, 'f'.repeat(64)) as `0x${string}`,
+        0,
+        0n,
+        0n,
+        0n,
+        ZERO,
+        ZERO,
+        SAFE_SIG,
+      ],
     }),
   }),
 ]);

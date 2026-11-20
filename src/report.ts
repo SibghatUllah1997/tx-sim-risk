@@ -1294,6 +1294,28 @@ export function formatReportFooter(report: JsonReport): string[] {
     case 'multicall':
       lines.push(...formatMulticallCallLines(report.payload.calls, ''));
       break;
+    case 'safe_exec': {
+      lines.push(`Target kind: ${report.payload.targetKind}`);
+      const named = formatAddressLabel(report.payload.targetLabel);
+      if (named) lines.push(`Target label: ${named}`);
+      if (report.payload.signatureCount != null) {
+        lines.push(`Signatures: ${report.payload.signatureCount}`);
+      }
+      if (report.payload.innerReport) {
+        lines.push(
+          `Inner: ${describeInnerReport(report.payload.innerReport)}`
+        );
+        if (report.payload.innerReport.type === 'multicall') {
+          lines.push(
+            ...formatMulticallCallLines(
+              report.payload.innerReport.payload.calls,
+              '  '
+            )
+          );
+        }
+      }
+      break;
+    }
     case 'eip7702':
       lines.push(`Authorizations: ${report.payload.authorizations.length}`);
       for (const [index, item] of report.payload.authorizations.entries()) {

@@ -9,8 +9,10 @@ import {
   UNLIMITED_APPROVAL_RISK,
   diffReports,
   formatDetectedHeader,
+  formatReportFooter,
   generateJsonReport,
   isValidReport,
+  renderHtmlReport,
 } from '../src';
 
 const TOKEN: Hex = '0xcccccccccccccccccccccccccccccccccccccccc';
@@ -204,5 +206,23 @@ describe('safe_exec reports', () => {
     )!;
     expect(report.risks).toEqual([]);
     expect(report.severity).toBe('info');
+  });
+
+  it('prints inner details in the text footer and HTML table', () => {
+    const report = generateJsonReport(
+      execTransaction({ data: approve(ROUTER, MAX_UINT256) })
+    )!;
+    const footer = formatReportFooter(report);
+    expect(footer).toContain('Target kind: unknown');
+    expect(footer).toContain('Signatures: 1');
+    expect(footer.some((line) => line.startsWith('Inner: erc20_approve'))).toBe(
+      true
+    );
+    const html = renderHtmlReport(report);
+    expect(html).toContain('<code>safe_exec</code>');
+    expect(html).toContain('<th>operation</th><td>call</td>');
+    expect(html).not.toContain('delegatecall');
+    expect(html).toContain(UNLIMITED_APPROVAL_RISK);
+    expect(html).not.toContain('<script');
   });
 });

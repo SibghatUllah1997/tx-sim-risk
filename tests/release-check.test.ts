@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   checkReleaseConsistency,
   readmeStatusVersion,
+  readReleaseSources,
   releaseNotesVersion,
   type ReleaseSources,
 } from '../src/releaseCheck';
@@ -88,5 +89,13 @@ describe('checkReleaseConsistency', () => {
   it('reports an unparsable lockfile instead of throwing', () => {
     const { problems } = checkReleaseConsistency(sources('0.2.0', { packageLock: 'nope' }));
     expect(problems).toEqual(['package-lock.json is not valid JSON']);
+  });
+});
+
+describe('this repository', () => {
+  it('is consistent and ready to tag', () => {
+    const result = checkReleaseConsistency(readReleaseSources());
+    expect(result.problems).toEqual([]);
+    expect(result.version).toMatch(/^\d+\.\d+\.\d+$/);
   });
 });

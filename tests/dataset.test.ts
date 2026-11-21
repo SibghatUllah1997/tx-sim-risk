@@ -72,6 +72,7 @@ describe('example dataset file', () => {
       'safe_delegatecall',
       'safe_hidden_grant',
       'safe_missing_signatures',
+      'universal_router_hidden_grant',
     ]) {
       expect(risks, id).toContain(id);
     }

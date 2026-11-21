@@ -1,3 +1,8 @@
+## 2026-11-21
+
+- Decode Uniswap Universal Router `execute` (with and without a deadline) into `universal_router` reports, including nested `EXECUTE_SUB_PLAN` and inner Permit2 grants.
+- Flag a Permit2 allowance hidden in the plan (`universal_router_hidden_grant`) and reuse phishing/block-list checks on sweep, unwrap, and swap recipients. Marked Days 45–46 done.
+
 ## 2026-11-20
 
 - Released v0.2.0: permits, Permit2, multicall, ERC-4337, EIP-7702, native value, SPL token decoding, plus `--rpc`, `--sarif`, and `--diff`. Notes are in `docs/RELEASE-NOTES.md`. Marked Day 42 done.

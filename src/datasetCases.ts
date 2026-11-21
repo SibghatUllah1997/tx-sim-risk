@@ -1,4 +1,11 @@
-import { encodeFunctionData, parseAbi, serializeTransaction, type Hex } from 'viem';
+import {
+  encodeAbiParameters,
+  encodeFunctionData,
+  parseAbi,
+  parseAbiParameters,
+  serializeTransaction,
+  type Hex,
+} from 'viem';
 import {
   Keypair,
   PublicKey,
@@ -183,6 +190,53 @@ function safeExec(data: Hex, operation = 0, signatures: Hex = SAFE_SIGNATURE): H
     functionName: 'execTransaction',
     args: [TOKEN, 0n, data, operation, 0n, 0n, 0n, ZERO_ADDR, ZERO_ADDR, signatures],
   });
+}
+
+const UNIVERSAL_ROUTER_ABI = parseAbi([
+  'function execute(bytes commands, bytes[] inputs)',
+]);
+
+function urExecute(commands: Hex, inputs: Hex[]): Hex {
+  return encodeFunctionData({
+    abi: UNIVERSAL_ROUTER_ABI,
+    functionName: 'execute',
+    args: [commands, inputs],
+  });
+}
+
+function urPermit2Permit(spender: string, amount: bigint): Hex {
+  return encodeAbiParameters(
+    parseAbiParameters(
+      '((address token, uint160 amount, uint48 expiration, uint48 nonce) details, address spender, uint256 sigDeadline) permitSingle, bytes signature'
+    ),
+    [
+      {
+        details: {
+          token: TOKEN,
+          amount,
+          expiration: Number(PERMIT2_EXPIRY),
+          nonce: 1,
+        },
+        spender: `0x${spender}`,
+        sigDeadline: PERMIT2_EXPIRY,
+      },
+      PERMIT2_SIG,
+    ]
+  );
+}
+
+function urUnwrap(recipient: string): Hex {
+  return encodeAbiParameters(
+    parseAbiParameters('address recipient, uint256 amountMin'),
+    [`0x${recipient}`, 1n]
+  );
+}
+
+function urSweep(recipient: string): Hex {
+  return encodeAbiParameters(
+    parseAbiParameters('address token, address recipient, uint256 amountMin'),
+    [TOKEN, `0x${recipient}`, 1n]
+  );
 }
 
 function handleOpsV06(callData: Hex, paymasterAndData: Hex = '0x'): Hex {
@@ -458,6 +512,15 @@ export function buildExampleDataset(): Dataset {
     evm('safe-unsigned-transfer', 'Safe execTransaction with no packed signatures wrapping a transfer.',
       safeExec(transfer(RECIPIENT, '0a'), 0, '0x'),
       { type: 'safe_exec', risks: ['safe_missing_signatures'], severity: 'warn' }),
+    evm('universal-router-hidden-permit', 'Universal Router execute whose first command is an unlimited Permit2 permit.',
+      urExecute('0x0a', [urPermit2Permit(ROUTER, MAX_UINT160)]),
+      { type: 'universal_router', risks: ['unlimited_permit', 'universal_router_hidden_grant'], severity: 'high' }),
+    evm('universal-router-phishing-sweep', 'Universal Router sweep() to a phishing-listed recipient.',
+      urExecute('0x04', [urSweep(PHISHING_DRAINER)]),
+      { type: 'universal_router', risks: ['phishing_spender'], severity: 'high' }),
+    evm('universal-router-unwrap', 'Universal Router unwrapWETH() to a normal recipient.',
+      urExecute('0x0c', [urUnwrap(RECIPIENT)]),
+      { type: 'universal_router', risks: [], severity: 'info' }),
     evm('erc20-plain-transfer', 'transfer() of 255 units from a named sender.',
       transfer(RECIPIENT, 'ff'),
       { type: 'erc20_transfer', risks: [], severity: 'info' },

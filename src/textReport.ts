@@ -105,6 +105,19 @@ export function formatDetectedHeader(report: JsonReport): string[] {
       }
       return lines;
     }
+    case 'universal_router': {
+      const p = report.payload;
+      const lines = [
+        `Detected: Uniswap Universal Router ${p.signature}`,
+        `Commands: ${p.commands.length}`,
+      ];
+      if (p.deadline != null) lines.push(`Deadline: ${p.deadline}`);
+      p.commands.forEach((command) => {
+        const extra = command.allowRevert ? ' (allowRevert)' : '';
+        lines.push(`  [${command.index}] ${command.kind}${extra}`);
+      });
+      return lines;
+    }
     case 'erc4337_userop': {
       const lines = [
         `Detected: ERC-4337 handleOps (${report.payload.version})`,

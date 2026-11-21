@@ -86,6 +86,13 @@ function collectAddresses(report: JsonReport, out: DiffAddressHit[]): void {
         collectAddresses(report.payload.innerReport, out);
       }
       return;
+    case 'universal_router':
+      for (const command of report.payload.commands) {
+        pushAddress(out, command.spender, 'spender');
+        pushAddress(out, command.recipient, 'recipient');
+        if (command.innerReport) collectAddresses(command.innerReport, out);
+      }
+      return;
     case 'erc4337_userop':
       for (const op of report.payload.ops) {
         pushAddress(out, op.paymaster, 'paymaster');
@@ -157,6 +164,14 @@ function collectAmounts(
       if (report.payload.innerReport) {
         collectAmounts(report.payload.innerReport, out, field('inner'));
       }
+      return;
+    case 'universal_router':
+      report.payload.commands.forEach((command, index) => {
+        if (command.amount != null) set(`commands[${index}].amount`, command.amount);
+        if (command.innerReport) {
+          collectAmounts(command.innerReport, out, field(`commands[${index}]`));
+        }
+      });
       return;
     case 'erc4337_userop':
       report.payload.ops.forEach((op, opIndex) => {

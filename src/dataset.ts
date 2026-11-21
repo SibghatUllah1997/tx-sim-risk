@@ -50,6 +50,7 @@ const REPORT_TYPES: readonly JsonReport['type'][] = [
   'multicall',
   'erc4337_userop',
   'safe_exec',
+  'universal_router',
   'eip7702',
   'native_transfer',
   'erc20_transfer',

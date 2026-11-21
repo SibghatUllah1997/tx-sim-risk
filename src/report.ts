@@ -40,6 +40,12 @@ import {
   type SafeVariant,
 } from './evm/safe';
 import {
+  decodeUniversalRouter,
+  type UniversalRouterCommandKind,
+  type UniversalRouterDecoded,
+  type UniversalRouterVariant,
+} from './evm/universalRouter';
+import {
   EIP7702_BROAD_DELEGATE_RISK,
   EIP7702_DELEGATION_RISK,
   hasEip7702BroadDelegate,
@@ -91,6 +97,7 @@ import {
   type RiskSeverity,
 } from './risks';
 import {
+  CALLER_ACCOUNT,
   emptySimulation,
   simulateCalldata,
   type AllowanceDelta,
@@ -300,6 +307,15 @@ export type JsonReport =
       };
     })
   | (ReportMeta & {
+      type: 'universal_router';
+      payload: {
+        variant: UniversalRouterVariant;
+        signature: string;
+        deadline: string | null;
+        commands: UniversalRouterCommandReport[];
+      };
+    })
+  | (ReportMeta & {
       type: 'eip7702';
       payload: {
         chainId: string;
@@ -425,6 +441,27 @@ export type UserOpReport = {
   paymaster: string | null;
   signature: string;
   calls: UserOpCallReport[];
+};
+
+/** One Universal Router command with its nested Permit2 or sub-plan report. */
+export type UniversalRouterCommandReport = {
+  index: number;
+  command: number;
+  kind: UniversalRouterCommandKind;
+  allowRevert: boolean;
+  input: string;
+  recipient: string | null;
+  token: string | null;
+  amount: string | null;
+  amountMin: string | null;
+  payerIsUser: boolean | null;
+  spender: string | null;
+  recipientKind: AddressKind | null;
+  recipientLabel: AddressLabel | null;
+  spenderKind: AddressKind | null;
+  spenderLabel: AddressLabel | null;
+  innerReport: JsonReport | null;
+  depthLimited: boolean;
 };
 
 /** One inner call of a `multicall` report with its own nested report. */
@@ -557,6 +594,10 @@ function grantsAccess(report: JsonReport): boolean {
     case 'safe_exec':
       return (
         report.payload.innerReport != null && grantsAccess(report.payload.innerReport)
+      );
+    case 'universal_router':
+      return report.payload.commands.some(
+        (command) => command.innerReport != null && grantsAccess(command.innerReport)
       );
     default:
       return false;
@@ -723,6 +764,100 @@ function safeExecReport(
       targetLabel: labelFor(decoded.to, options),
       innerReport,
       depthLimited: tooDeep,
+    },
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
+    simulation,
+  };
+}
+
+function permit2ReportFromDecoded(
+  decoded: Permit2Decoded,
+  options: ReportOptions | undefined
+): JsonReport {
+  const risks = permit2Risks(decoded, options);
+  const simulation = emptySimulation();
+  if (decoded.spender) {
+    simulation.allowances.push({
+      owner: decoded.owner ?? (options?.from ? options.from : CALLER_ACCOUNT),
+      spender: decoded.spender,
+      mode: 'set',
+      delta: null,
+      newValue: decoded.amount.toString(),
+      wouldRevert: false,
+    });
+    simulation.notes.push(
+      'Permit2 permit inside a Universal Router plan sets the allowance from an off-chain signature; the token rejects it if the signature, nonce, or deadline is invalid.'
+    );
+  }
+  return {
+    type: 'permit2',
+    payload: permit2Payload(decoded, options),
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
+    simulation,
+  };
+}
+
+function universalRouterReport(
+  decoded: UniversalRouterDecoded,
+  options: ReportOptions | undefined,
+  depth: number
+): JsonReport {
+  const risks: string[] = [];
+  const simulation = emptySimulation();
+  let depthLimited = false;
+  const commands = decoded.commands.map((command): UniversalRouterCommandReport => {
+    const tooDeep =
+      command.nested != null && depth + 1 >= MAX_MULTICALL_DEPTH;
+    if (tooDeep) depthLimited = true;
+    let innerReport: JsonReport | null = null;
+    if (command.permit2) {
+      innerReport = permit2ReportFromDecoded(command.permit2, options);
+    } else if (command.nested && !tooDeep) {
+      innerReport = universalRouterReport(command.nested, options, depth + 1);
+    }
+    if (innerReport) {
+      pushUnique(risks, innerReport.risks);
+      mergeSimulation(simulation, innerReport.simulation);
+    }
+    return {
+      index: command.index,
+      command: command.command,
+      kind: command.kind,
+      allowRevert: command.allowRevert,
+      input: command.input,
+      recipient: command.recipient,
+      token: command.token,
+      amount: stringifyNullable(command.amount),
+      amountMin: stringifyNullable(command.amountMin),
+      payerIsUser: command.payerIsUser,
+      spender: command.spender,
+      recipientKind: command.recipient
+        ? spenderKindFor(command.recipient, options)
+        : null,
+      recipientLabel: labelFor(command.recipient, options),
+      spenderKind: command.spender
+        ? spenderKindFor(command.spender, options)
+        : null,
+      spenderLabel: labelFor(command.spender, options),
+      innerReport,
+      depthLimited: tooDeep,
+    };
+  });
+  if (depthLimited) pushUnique(risks, [MULTICALL_DEPTH_LIMIT_RISK]);
+  pushUnique(simulation.notes, [
+    'Universal Router runs each command in order as the router contract. Token pulls use Permit2 when payerIsUser is set.',
+  ]);
+  return {
+    type: 'universal_router',
+    payload: {
+      variant: decoded.variant,
+      signature: decoded.signature,
+      deadline: stringifyNullable(decoded.deadline),
+      commands,
     },
     risks,
     riskDetails: describeRisks(risks),
@@ -952,9 +1087,9 @@ function eip7702Report(
 
 /**
  * Decode EVM calldata into a report. Batches (`multicall`, Multicall3
- * `aggregate*`) and Safe `execTransaction` envelopes are split and every
- * inner call is analyzed with the same rules, up to `MAX_MULTICALL_DEPTH`
- * levels of nesting.
+ * `aggregate*`), Safe `execTransaction`, and Uniswap Universal Router
+ * `execute` envelopes are split and every inner call is analyzed with
+ * the same rules, up to `MAX_MULTICALL_DEPTH` levels of nesting.
  */
 export function generateJsonReport(
   data: string,
@@ -1113,6 +1248,11 @@ function generateJsonReportAt(
   const safe = decodeSafeExec(data);
   if (safe) {
     return safeExecReport(safe, options, depth);
+  }
+
+  const router = decodeUniversalRouter(data);
+  if (router) {
+    return universalRouterReport(router, options, depth);
   }
 
   // Calls without a dedicated risk rule (transferFrom, safeTransferFrom,

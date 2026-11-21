@@ -43,7 +43,12 @@ export {
   formatMulticallCallLines,
   MULTICALL3_ADDRESS,
 } from './report';
-export type { JsonReport, MulticallCallReport, ReportOptions } from './report';
+export type {
+  JsonReport,
+  MulticallCallReport,
+  ReportOptions,
+  UniversalRouterCommandReport,
+} from './report';
 export * from './samples';
 export * from './pages';
 export * from './solana/skeleton';

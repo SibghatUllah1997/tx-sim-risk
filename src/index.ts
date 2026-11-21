@@ -16,6 +16,7 @@ export * from './evm/permit2';
 export * from './evm/multicall';
 export * from './evm/userOp';
 export * from './evm/safe';
+export * from './evm/universalRouter';
 export * from './evm/eip7702';
 export * from './evm/nativeValue';
 export * from './evm/liveCall';

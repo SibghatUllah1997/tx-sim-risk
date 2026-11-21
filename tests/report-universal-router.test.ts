@@ -14,8 +14,10 @@ import {
   UNLIMITED_PERMIT_RISK,
   diffReports,
   formatDetectedHeader,
+  formatReportFooter,
   generateJsonReport,
   isValidReport,
+  renderHtmlReport,
 } from '../src';
 
 const TOKEN: Hex = '0xcccccccccccccccccccccccccccccccccccccccc';
@@ -221,5 +223,24 @@ describe('universal_router reports', () => {
     expect(
       diff.amountChanges.some((c) => c.field === 'commands[1].amount')
     ).toBe(true);
+  });
+
+  it('prints command details in the text footer and HTML table', () => {
+    const report = generateJsonReport(
+      execute(commandsBytes([0x0a]), [
+        permit2Permit(ROUTER, MAX_UINT160, 1_900_000_000n),
+      ])
+    )!;
+    const footer = formatReportFooter(report);
+    expect(
+      footer.some((line) => line.startsWith('Command [0] permit2_permit'))
+    ).toBe(true);
+    expect(footer.some((line) => line.includes(ROUTER))).toBe(true);
+    const html = renderHtmlReport(report);
+    expect(html).toContain('<code>universal_router</code>');
+    expect(html).toContain('<th>variant</th><td>execute</td>');
+    expect(html).toContain('permit2_permit');
+    expect(html).toContain(UNLIMITED_PERMIT_RISK);
+    expect(html).not.toContain('<script');
   });
 });

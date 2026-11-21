@@ -41,6 +41,7 @@ export {
   formatCpiLine,
   formatSplTokenLine,
   formatMulticallCallLines,
+  formatUniversalRouterCommandLines,
   MULTICALL3_ADDRESS,
 } from './report';
 export type {

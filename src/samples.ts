@@ -1,4 +1,4 @@
-import { encodeFunctionData, parseAbi } from 'viem';
+import { encodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters } from 'viem';
 import { createAddressKindMap } from './evm/addressKind';
 import { generateJsonReport, type JsonReport, type ReportOptions } from './report';
 
@@ -49,6 +49,9 @@ const TRANSFER_FROM_ABI = parseAbi([
 ]);
 const SAFE_EXEC_ABI = parseAbi([
   'function execTransaction(address to, uint256 value, bytes data, uint8 operation, uint256 safeTxGas, uint256 baseGas, uint256 gasPrice, address gasToken, address refundReceiver, bytes signatures)',
+]);
+const UNIVERSAL_ROUTER_ABI = parseAbi([
+  'function execute(bytes commands, bytes[] inputs)',
 ]);
 const TOKEN = `0x${'cc'.repeat(20)}` as const;
 const ZERO = `0x${'0'.repeat(40)}` as const;
@@ -168,6 +171,39 @@ export const SAMPLE_SPECS: readonly SampleSpec[] = Object.freeze([
         ZERO,
         ZERO,
         SAFE_SIG,
+      ],
+    }),
+  }),
+  Object.freeze({
+    id: 'universal-router-hidden-permit',
+    title: 'Unlimited Permit2 grant hidden in a Universal Router plan',
+    summary:
+      'Uniswap Universal Router execute whose first command is a Permit2 permit for type(uint160).max.',
+    input: encodeFunctionData({
+      abi: UNIVERSAL_ROUTER_ABI,
+      functionName: 'execute',
+      args: [
+        '0x0a',
+        [
+          encodeAbiParameters(
+            parseAbiParameters(
+              '((address token, uint160 amount, uint48 expiration, uint48 nonce) details, address spender, uint256 sigDeadline) permitSingle, bytes signature'
+            ),
+            [
+              {
+                details: {
+                  token: TOKEN,
+                  amount: (1n << 160n) - 1n,
+                  expiration: 1_900_000_000,
+                  nonce: 1,
+                },
+                spender: `0x${UNISWAP_V2_ROUTER}` as `0x${string}`,
+                sigDeadline: 1_900_000_000n,
+              },
+              SAFE_SIG,
+            ]
+          ),
+        ],
       ],
     }),
   }),

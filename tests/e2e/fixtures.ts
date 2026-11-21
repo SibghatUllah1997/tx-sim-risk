@@ -1,4 +1,11 @@
-import { encodeFunctionData, parseAbi, serializeTransaction, type Hex } from 'viem';
+import {
+  encodeAbiParameters,
+  encodeFunctionData,
+  parseAbi,
+  parseAbiParameters,
+  serializeTransaction,
+  type Hex,
+} from 'viem';
 import {
   Keypair,
   PublicKey,
@@ -44,6 +51,55 @@ const SAFE_ABI = parseAbi([
 const ZERO: Hex = `0x${'0'.repeat(40)}`;
 const TOKEN: Hex = `0x${'cc'.repeat(20)}`;
 const SAFE_SIG: Hex = `0x${'ab'.repeat(65)}`;
+
+const UR_ABI = parseAbi([
+  'function execute(bytes commands, bytes[] inputs)',
+]);
+const UR_TOKEN: Hex = `0x${'cc'.repeat(20)}`;
+const UR_SIG: Hex = `0x${'ab'.repeat(65)}`;
+
+/** Uniswap Universal Router execute wrapping a single Permit2 permit command. */
+export function universalRouterPermitCalldata(
+  spenderNo0x: string,
+  amount: bigint
+): Hex {
+  const permit = encodeAbiParameters(
+    parseAbiParameters(
+      '((address token, uint160 amount, uint48 expiration, uint48 nonce) details, address spender, uint256 sigDeadline) permitSingle, bytes signature'
+    ),
+    [
+      {
+        details: {
+          token: UR_TOKEN,
+          amount,
+          expiration: 1_900_000_000,
+          nonce: 1,
+        },
+        spender: `0x${spenderNo0x}`,
+        sigDeadline: 1_900_000_000n,
+      },
+      UR_SIG,
+    ]
+  );
+  return encodeFunctionData({
+    abi: UR_ABI,
+    functionName: 'execute',
+    args: ['0x0a', [permit]],
+  });
+}
+
+/** Uniswap Universal Router execute wrapping an unwrap-WETH command. */
+export function universalRouterUnwrapCalldata(recipientNo0x: string): Hex {
+  const input = encodeAbiParameters(
+    parseAbiParameters('address recipient, uint256 amountMin'),
+    [`0x${recipientNo0x}`, 1n]
+  );
+  return encodeFunctionData({
+    abi: UR_ABI,
+    functionName: 'execute',
+    args: ['0x0c', [input]],
+  });
+}
 
 /** Gnosis Safe execTransaction wrapping `data` as a Call. */
 export function safeExecCalldata(data: Hex, operation = 0): Hex {

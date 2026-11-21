@@ -64,6 +64,21 @@ function payloadRows(report: JsonReport): string[] {
       ),
     ];
   }
+  if (report.type === 'universal_router') {
+    const payload = report.payload;
+    return [
+      row('variant', payload.variant),
+      row('signature', payload.signature),
+      row('deadline', payload.deadline ?? ''),
+      row('commands', String(payload.commands.length)),
+      ...payload.commands.map((command) =>
+        row(
+          `command ${command.index}`,
+          `${command.kind}${command.allowRevert ? ' allowRevert' : ''}${command.spender ? ` spender=${command.spender}` : ''}${command.recipient ? ` recipient=${command.recipient}` : ''} type=${command.innerReport?.type ?? 'none'} risks=${(command.innerReport?.risks ?? []).join(',')}`
+        )
+      ),
+    ];
+  }
   if (report.type === 'safe_exec') {
     const payload = report.payload;
     return [

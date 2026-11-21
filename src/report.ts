@@ -1399,6 +1399,38 @@ export function formatMulticallCallLines(
   return lines;
 }
 
+/** One line per Universal Router command, indented for nested sub-plans. */
+export function formatUniversalRouterCommandLines(
+  commands: readonly UniversalRouterCommandReport[],
+  indent: string
+): string[] {
+  const lines: string[] = [];
+  for (const command of commands) {
+    const parts = [`Command [${command.index}] ${command.kind}`];
+    if (command.allowRevert) parts.push('allowRevert');
+    if (command.spender) parts.push(`spender=${command.spender}`);
+    if (command.recipient) parts.push(`recipient=${command.recipient}`);
+    if (command.amount != null) parts.push(`amount=${command.amount}`);
+    const what = command.depthLimited
+      ? 'nested plan not analyzed (depth limit)'
+      : describeInnerReport(command.innerReport);
+    lines.push(
+      command.innerReport || command.depthLimited
+        ? `${indent}${parts.join(' ')}: ${what}`
+        : `${indent}${parts.join(' ')}`
+    );
+    if (command.innerReport?.type === 'universal_router') {
+      lines.push(
+        ...formatUniversalRouterCommandLines(
+          command.innerReport.payload.commands,
+          `${indent}  `
+        )
+      );
+    }
+  }
+  return lines;
+}
+
 /**
  * Extra plain-text lines for CLI output: spender/operator kind, collected
  * risk ids with reasons, and stub balance/allowance deltas. Empty when
@@ -1444,6 +1476,9 @@ export function formatReportFooter(report: JsonReport): string[] {
     }
     case 'multicall':
       lines.push(...formatMulticallCallLines(report.payload.calls, ''));
+      break;
+    case 'universal_router':
+      lines.push(...formatUniversalRouterCommandLines(report.payload.commands, ''));
       break;
     case 'safe_exec': {
       lines.push(`Target kind: ${report.payload.targetKind}`);

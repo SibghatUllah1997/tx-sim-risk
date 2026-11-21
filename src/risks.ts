@@ -17,6 +17,7 @@ import {
   SAFE_HIDDEN_GRANT_RISK,
   SAFE_MISSING_SIGNATURES_RISK,
 } from './evm/safe';
+import { UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK } from './evm/universalRouter';
 import {
   EIP7702_BROAD_DELEGATE_RISK,
   EIP7702_DELEGATION_RISK,
@@ -54,6 +55,7 @@ export const KNOWN_RISK_IDS = [
   SAFE_DELEGATECALL_RISK,
   SAFE_HIDDEN_GRANT_RISK,
   SAFE_MISSING_SIGNATURES_RISK,
+  UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK,
   EIP7702_DELEGATION_RISK,
   EIP7702_BROAD_DELEGATE_RISK,
   NATIVE_VALUE_NONPAYABLE_CALL_RISK,
@@ -109,6 +111,7 @@ export const RISK_SEVERITIES: Readonly<Record<KnownRiskId, RiskSeverity>> =
     [SAFE_DELEGATECALL_RISK]: 'high',
     [SAFE_HIDDEN_GRANT_RISK]: 'warn',
     [SAFE_MISSING_SIGNATURES_RISK]: 'warn',
+    [UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK]: 'warn',
     [EIP7702_DELEGATION_RISK]: 'high',
     [EIP7702_BROAD_DELEGATE_RISK]: 'high',
     [NATIVE_VALUE_NONPAYABLE_CALL_RISK]: 'warn',
@@ -180,6 +183,8 @@ export const RISK_REASONS: Readonly<Record<KnownRiskId, string>> = Object.freeze
     'An approval, permit, or operator grant is nested inside a Safe execTransaction, where wallets that only show the outer Safe call can hide it.',
   [SAFE_MISSING_SIGNATURES_RISK]:
     'The execTransaction carries no packed signatures, so it cannot meet the Safe threshold unless a hash was pre-approved on-chain.',
+  [UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK]:
+    'A Permit2 allowance is nested inside a Uniswap Universal Router execute plan, where wallets that only show the outer swap can hide the grant.',
   [EIP7702_DELEGATION_RISK]:
     'The type-4 transaction designates a contract whose code will run in place of the sender EOA for later calls, until the designation is cleared.',
   [EIP7702_BROAD_DELEGATE_RISK]:

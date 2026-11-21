@@ -40,7 +40,9 @@ import {
   type SafeVariant,
 } from './evm/safe';
 import {
+  UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK,
   decodeUniversalRouter,
+  isExternalRecipient,
   type UniversalRouterCommandKind,
   type UniversalRouterDecoded,
   type UniversalRouterVariant,
@@ -821,7 +823,16 @@ function universalRouterReport(
     }
     if (innerReport) {
       pushUnique(risks, innerReport.risks);
+      if (grantsAccess(innerReport)) {
+        pushUnique(risks, [UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK]);
+      }
       mergeSimulation(simulation, innerReport.simulation);
+    }
+    if (isExternalRecipient(command.recipient)) {
+      pushUnique(risks, [
+        ...blocklistedSpenderRisks(command.recipient, options?.lists),
+        ...phishingSpenderRisks(command.recipient, options?.phishingIndex),
+      ]);
     }
     return {
       index: command.index,

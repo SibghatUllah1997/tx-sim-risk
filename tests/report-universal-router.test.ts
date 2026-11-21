@@ -9,6 +9,8 @@ import {
 import {
   MAX_UINT160,
   PHISHING_SPENDER_RISK,
+  UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK,
+  UNIVERSAL_ROUTER_MSG_SENDER,
   UNLIMITED_PERMIT_RISK,
   diffReports,
   formatDetectedHeader,
@@ -69,6 +71,13 @@ function unwrap(recipient: Hex, amountMin: bigint): Hex {
   );
 }
 
+function sweep(token: Hex, recipient: Hex, amountMin: bigint): Hex {
+  return encodeAbiParameters(
+    parseAbiParameters('address token, address recipient, uint256 amountMin'),
+    [token, recipient, amountMin]
+  );
+}
+
 function subPlan(commands: Hex, inputs: Hex[]): Hex {
   return encodeAbiParameters(
     parseAbiParameters('bytes commands, bytes[] inputs'),
@@ -92,7 +101,10 @@ describe('universal_router reports', () => {
     expect(command.spender).toBe(ROUTER);
     expect(command.innerReport?.type).toBe('permit2');
     expect(command.innerReport?.risks).toEqual([UNLIMITED_PERMIT_RISK]);
-    expect(report.risks).toEqual([UNLIMITED_PERMIT_RISK]);
+    expect(report.risks).toEqual([
+      UNLIMITED_PERMIT_RISK,
+      UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK,
+    ]);
     expect(report.severity).toBe('high');
     expect(isValidReport(report)).toBe(true);
   });
@@ -157,9 +169,38 @@ describe('universal_router reports', () => {
         permit2Permit(PHISHING, 8n, 1_900_000_000n),
       ])
     )!;
-    expect(report.risks).toEqual([PHISHING_SPENDER_RISK]);
+    expect(report.risks).toEqual([
+      PHISHING_SPENDER_RISK,
+      UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK,
+    ]);
     expect(report.severity).toBe('high');
     expect(isValidReport(report)).toBe(true);
+  });
+
+  it('flags a phishing-listed sweep recipient without treating MSG_SENDER as one', () => {
+    const phishing = generateJsonReport(
+      execute(commandsBytes([0x04]), [sweep(TOKEN, PHISHING, 1n)])
+    )!;
+    expect(phishing.risks).toEqual([PHISHING_SPENDER_RISK]);
+    expect(phishing.severity).toBe('high');
+
+    const internal = generateJsonReport(
+      execute(commandsBytes([0x0c]), [unwrap(UNIVERSAL_ROUTER_MSG_SENDER, 1n)])
+    )!;
+    expect(internal.risks).toEqual([]);
+    expect(internal.severity).toBe('info');
+    expect(isValidReport(phishing)).toBe(true);
+    expect(isValidReport(internal)).toBe(true);
+  });
+
+  it('does not raise a hidden-grant warning for a zero-amount Permit2 permit', () => {
+    const report = generateJsonReport(
+      execute(commandsBytes([0x0a]), [
+        permit2Permit(ROUTER, 0n, 1_900_000_000n),
+      ])
+    )!;
+    expect(report.risks).toEqual([]);
+    expect(report.severity).toBe('info');
   });
 
   it('diffs a new Permit2 spender when the plan adds a permit command', () => {

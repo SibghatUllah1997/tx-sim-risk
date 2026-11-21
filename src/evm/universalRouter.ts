@@ -36,6 +36,9 @@ export const MAX_UNIVERSAL_ROUTER_COMMANDS = 256;
 /** Nested `EXECUTE_SUB_PLAN` deeper than this is rejected at decode time. */
 export const MAX_UNIVERSAL_ROUTER_DECODE_DEPTH = 8;
 
+/** Risk id when a Permit2 grant is tucked inside a Universal Router plan. */
+export const UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK = 'universal_router_hidden_grant';
+
 export type UniversalRouterVariant = 'execute' | 'execute_deadline';
 
 /**
@@ -537,7 +540,9 @@ function parseCommandList(
  * True when `recipient` is a real counterparty rather than the router's
  * `MSG_SENDER` / `ADDRESS_THIS` sentinels (or the zero address).
  */
-export function isExternalRecipient(address: string | null | undefined): boolean {
+export function isExternalRecipient(
+  address: string | null | undefined
+): address is string {
   if (!address) return false;
   const key = asAddress(address);
   return (

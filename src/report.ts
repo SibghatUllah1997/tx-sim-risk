@@ -48,6 +48,7 @@ import {
   type UniversalRouterVariant,
 } from './evm/universalRouter';
 import {
+  COWSWAP_HIDDEN_GRANT_RISK,
   decodeCowswap,
   type CowswapBalanceKind,
   type CowswapDecoded,
@@ -965,8 +966,15 @@ function cowswapReport(
     }
     if (innerReport) {
       pushUnique(risks, innerReport.risks);
+      if (grantsAccess(innerReport)) {
+        pushUnique(risks, [COWSWAP_HIDDEN_GRANT_RISK]);
+      }
       mergeSimulation(simulation, innerReport.simulation);
     }
+    pushUnique(risks, [
+      ...blocklistedSpenderRisks(item.target, options?.lists),
+      ...phishingSpenderRisks(item.target, options?.phishingIndex),
+    ]);
     if (item.value > 0n) {
       if (innerReport) {
         pushUnique(risks, nativeValueCallRisks(innerReport.type, item.value));
@@ -989,6 +997,12 @@ function cowswapReport(
   const trades: CowswapTradeReport[] = decoded.trades.map((item) => {
     const sellToken = decoded.tokens[item.sellTokenIndex] ?? null;
     const buyToken = decoded.tokens[item.buyTokenIndex] ?? null;
+    if (!item.receiverIsOwner) {
+      pushUnique(risks, [
+        ...blocklistedSpenderRisks(item.receiver, options?.lists),
+        ...phishingSpenderRisks(item.receiver, options?.phishingIndex),
+      ]);
+    }
     return {
       index: item.index,
       sellTokenIndex: item.sellTokenIndex,

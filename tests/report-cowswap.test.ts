@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { encodeFunctionData, parseAbi, type Hex } from 'viem';
 import {
+  COWSWAP_HIDDEN_GRANT_RISK,
+  PHISHING_SPENDER_RISK,
   UNLIMITED_APPROVAL_RISK,
+  diffReports,
   formatDetectedHeader,
   generateJsonReport,
   isValidReport,
@@ -11,6 +14,7 @@ const TOKEN: Hex = '0xcccccccccccccccccccccccccccccccccccccccc';
 const TOKEN_OUT: Hex = '0xdddddddddddddddddddddddddddddddddddddddd';
 const ROUTER: Hex = '0x7a250d5630b4cf539739df2c5dacb4c659f2488d';
 const RECEIVER: Hex = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const PHISHING: Hex = '0xbad0000000000000000000000000000000000001';
 const ZERO: Hex = '0x0000000000000000000000000000000000000000';
 const APP_DATA: Hex = `0x${'11'.repeat(32)}`;
 const SIG: Hex = '0xabcd';
@@ -103,7 +107,10 @@ describe('cowswap reports', () => {
     expect(inner.target).toBe(TOKEN);
     expect(inner.innerReport?.type).toBe('erc20_approve');
     expect(inner.innerReport?.risks).toEqual([UNLIMITED_APPROVAL_RISK]);
-    expect(report.risks).toEqual([UNLIMITED_APPROVAL_RISK]);
+    expect(report.risks).toEqual([
+      UNLIMITED_APPROVAL_RISK,
+      COWSWAP_HIDDEN_GRANT_RISK,
+    ]);
     expect(report.severity).toBe('high');
     expect(inner.depthLimited).toBe(false);
     expect(isValidReport(report)).toBe(true);
@@ -197,5 +204,75 @@ describe('cowswap reports', () => {
     expect(report.payload.trades[0]!.receiverKind).toBeNull();
     expect(report.payload.trades[0]!.receiverLabel).toBeNull();
     expect(isValidReport(report)).toBe(true);
+  });
+
+  it('flags a phishing-listed interaction target', () => {
+    const report = generateJsonReport(
+      settle({
+        interactions: [
+          [],
+          [],
+          [{ target: PHISHING, value: 0n, callData: '0x' }],
+        ],
+      })
+    )!;
+    expect(report.risks).toEqual([PHISHING_SPENDER_RISK]);
+    expect(report.severity).toBe('high');
+    expect(isValidReport(report)).toBe(true);
+  });
+
+  it('flags a phishing-listed trade receiver and skips the owner sentinel', () => {
+    const phishing = generateJsonReport(settle({ trades: [trade(PHISHING)] }))!;
+    expect(phishing.risks).toEqual([PHISHING_SPENDER_RISK]);
+    expect(phishing.severity).toBe('high');
+
+    const owner = generateJsonReport(settle({ trades: [trade(ZERO)] }))!;
+    expect(owner.risks).toEqual([]);
+    expect(isValidReport(phishing)).toBe(true);
+    expect(isValidReport(owner)).toBe(true);
+  });
+
+  it('does not raise a hidden-grant warning for a revoke', () => {
+    const report = generateJsonReport(
+      settle({
+        interactions: [
+          [{ target: TOKEN, value: 0n, callData: approve(ROUTER, 0n) }],
+          [],
+          [],
+        ],
+      })
+    )!;
+    expect(report.risks).toEqual([]);
+    expect(report.severity).toBe('info');
+  });
+
+  it('diffs a new inner spender when a settle adds a hidden approve', () => {
+    const baseline = generateJsonReport(
+      settle({
+        interactions: [
+          [{ target: TOKEN, value: 0n, callData: transfer(RECEIVER, 1n) }],
+          [],
+          [],
+        ],
+      })
+    )!;
+    const candidate = generateJsonReport(
+      settle({
+        interactions: [
+          [{ target: TOKEN, value: 0n, callData: approve(ROUTER, 8n) }],
+          [],
+          [],
+        ],
+      })
+    )!;
+    const diff = diffReports(baseline, candidate);
+    expect(diff.candidate.type).toBe('cowswap');
+    expect(diff.addedAddresses).toEqual([
+      { address: ROUTER, role: 'spender' },
+    ]);
+    expect(diff.addedRisks).toEqual([COWSWAP_HIDDEN_GRANT_RISK]);
+    expect(
+      diff.amountChanges.some((c) => c.field === 'interactions[0].amount')
+    ).toBe(true);
   });
 });

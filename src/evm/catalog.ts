@@ -59,6 +59,11 @@ const SEED_ENTRIES: readonly CatalogEntry[] = [
     kind: 'router',
   },
   {
+    address: '0x9008d19f58aabd9ed0d60971565aa8510560ab41',
+    name: 'Cow Protocol GPv2Settlement',
+    kind: 'router',
+  },
+  {
     address: '0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f',
     name: 'Arbitrum Delayed Inbox',
     kind: 'bridge',

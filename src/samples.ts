@@ -53,6 +53,10 @@ const SAFE_EXEC_ABI = parseAbi([
 const UNIVERSAL_ROUTER_ABI = parseAbi([
   'function execute(bytes commands, bytes[] inputs)',
 ]);
+const COW_SETTLE_ABI = parseAbi([
+  'function settle(address[] tokens, uint256[] clearingPrices, (uint256 sellTokenIndex, uint256 buyTokenIndex, address receiver, uint256 sellAmount, uint256 buyAmount, uint32 validTo, bytes32 appData, uint256 feeAmount, uint256 flags, uint256 executedAmount, bytes signature)[] trades, (address target, uint256 value, bytes callData)[][3] interactions)',
+]);
+const TOKEN_OUT = `0x${'dd'.repeat(20)}` as const;
 const TOKEN = `0x${'cc'.repeat(20)}` as const;
 const ZERO = `0x${'0'.repeat(40)}` as const;
 const SAFE_SIG = `0x${'ab'.repeat(65)}` as const;
@@ -203,6 +207,46 @@ export const SAMPLE_SPECS: readonly SampleSpec[] = Object.freeze([
               SAFE_SIG,
             ]
           ),
+        ],
+      ],
+    }),
+  }),
+  Object.freeze({
+    id: 'cowswap-hidden-approve',
+    title: 'Unlimited approve hidden in a CowSwap settlement',
+    summary:
+      'Cow Protocol GPv2Settlement settle whose first interaction is an unlimited ERC-20 approve.',
+    input: encodeFunctionData({
+      abi: COW_SETTLE_ABI,
+      functionName: 'settle',
+      args: [
+        [TOKEN, TOKEN_OUT],
+        [1n, 2n],
+        [
+          {
+            sellTokenIndex: 0n,
+            buyTokenIndex: 1n,
+            receiver: `0x${RECIPIENT}` as `0x${string}`,
+            sellAmount: 10n,
+            buyAmount: 9n,
+            validTo: 1_900_000_000,
+            appData: `0x${'11'.repeat(32)}` as `0x${string}`,
+            feeAmount: 1n,
+            flags: 0n,
+            executedAmount: 0n,
+            signature: '0xabcd',
+          },
+        ],
+        [
+          [
+            {
+              target: TOKEN,
+              value: 0n,
+              callData: encodeApprove(UNISWAP_V2_ROUTER, 'f'.repeat(64)) as `0x${string}`,
+            },
+          ],
+          [],
+          [],
         ],
       ],
     }),

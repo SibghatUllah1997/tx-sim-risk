@@ -239,6 +239,65 @@ function urSweep(recipient: string): Hex {
   );
 }
 
+const TOKEN_OUT: Hex = `0x${'dd'.repeat(20)}`;
+const COW_APP_DATA: Hex = `0x${'11'.repeat(32)}`;
+const COW_TRADE_SIG: Hex = '0xabcd';
+const COW_ORDER_UID: Hex = `0x${'ab'.repeat(56)}`;
+const COW_ABI = parseAbi([
+  'function settle(address[] tokens, uint256[] clearingPrices, (uint256 sellTokenIndex, uint256 buyTokenIndex, address receiver, uint256 sellAmount, uint256 buyAmount, uint32 validTo, bytes32 appData, uint256 feeAmount, uint256 flags, uint256 executedAmount, bytes signature)[] trades, (address target, uint256 value, bytes callData)[][3] interactions)',
+  'function setPreSignature(bytes orderUid, bool signed)',
+]);
+
+function cowSettle(opts: {
+  receiver?: string;
+  callData?: Hex;
+  target?: Hex;
+} = {}): Hex {
+  const receiver = `0x${(opts.receiver ?? RECIPIENT).toLowerCase()}` as Hex;
+  const hasInteraction = opts.callData != null || opts.target != null;
+  const interactions: [
+    { target: Hex; value: bigint; callData: Hex }[],
+    { target: Hex; value: bigint; callData: Hex }[],
+    { target: Hex; value: bigint; callData: Hex }[],
+  ] = hasInteraction
+    ? [
+        [
+          {
+            target: opts.target ?? TOKEN,
+            value: 0n,
+            callData: opts.callData ?? '0x',
+          },
+        ],
+        [],
+        [],
+      ]
+    : [[], [], []];
+  return encodeFunctionData({
+    abi: COW_ABI,
+    functionName: 'settle',
+    args: [
+      [TOKEN, TOKEN_OUT],
+      [1n, 2n],
+      [
+        {
+          sellTokenIndex: 0n,
+          buyTokenIndex: 1n,
+          receiver,
+          sellAmount: 10n,
+          buyAmount: 9n,
+          validTo: 1_900_000_000,
+          appData: COW_APP_DATA,
+          feeAmount: 1n,
+          flags: 0n,
+          executedAmount: 0n,
+          signature: COW_TRADE_SIG,
+        },
+      ],
+      interactions,
+    ],
+  });
+}
+
 function handleOpsV06(callData: Hex, paymasterAndData: Hex = '0x'): Hex {
   return encodeFunctionData({
     abi: HANDLE_OPS_V06_ABI,
@@ -521,6 +580,19 @@ export function buildExampleDataset(): Dataset {
     evm('universal-router-unwrap', 'Universal Router unwrapWETH() to a normal recipient.',
       urExecute('0x0c', [urUnwrap(RECIPIENT)]),
       { type: 'universal_router', risks: [], severity: 'info' }),
+    evm('cowswap-hidden-unlimited-approve', 'CowSwap settle whose first interaction is an unlimited approve.',
+      cowSettle({ callData: approve(ROUTER, MAX_UINT) }),
+      { type: 'cowswap', risks: ['unlimited_approval', 'cowswap_hidden_grant'], severity: 'high' }),
+    evm('cowswap-phishing-receiver', 'CowSwap settle whose trade receiver is on the phishing seed list.',
+      cowSettle({ receiver: PHISHING_DRAINER }),
+      { type: 'cowswap', risks: ['phishing_spender'], severity: 'high' }),
+    evm('cowswap-set-presignature', 'CowSwap setPreSignature(true) for a 56-byte order UID.',
+      encodeFunctionData({
+        abi: COW_ABI,
+        functionName: 'setPreSignature',
+        args: [COW_ORDER_UID, true],
+      }),
+      { type: 'cowswap', risks: [], severity: 'info' }),
     evm('erc20-plain-transfer', 'transfer() of 255 units from a named sender.',
       transfer(RECIPIENT, 'ff'),
       { type: 'erc20_transfer', risks: [], severity: 'info' },

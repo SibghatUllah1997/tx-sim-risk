@@ -1,3 +1,8 @@
+## 2026-11-23
+
+- Decode Cow Protocol GPv2Settlement `settle`, `setPreSignature`, and `invalidateOrder` into `cowswap` reports, and recursively analyze each interaction's inner calldata.
+- Flag an approval hidden inside a settle interaction (`cowswap_hidden_grant`) and reuse phishing/block-list checks on interaction targets and trade receivers. Marked Days 47–48 done.
+
 ## 2026-11-21
 
 - Decode Uniswap Universal Router `execute` (with and without a deadline) into `universal_router` reports, including nested `EXECUTE_SUB_PLAN` and inner Permit2 grants.

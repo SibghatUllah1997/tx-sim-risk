@@ -56,3 +56,5 @@ More nested envelopes after v0.2.0. Default analysis stays offline. Use existing
 - [x] Day 44: Flag Safe `DELEGATECALL`, grants hidden inside the envelope, and unsigned or phishing-listed targets
 - [x] Day 45: Decode Uniswap Universal Router `execute` commands and recursively analyze inner Permit2 grants and sub-plans
 - [x] Day 46: Flag Permit2 grants hidden inside `execute`, and sweeps/unwraps to phishing-listed recipients
+- [x] Day 47: Decode Cow Protocol GPv2Settlement `settle` / `setPreSignature` / `invalidateOrder` and recursively analyze inner interactions
+- [x] Day 48: Flag CowSwap grants hidden inside interactions, and trades/interactions targeting phishing-listed addresses

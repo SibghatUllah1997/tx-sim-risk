@@ -73,6 +73,7 @@ describe('example dataset file', () => {
       'safe_hidden_grant',
       'safe_missing_signatures',
       'universal_router_hidden_grant',
+      'cowswap_hidden_grant',
     ]) {
       expect(risks, id).toContain(id);
     }

@@ -48,6 +48,15 @@ import {
   type UniversalRouterVariant,
 } from './evm/universalRouter';
 import {
+  decodeCowswap,
+  type CowswapBalanceKind,
+  type CowswapDecoded,
+  type CowswapInteractionStage,
+  type CowswapOrderKind,
+  type CowswapSigningScheme,
+  type CowswapVariant,
+} from './evm/cowswap';
+import {
   EIP7702_BROAD_DELEGATE_RISK,
   EIP7702_DELEGATION_RISK,
   hasEip7702BroadDelegate,
@@ -318,6 +327,20 @@ export type JsonReport =
       };
     })
   | (ReportMeta & {
+      type: 'cowswap';
+      payload: {
+        variant: CowswapVariant;
+        signature: string;
+        tokens: string[];
+        tokenLabels: (AddressLabel | null)[];
+        clearingPrices: string[];
+        trades: CowswapTradeReport[];
+        interactions: CowswapInteractionReport[];
+        orderUid: string | null;
+        signed: boolean | null;
+      };
+    })
+  | (ReportMeta & {
       type: 'eip7702';
       payload: {
         chainId: string;
@@ -443,6 +466,48 @@ export type UserOpReport = {
   paymaster: string | null;
   signature: string;
   calls: UserOpCallReport[];
+};
+
+/** One CowSwap trade recovered from GPv2Settlement `settle`. */
+export type CowswapTradeReport = {
+  index: number;
+  sellTokenIndex: number;
+  buyTokenIndex: number;
+  sellToken: string | null;
+  buyToken: string | null;
+  receiver: string;
+  receiverIsOwner: boolean;
+  sellAmount: string;
+  buyAmount: string;
+  validTo: string;
+  appData: string;
+  feeAmount: string;
+  flags: string;
+  executedAmount: string;
+  signature: string;
+  kind: CowswapOrderKind;
+  partiallyFillable: boolean;
+  sellTokenBalance: CowswapBalanceKind;
+  buyTokenBalance: CowswapBalanceKind;
+  signingScheme: CowswapSigningScheme;
+  sellTokenLabel: AddressLabel | null;
+  buyTokenLabel: AddressLabel | null;
+  receiverKind: AddressKind | null;
+  receiverLabel: AddressLabel | null;
+};
+
+/** One CowSwap interaction with its nested inner report. */
+export type CowswapInteractionReport = {
+  index: number;
+  stage: CowswapInteractionStage;
+  stageIndex: number;
+  target: string;
+  value: string;
+  data: string;
+  targetKind: AddressKind;
+  targetLabel: AddressLabel | null;
+  innerReport: JsonReport | null;
+  depthLimited: boolean;
 };
 
 /** One Universal Router command with its nested Permit2 or sub-plan report. */
@@ -600,6 +665,10 @@ function grantsAccess(report: JsonReport): boolean {
     case 'universal_router':
       return report.payload.commands.some(
         (command) => command.innerReport != null && grantsAccess(command.innerReport)
+      );
+    case 'cowswap':
+      return report.payload.interactions.some(
+        (item) => item.innerReport != null && grantsAccess(item.innerReport)
       );
     default:
       return false;
@@ -869,6 +938,113 @@ function universalRouterReport(
       signature: decoded.signature,
       deadline: stringifyNullable(decoded.deadline),
       commands,
+    },
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
+    simulation,
+  };
+}
+
+function cowswapReport(
+  decoded: CowswapDecoded,
+  options: ReportOptions | undefined,
+  depth: number
+): JsonReport {
+  const risks: string[] = [];
+  const simulation = emptySimulation();
+  const interactions = decoded.interactions.map((item): CowswapInteractionReport => {
+    const tooDeep = item.data !== '0x' && depth + 1 >= MAX_MULTICALL_DEPTH;
+    let innerReport: JsonReport | null = null;
+    if (item.data !== '0x' && !tooDeep) {
+      try {
+        innerReport = generateJsonReportAt(item.data, options, depth + 1);
+      } catch {
+        innerReport = null;
+      }
+    }
+    if (innerReport) {
+      pushUnique(risks, innerReport.risks);
+      mergeSimulation(simulation, innerReport.simulation);
+    }
+    if (item.value > 0n) {
+      if (innerReport) {
+        pushUnique(risks, nativeValueCallRisks(innerReport.type, item.value));
+      }
+      pushUnique(simulation.notes, [nativeValueNote(item.value, item.target)]);
+    }
+    return {
+      index: item.index,
+      stage: item.stage,
+      stageIndex: item.stageIndex,
+      target: item.target,
+      value: item.value.toString(),
+      data: item.data,
+      targetKind: spenderKindFor(item.target, options),
+      targetLabel: labelFor(item.target, options),
+      innerReport,
+      depthLimited: tooDeep,
+    };
+  });
+  const trades: CowswapTradeReport[] = decoded.trades.map((item) => {
+    const sellToken = decoded.tokens[item.sellTokenIndex] ?? null;
+    const buyToken = decoded.tokens[item.buyTokenIndex] ?? null;
+    return {
+      index: item.index,
+      sellTokenIndex: item.sellTokenIndex,
+      buyTokenIndex: item.buyTokenIndex,
+      sellToken,
+      buyToken,
+      receiver: item.receiver,
+      receiverIsOwner: item.receiverIsOwner,
+      sellAmount: item.sellAmount.toString(),
+      buyAmount: item.buyAmount.toString(),
+      validTo: String(item.validTo),
+      appData: item.appData,
+      feeAmount: item.feeAmount.toString(),
+      flags: item.flags.toString(),
+      executedAmount: item.executedAmount.toString(),
+      signature: item.signature,
+      kind: item.kind,
+      partiallyFillable: item.partiallyFillable,
+      sellTokenBalance: item.sellTokenBalance,
+      buyTokenBalance: item.buyTokenBalance,
+      signingScheme: item.signingScheme,
+      sellTokenLabel: labelFor(sellToken, options),
+      buyTokenLabel: labelFor(buyToken, options),
+      receiverKind: item.receiverIsOwner
+        ? null
+        : spenderKindFor(item.receiver, options),
+      receiverLabel: item.receiverIsOwner
+        ? null
+        : labelFor(item.receiver, options),
+    };
+  });
+  if (decoded.variant === 'settle') {
+    pushUnique(simulation.notes, [
+      'Settle runs each interaction as the GPv2Settlement contract. Token movements go through the vault relayer, not the trader.',
+    ]);
+  } else if (decoded.variant === 'set_presignature') {
+    pushUnique(simulation.notes, [
+      'setPreSignature marks an order as signed on-chain so a solver can settle it without an ECDSA signature in the trade.',
+    ]);
+  } else {
+    pushUnique(simulation.notes, [
+      'invalidateOrder consumes the order UID so that order cannot be filled.',
+    ]);
+  }
+  return {
+    type: 'cowswap',
+    payload: {
+      variant: decoded.variant,
+      signature: decoded.signature,
+      tokens: decoded.tokens,
+      tokenLabels: decoded.tokens.map((token) => labelFor(token, options)),
+      clearingPrices: decoded.clearingPrices.map((price) => price.toString()),
+      trades,
+      interactions,
+      orderUid: decoded.orderUid,
+      signed: decoded.signed,
     },
     risks,
     riskDetails: describeRisks(risks),
@@ -1264,6 +1440,11 @@ function generateJsonReportAt(
   const router = decodeUniversalRouter(data);
   if (router) {
     return universalRouterReport(router, options, depth);
+  }
+
+  const cowswap = decodeCowswap(data);
+  if (cowswap) {
+    return cowswapReport(cowswap, options, depth);
   }
 
   // Calls without a dedicated risk rule (transferFrom, safeTransferFrom,

@@ -118,6 +118,21 @@ export function formatDetectedHeader(report: JsonReport): string[] {
       });
       return lines;
     }
+    case 'cowswap': {
+      const p = report.payload;
+      if (p.variant === 'settle') {
+        return [
+          `Detected: CowSwap ${p.signature}`,
+          `Tokens: ${p.tokens.length}`,
+          `Trades: ${p.trades.length}`,
+          `Interactions: ${p.interactions.length}`,
+        ];
+      }
+      const lines = [`Detected: CowSwap ${p.signature}`];
+      if (p.orderUid) lines.push(`Order UID: ${p.orderUid}`);
+      if (p.signed != null) lines.push(`Signed: ${p.signed ? 'yes' : 'no'}`);
+      return lines;
+    }
     case 'erc4337_userop': {
       const lines = [
         `Detected: ERC-4337 handleOps (${report.payload.version})`,

@@ -93,6 +93,19 @@ function collectAddresses(report: JsonReport, out: DiffAddressHit[]): void {
         if (command.innerReport) collectAddresses(command.innerReport, out);
       }
       return;
+    case 'cowswap':
+      for (const trade of report.payload.trades) {
+        if (!trade.receiverIsOwner) {
+          pushAddress(out, trade.receiver, 'recipient');
+        }
+      }
+      for (const item of report.payload.interactions) {
+        if (item.data === '0x') {
+          pushAddress(out, item.target, 'recipient');
+        }
+        if (item.innerReport) collectAddresses(item.innerReport, out);
+      }
+      return;
     case 'erc4337_userop':
       for (const op of report.payload.ops) {
         pushAddress(out, op.paymaster, 'paymaster');
@@ -170,6 +183,18 @@ function collectAmounts(
         if (command.amount != null) set(`commands[${index}].amount`, command.amount);
         if (command.innerReport) {
           collectAmounts(command.innerReport, out, field(`commands[${index}]`));
+        }
+      });
+      return;
+    case 'cowswap':
+      report.payload.trades.forEach((trade, index) => {
+        set(`trades[${index}].sellAmount`, trade.sellAmount);
+        set(`trades[${index}].buyAmount`, trade.buyAmount);
+      });
+      report.payload.interactions.forEach((item, index) => {
+        set(`interactions[${index}].value`, item.value);
+        if (item.innerReport) {
+          collectAmounts(item.innerReport, out, field(`interactions[${index}]`));
         }
       });
       return;

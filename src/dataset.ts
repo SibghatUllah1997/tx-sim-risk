@@ -51,6 +51,7 @@ const REPORT_TYPES: readonly JsonReport['type'][] = [
   'erc4337_userop',
   'safe_exec',
   'universal_router',
+  'cowswap',
   'eip7702',
   'native_transfer',
   'erc20_transfer',

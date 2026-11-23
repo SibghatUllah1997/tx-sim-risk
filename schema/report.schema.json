@@ -11,6 +11,7 @@
     { "$ref": "#/$defs/erc4337UserOpReport" },
     { "$ref": "#/$defs/safeExecReport" },
     { "$ref": "#/$defs/universalRouterReport" },
+    { "$ref": "#/$defs/cowswapReport" },
     { "$ref": "#/$defs/eip7702Report" },
     { "$ref": "#/$defs/nativeTransferReport" },
     { "$ref": "#/$defs/erc20TransferReport" },
@@ -716,6 +717,177 @@
         }
       }
     },
+    "cowswapOrderKind": {
+      "type": "string",
+      "enum": ["sell", "buy"]
+    },
+    "cowswapBalanceKind": {
+      "type": "string",
+      "enum": ["erc20", "external", "internal"]
+    },
+    "cowswapSigningScheme": {
+      "type": "string",
+      "enum": ["eip712", "ethsign", "eip1271", "presign"]
+    },
+    "cowswapInteractionStage": {
+      "type": "string",
+      "enum": ["pre", "intra", "post"]
+    },
+    "cowswapTrade": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "sellTokenIndex",
+        "buyTokenIndex",
+        "sellToken",
+        "buyToken",
+        "receiver",
+        "receiverIsOwner",
+        "sellAmount",
+        "buyAmount",
+        "validTo",
+        "appData",
+        "feeAmount",
+        "flags",
+        "executedAmount",
+        "signature",
+        "kind",
+        "partiallyFillable",
+        "sellTokenBalance",
+        "buyTokenBalance",
+        "signingScheme",
+        "sellTokenLabel",
+        "buyTokenLabel",
+        "receiverKind",
+        "receiverLabel"
+      ],
+      "properties": {
+        "index": { "$ref": "#/$defs/uint" },
+        "sellTokenIndex": { "$ref": "#/$defs/uint" },
+        "buyTokenIndex": { "$ref": "#/$defs/uint" },
+        "sellToken": {
+          "anyOf": [
+            { "$ref": "#/$defs/evmAddress" },
+            { "type": "null" }
+          ]
+        },
+        "buyToken": {
+          "anyOf": [
+            { "$ref": "#/$defs/evmAddress" },
+            { "type": "null" }
+          ]
+        },
+        "receiver": { "$ref": "#/$defs/evmAddress" },
+        "receiverIsOwner": { "type": "boolean" },
+        "sellAmount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "buyAmount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "validTo": { "$ref": "#/$defs/unsignedDecimalString" },
+        "appData": { "$ref": "#/$defs/hexBytes" },
+        "feeAmount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "flags": { "$ref": "#/$defs/unsignedDecimalString" },
+        "executedAmount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "signature": { "$ref": "#/$defs/hexBytes" },
+        "kind": { "$ref": "#/$defs/cowswapOrderKind" },
+        "partiallyFillable": { "type": "boolean" },
+        "sellTokenBalance": { "$ref": "#/$defs/cowswapBalanceKind" },
+        "buyTokenBalance": { "$ref": "#/$defs/cowswapBalanceKind" },
+        "signingScheme": { "$ref": "#/$defs/cowswapSigningScheme" },
+        "sellTokenLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "buyTokenLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "receiverKind": {
+          "anyOf": [
+            { "$ref": "#/$defs/addressKind" },
+            { "type": "null" }
+          ]
+        },
+        "receiverLabel": { "$ref": "#/$defs/nullableAddressLabel" }
+      }
+    },
+    "cowswapInteraction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "stage",
+        "stageIndex",
+        "target",
+        "value",
+        "data",
+        "targetKind",
+        "targetLabel",
+        "innerReport",
+        "depthLimited"
+      ],
+      "properties": {
+        "index": { "$ref": "#/$defs/uint" },
+        "stage": { "$ref": "#/$defs/cowswapInteractionStage" },
+        "stageIndex": { "$ref": "#/$defs/uint" },
+        "target": { "$ref": "#/$defs/evmAddress" },
+        "value": { "$ref": "#/$defs/unsignedDecimalString" },
+        "data": { "$ref": "#/$defs/hexBytes" },
+        "targetKind": { "$ref": "#/$defs/addressKind" },
+        "targetLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "innerReport": {
+          "anyOf": [
+            { "$ref": "#/$defs/decodedEvmReport" },
+            { "type": "null" }
+          ]
+        },
+        "depthLimited": { "type": "boolean" }
+      }
+    },
+    "cowswapPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variant",
+        "signature",
+        "tokens",
+        "tokenLabels",
+        "clearingPrices",
+        "trades",
+        "interactions",
+        "orderUid",
+        "signed"
+      ],
+      "properties": {
+        "variant": {
+          "type": "string",
+          "enum": ["settle", "set_presignature", "invalidate_order"]
+        },
+        "signature": { "$ref": "#/$defs/nonEmptyString" },
+        "tokens": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evmAddress" }
+        },
+        "tokenLabels": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nullableAddressLabel" }
+        },
+        "clearingPrices": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/unsignedDecimalString" }
+        },
+        "trades": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/cowswapTrade" }
+        },
+        "interactions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/cowswapInteraction" }
+        },
+        "orderUid": {
+          "anyOf": [
+            { "$ref": "#/$defs/hexBytes" },
+            { "type": "null" }
+          ]
+        },
+        "signed": {
+          "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+        }
+      }
+    },
     "eip7702Payload": {
       "type": "object",
       "additionalProperties": false,
@@ -1241,6 +1413,20 @@
         }
       ]
     },
+    "cowswapReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "cowswap" },
+            "payload": { "$ref": "#/$defs/cowswapPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
     "decodedEvmReport": {
       "description": "Any report the EVM calldata decoder can emit; used for calls nested inside a multicall batch.",
       "oneOf": [
@@ -1251,6 +1437,7 @@
         { "$ref": "#/$defs/erc4337UserOpReport" },
         { "$ref": "#/$defs/safeExecReport" },
         { "$ref": "#/$defs/universalRouterReport" },
+        { "$ref": "#/$defs/cowswapReport" },
         { "$ref": "#/$defs/eip7702Report" },
         { "$ref": "#/$defs/erc20TransferReport" },
         { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },

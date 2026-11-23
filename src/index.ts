@@ -46,6 +46,8 @@ export {
   MULTICALL3_ADDRESS,
 } from './report';
 export type {
+  CowswapInteractionReport,
+  CowswapTradeReport,
   JsonReport,
   MulticallCallReport,
   ReportOptions,

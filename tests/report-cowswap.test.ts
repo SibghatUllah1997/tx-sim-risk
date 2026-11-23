@@ -6,8 +6,10 @@ import {
   UNLIMITED_APPROVAL_RISK,
   diffReports,
   formatDetectedHeader,
+  formatReportFooter,
   generateJsonReport,
   isValidReport,
+  renderHtmlReport,
 } from '../src';
 
 const TOKEN: Hex = '0xcccccccccccccccccccccccccccccccccccccccc';
@@ -147,6 +149,7 @@ describe('cowswap reports', () => {
       'Detected: CowSwap settle(address[],uint256[],(uint256,uint256,address,uint256,uint256,uint32,bytes32,uint256,uint256,uint256,bytes)[],(address,uint256,bytes)[][3])',
       'Tokens: 2',
       'Trades: 1',
+      `  trade [0] sell eip712 receiver=${RECEIVER}`,
       'Interactions: 0',
     ]);
     expect(isValidReport(report)).toBe(true);
@@ -274,5 +277,35 @@ describe('cowswap reports', () => {
     expect(
       diff.amountChanges.some((c) => c.field === 'interactions[0].amount')
     ).toBe(true);
+  });
+
+  it('prints trade and interaction details in the text footer and HTML table', () => {
+    const report = generateJsonReport(
+      settle({
+        interactions: [
+          [{ target: TOKEN, value: 0n, callData: approve(ROUTER, MAX_UINT256) }],
+          [],
+          [],
+        ],
+      })
+    )!;
+    const footer = formatReportFooter(report);
+    expect(
+      footer.some((line) =>
+        line.startsWith(`Trade [0] sell sell=10 buy=9 receiver=${RECEIVER}`)
+      )
+    ).toBe(true);
+    expect(
+      footer.some((line) =>
+        line.startsWith(`Interaction [0] pre target=${TOKEN} value=0:`)
+      )
+    ).toBe(true);
+    const html = renderHtmlReport(report);
+    expect(html).toContain('<code>cowswap</code>');
+    expect(html).toContain('<th>variant</th><td>settle</td>');
+    expect(html).toContain('pre target=');
+    expect(html).toContain(UNLIMITED_APPROVAL_RISK);
+    expect(html).toContain(COWSWAP_HIDDEN_GRANT_RISK);
+    expect(html).not.toContain('<script');
   });
 });

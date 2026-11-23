@@ -1594,6 +1594,41 @@ export function formatMulticallCallLines(
   return lines;
 }
 
+/** One line per CowSwap trade and interaction, with nested inner reports. */
+export function formatCowswapLines(
+  report: Extract<JsonReport, { type: 'cowswap' }>,
+  indent: string
+): string[] {
+  const lines: string[] = [];
+  for (const trade of report.payload.trades) {
+    const receiver = trade.receiverIsOwner ? 'owner' : trade.receiver;
+    lines.push(
+      `${indent}Trade [${trade.index}] ${trade.kind} sell=${trade.sellAmount} buy=${trade.buyAmount} receiver=${receiver} scheme=${trade.signingScheme}`
+    );
+  }
+  for (const item of report.payload.interactions) {
+    const named = formatAddressLabel(item.targetLabel);
+    const target = named ? `${item.target} (${named})` : item.target;
+    const what = item.depthLimited
+      ? 'nested call not analyzed (depth limit)'
+      : describeInnerReport(item.innerReport);
+    lines.push(
+      item.innerReport || item.depthLimited
+        ? `${indent}Interaction [${item.index}] ${item.stage} target=${target} value=${item.value}: ${what}`
+        : `${indent}Interaction [${item.index}] ${item.stage} target=${target} value=${item.value}`
+    );
+    if (item.innerReport?.type === 'multicall') {
+      lines.push(
+        ...formatMulticallCallLines(item.innerReport.payload.calls, `${indent}  `)
+      );
+    }
+    if (item.innerReport?.type === 'cowswap') {
+      lines.push(...formatCowswapLines(item.innerReport, `${indent}  `));
+    }
+  }
+  return lines;
+}
+
 /** One line per Universal Router command, indented for nested sub-plans. */
 export function formatUniversalRouterCommandLines(
   commands: readonly UniversalRouterCommandReport[],
@@ -1674,6 +1709,9 @@ export function formatReportFooter(report: JsonReport): string[] {
       break;
     case 'universal_router':
       lines.push(...formatUniversalRouterCommandLines(report.payload.commands, ''));
+      break;
+    case 'cowswap':
+      lines.push(...formatCowswapLines(report, ''));
       break;
     case 'safe_exec': {
       lines.push(`Target kind: ${report.payload.targetKind}`);

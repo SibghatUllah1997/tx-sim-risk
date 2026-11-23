@@ -101,6 +101,42 @@ export function universalRouterUnwrapCalldata(recipientNo0x: string): Hex {
   });
 }
 
+const COW_ABI = parseAbi([
+  'function settle(address[] tokens, uint256[] clearingPrices, (uint256 sellTokenIndex, uint256 buyTokenIndex, address receiver, uint256 sellAmount, uint256 buyAmount, uint32 validTo, bytes32 appData, uint256 feeAmount, uint256 flags, uint256 executedAmount, bytes signature)[] trades, (address target, uint256 value, bytes callData)[][3] interactions)',
+]);
+const COW_TOKEN: Hex = `0x${'cc'.repeat(20)}`;
+const COW_TOKEN_OUT: Hex = `0x${'dd'.repeat(20)}`;
+const COW_RECEIVER: Hex = `0x${'aa'.repeat(20)}`;
+const COW_APP: Hex = `0x${'11'.repeat(32)}`;
+
+/** CowSwap GPv2Settlement settle wrapping one pre-interaction. */
+export function cowswapSettleCalldata(callData: Hex, target: Hex = COW_TOKEN): Hex {
+  return encodeFunctionData({
+    abi: COW_ABI,
+    functionName: 'settle',
+    args: [
+      [COW_TOKEN, COW_TOKEN_OUT],
+      [1n, 2n],
+      [
+        {
+          sellTokenIndex: 0n,
+          buyTokenIndex: 1n,
+          receiver: COW_RECEIVER,
+          sellAmount: 10n,
+          buyAmount: 9n,
+          validTo: 1_900_000_000,
+          appData: COW_APP,
+          feeAmount: 1n,
+          flags: 0n,
+          executedAmount: 0n,
+          signature: '0xabcd',
+        },
+      ],
+      [[{ target, value: 0n, callData }], [], []],
+    ],
+  });
+}
+
 /** Gnosis Safe execTransaction wrapping `data` as a Call. */
 export function safeExecCalldata(data: Hex, operation = 0): Hex {
   return encodeFunctionData({

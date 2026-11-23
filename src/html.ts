@@ -79,6 +79,37 @@ function payloadRows(report: JsonReport): string[] {
       ),
     ];
   }
+  if (report.type === 'cowswap') {
+    const payload = report.payload;
+    const rows = [
+      row('variant', payload.variant),
+      row('signature', payload.signature),
+      row('tokens', String(payload.tokens.length)),
+      row('trades', String(payload.trades.length)),
+      row('interactions', String(payload.interactions.length)),
+    ];
+    if (payload.orderUid) rows.push(row('orderUid', payload.orderUid));
+    if (payload.signed != null) {
+      rows.push(row('signed', payload.signed ? 'yes' : 'no'));
+    }
+    payload.trades.forEach((item) => {
+      rows.push(
+        row(
+          `trade ${item.index}`,
+          `${item.kind} ${item.signingScheme} sell=${item.sellAmount} buy=${item.buyAmount} receiver=${item.receiverIsOwner ? 'owner' : item.receiver}`
+        )
+      );
+    });
+    payload.interactions.forEach((item) => {
+      rows.push(
+        row(
+          `interaction ${item.index}`,
+          `${item.stage} target=${item.target} value=${item.value} type=${item.innerReport?.type ?? 'none'} risks=${(item.innerReport?.risks ?? []).join(',')}`
+        )
+      );
+    });
+    return rows;
+  }
   if (report.type === 'safe_exec') {
     const payload = report.payload;
     return [

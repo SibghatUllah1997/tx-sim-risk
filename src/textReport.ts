@@ -121,12 +121,24 @@ export function formatDetectedHeader(report: JsonReport): string[] {
     case 'cowswap': {
       const p = report.payload;
       if (p.variant === 'settle') {
-        return [
+        const lines = [
           `Detected: CowSwap ${p.signature}`,
           `Tokens: ${p.tokens.length}`,
           `Trades: ${p.trades.length}`,
-          `Interactions: ${p.interactions.length}`,
         ];
+        p.trades.forEach((item) => {
+          const receiver = item.receiverIsOwner ? 'owner' : item.receiver;
+          lines.push(
+            `  trade [${item.index}] ${item.kind} ${item.signingScheme} receiver=${receiver}`
+          );
+        });
+        lines.push(`Interactions: ${p.interactions.length}`);
+        p.interactions.forEach((item) => {
+          lines.push(
+            `  interaction [${item.index}] ${item.stage} target=${item.target}`
+          );
+        });
+        return lines;
       }
       const lines = [`Detected: CowSwap ${p.signature}`];
       if (p.orderUid) lines.push(`Order UID: ${p.orderUid}`);

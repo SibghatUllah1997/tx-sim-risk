@@ -43,6 +43,7 @@ export {
   formatSplTokenLine,
   formatMulticallCallLines,
   formatUniversalRouterCommandLines,
+  formatCowswapLines,
   MULTICALL3_ADDRESS,
 } from './report';
 export type {

@@ -18,6 +18,7 @@ export * from './evm/userOp';
 export * from './evm/safe';
 export * from './evm/universalRouter';
 export * from './evm/cowswap';
+export * from './evm/oneInch';
 export * from './evm/eip7702';
 export * from './evm/nativeValue';
 export * from './evm/liveCall';

@@ -54,6 +54,11 @@ const SEED_ENTRIES: readonly CatalogEntry[] = [
     kind: 'router',
   },
   {
+    address: '0x111111125421ca6dc452d289314280a0f8842a65',
+    name: '1inch v6 Aggregation Router',
+    kind: 'router',
+  },
+  {
     address: '0xdef1c0ded9bec7f1a1670819833240f027b25eff',
     name: '0x Exchange Proxy',
     kind: 'router',

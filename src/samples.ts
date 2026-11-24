@@ -56,6 +56,9 @@ const UNIVERSAL_ROUTER_ABI = parseAbi([
 const COW_SETTLE_ABI = parseAbi([
   'function settle(address[] tokens, uint256[] clearingPrices, (uint256 sellTokenIndex, uint256 buyTokenIndex, address receiver, uint256 sellAmount, uint256 buyAmount, uint32 validTo, bytes32 appData, uint256 feeAmount, uint256 flags, uint256 executedAmount, bytes signature)[] trades, (address target, uint256 value, bytes callData)[][3] interactions)',
 ]);
+const ONEINCH_SWAP_ABI = parseAbi([
+  'function swap(address executor, (address srcToken, address dstToken, address srcReceiver, address dstReceiver, uint256 amount, uint256 minReturnAmount, uint256 flags) desc, bytes permit, bytes data)',
+]);
 const TOKEN_OUT = `0x${'dd'.repeat(20)}` as const;
 const TOKEN = `0x${'cc'.repeat(20)}` as const;
 const ZERO = `0x${'0'.repeat(40)}` as const;
@@ -248,6 +251,30 @@ export const SAMPLE_SPECS: readonly SampleSpec[] = Object.freeze([
           [],
           [],
         ],
+      ],
+    }),
+  }),
+  Object.freeze({
+    id: 'oneinch-hidden-approve',
+    title: 'Unlimited approve hidden in a 1inch Aggregation Router swap',
+    summary:
+      '1inch Aggregation Router swap whose executor calldata is an unlimited ERC-20 approve.',
+    input: encodeFunctionData({
+      abi: ONEINCH_SWAP_ABI,
+      functionName: 'swap',
+      args: [
+        `0x${'11'.repeat(20)}` as `0x${string}`,
+        {
+          srcToken: TOKEN,
+          dstToken: TOKEN_OUT,
+          srcReceiver: `0x${'22'.repeat(20)}` as `0x${string}`,
+          dstReceiver: `0x${RECIPIENT}` as `0x${string}`,
+          amount: 10n,
+          minReturnAmount: 9n,
+          flags: 0n,
+        },
+        '0x',
+        encodeApprove(UNISWAP_V2_ROUTER, 'f'.repeat(64)) as `0x${string}`,
       ],
     }),
   }),

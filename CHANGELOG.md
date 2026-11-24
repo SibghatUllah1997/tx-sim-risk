@@ -1,3 +1,8 @@
+## 2026-11-24
+
+- Decode 1inch Aggregation Router V5 `swap`, `unoswapTo`, and `clipperSwapTo` (plus the WithPermit variants) into `oneinch` reports, and recursively analyze attached permit bytes and executor calldata.
+- Flag an approval or permit hidden inside the envelope (`oneinch_hidden_grant`) and reuse phishing/block-list checks on swap destinations, unoswap recipients, and executors. Marked Days 49–50 done.
+
 ## 2026-11-23
 
 - Decode Cow Protocol GPv2Settlement `settle`, `setPreSignature`, and `invalidateOrder` into `cowswap` reports, and recursively analyze each interaction's inner calldata.

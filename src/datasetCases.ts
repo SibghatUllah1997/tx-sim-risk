@@ -248,6 +248,35 @@ const COW_ABI = parseAbi([
   'function setPreSignature(bytes orderUid, bool signed)',
 ]);
 
+const ONEINCH_EXECUTOR: Hex = `0x${'11'.repeat(20)}`;
+const ONEINCH_SRC_RECEIVER: Hex = `0x${'22'.repeat(20)}`;
+const ONEINCH_ABI = parseAbi([
+  'function swap(address executor, (address srcToken, address dstToken, address srcReceiver, address dstReceiver, uint256 amount, uint256 minReturnAmount, uint256 flags) desc, bytes permit, bytes data)',
+  'function unoswapTo(address recipient, address srcToken, uint256 amount, uint256 minReturn, uint256[] pools)',
+]);
+
+function oneInchSwap(opts: { callData?: Hex; dstReceiver?: string } = {}): Hex {
+  const dstReceiver = `0x${(opts.dstReceiver ?? RECIPIENT).toLowerCase()}` as Hex;
+  return encodeFunctionData({
+    abi: ONEINCH_ABI,
+    functionName: 'swap',
+    args: [
+      ONEINCH_EXECUTOR,
+      {
+        srcToken: TOKEN,
+        dstToken: TOKEN_OUT,
+        srcReceiver: ONEINCH_SRC_RECEIVER,
+        dstReceiver,
+        amount: 10n,
+        minReturnAmount: 9n,
+        flags: 0n,
+      },
+      '0x',
+      opts.callData ?? '0x',
+    ],
+  });
+}
+
 function cowSettle(opts: {
   receiver?: string;
   callData?: Hex;
@@ -593,6 +622,19 @@ export function buildExampleDataset(): Dataset {
         args: [COW_ORDER_UID, true],
       }),
       { type: 'cowswap', risks: [], severity: 'info' }),
+    evm('oneinch-hidden-unlimited-approve', '1inch swap whose executor calldata is an unlimited approve.',
+      oneInchSwap({ callData: approve(ROUTER, MAX_UINT) }),
+      { type: 'oneinch', risks: ['unlimited_approval', 'oneinch_hidden_grant'], severity: 'high' }),
+    evm('oneinch-phishing-receiver', '1inch swap whose dstReceiver is on the phishing seed list.',
+      oneInchSwap({ dstReceiver: PHISHING_DRAINER }),
+      { type: 'oneinch', risks: ['phishing_spender'], severity: 'high' }),
+    evm('oneinch-unoswap', '1inch unoswapTo() of 10 units to a normal recipient.',
+      encodeFunctionData({
+        abi: ONEINCH_ABI,
+        functionName: 'unoswapTo',
+        args: [`0x${RECIPIENT}`, TOKEN, 10n, 9n, [1n]],
+      }),
+      { type: 'oneinch', risks: [], severity: 'info' }),
     evm('erc20-plain-transfer', 'transfer() of 255 units from a named sender.',
       transfer(RECIPIENT, 'ff'),
       { type: 'erc20_transfer', risks: [], severity: 'info' },

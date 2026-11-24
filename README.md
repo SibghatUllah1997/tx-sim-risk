@@ -20,6 +20,7 @@ Features:
 - Decode Gnosis Safe `execTransaction` / `execTransactionFromModule`, analyze the inner call, and flag DelegateCall, hidden grants, and unsigned owner-submitted txs
 - Decode Uniswap Universal Router `execute` commands, recurse into sub-plans, and flag hidden Permit2 grants (`universal_router_hidden_grant`)
 - Decode Cow Protocol GPv2Settlement `settle`, recurse into interactions, and flag hidden grants (`cowswap_hidden_grant`)
+- Decode 1inch Aggregation Router `swap` / `unoswapTo` / `clipperSwapTo`, recurse into executor calldata and attached permits, and flag hidden grants (`oneinch_hidden_grant`)
 - Parse EIP-7702 type-4 authorization lists and flag delegate designations, including any-chain (`chain_id = 0`) grants
 - Report raw txs with empty calldata as native ETH transfers, and flag ETH attached to a non-payable token or wallet call (`native_value_nonpayable_call`)
 - Decode ERC-721 / ERC-1155 setApprovalForAll and flag operator grants
@@ -123,7 +124,7 @@ Sample HTML gallery
 - Pushes to `main` deploy that gallery with GitHub Pages (see `.github/workflows/pages.yml`)
 
 Example dataset
-- `examples/dataset/cases.json` holds 46 labelled inputs (ERC-20 incl. permits and Permit2, multicall, ERC-4337, EIP-7702, Gnosis Safe, Uniswap Universal Router, CowSwap, NFT, raw EVM txs incl. native ETH value, Solana SPL token) with the report type, risks, and severity each should produce
+- `examples/dataset/cases.json` holds 49 labelled inputs (ERC-20 incl. permits and Permit2, multicall, ERC-4337, EIP-7702, Gnosis Safe, Uniswap Universal Router, CowSwap, 1inch Aggregation Router, NFT, raw EVM txs incl. native ETH value, Solana SPL token) with the report type, risks, and severity each should produce
 - Every case maps to CLI flags, e.g. `node dist/cli.js <input> --config examples/risk-lists.json --json`
 - `npm run dataset` rebuilds the file from `src/datasetCases.ts` and checks every case; tests fail if the file and the builder drift
 - Use it as a regression corpus or to compare another decoder: `checkDatasetFile('examples/dataset/cases.json')`
@@ -172,7 +173,7 @@ flowchart TD
     A[CLI input\nhex calldata, raw EVM tx, or Solana tx] --> P[Decoder registry\n(EVM, Solana, plugins)]
     P --> B{EVM plugin}
     B -- raw tx --> C[unwrap data + chainId]
-    B -- calldata --> E[ERC-20 / NFT / Safe / Universal Router / CowSwap decoders]
+    B -- calldata --> E[ERC-20 / NFT / Safe / Universal Router / CowSwap / 1inch decoders]
     C --> E
     P --> SOL[Solana plugin\nskeleton + ATA + CPI]
     E --> L[Allow/block lists\n(--config)]

@@ -58,3 +58,5 @@ More nested envelopes after v0.2.0. Default analysis stays offline. Use existing
 - [x] Day 46: Flag Permit2 grants hidden inside `execute`, and sweeps/unwraps to phishing-listed recipients
 - [x] Day 47: Decode Cow Protocol GPv2Settlement `settle` / `setPreSignature` / `invalidateOrder` and recursively analyze inner interactions
 - [x] Day 48: Flag CowSwap grants hidden inside interactions, and trades/interactions targeting phishing-listed addresses
+- [x] Day 49: Decode 1inch Aggregation Router `swap` / `unoswapTo` / `clipperSwapTo` (and WithPermit variants) and recursively analyze inner executor calldata and attached permits
+- [x] Day 50: Flag 1inch grants hidden inside the envelope, and swaps targeting phishing-listed recipients

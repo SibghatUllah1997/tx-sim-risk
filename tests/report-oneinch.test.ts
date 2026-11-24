@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { encodeFunctionData, parseAbi, type Hex } from 'viem';
 import {
+  ONEINCH_HIDDEN_GRANT_RISK,
   ONEINCH_SIGNATURES,
+  PHISHING_SPENDER_RISK,
   UNLIMITED_APPROVAL_RISK,
   UNLIMITED_PERMIT_RISK,
+  diffReports,
   formatDetectedHeader,
   generateJsonReport,
   isValidReport,
@@ -14,6 +17,7 @@ const TOKEN_OUT: Hex = '0xdddddddddddddddddddddddddddddddddddddddd';
 const EXECUTOR: Hex = '0x1111111111111111111111111111111111111111';
 const SRC_RECEIVER: Hex = '0x2222222222222222222222222222222222222222';
 const DST_RECEIVER: Hex = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const PHISHING: Hex = '0xbad0000000000000000000000000000000000001';
 const CLIPPER: Hex = '0x3333333333333333333333333333333333333333';
 const POOL: Hex = '0x4444444444444444444444444444444444444444';
 const ROUTER: Hex = '0x7a250d5630b4cf539739df2c5dacb4c659f2488d';
@@ -96,7 +100,10 @@ describe('oneinch reports', () => {
       UNLIMITED_APPROVAL_RISK,
     ]);
     expect(report.payload.permitReport).toBeNull();
-    expect(report.risks).toEqual([UNLIMITED_APPROVAL_RISK]);
+    expect(report.risks).toEqual([
+      UNLIMITED_APPROVAL_RISK,
+      ONEINCH_HIDDEN_GRANT_RISK,
+    ]);
     expect(report.severity).toBe('high');
     expect(report.payload.executorDepthLimited).toBe(false);
     expect(isValidReport(report)).toBe(true);
@@ -110,7 +117,10 @@ describe('oneinch reports', () => {
     if (report.type !== 'oneinch') return;
     expect(report.payload.permitReport?.type).toBe('erc20_permit');
     expect(report.payload.permitReport?.risks).toEqual([UNLIMITED_PERMIT_RISK]);
-    expect(report.risks).toEqual([UNLIMITED_PERMIT_RISK]);
+    expect(report.risks).toEqual([
+      UNLIMITED_PERMIT_RISK,
+      ONEINCH_HIDDEN_GRANT_RISK,
+    ]);
     expect(report.severity).toBe('high');
     expect(isValidReport(report)).toBe(true);
   });
@@ -204,5 +214,65 @@ describe('oneinch reports', () => {
       report.simulation.notes.some((n) => /Clipper exchange/.test(n))
     ).toBe(true);
     expect(isValidReport(report)).toBe(true);
+  });
+
+  it('flags a phishing-listed swap destination', () => {
+    const data = encodeFunctionData({
+      abi: ONEINCH_ABI,
+      functionName: 'swap',
+      args: [
+        EXECUTOR,
+        {
+          srcToken: TOKEN,
+          dstToken: TOKEN_OUT,
+          srcReceiver: SRC_RECEIVER,
+          dstReceiver: PHISHING,
+          amount: 10n,
+          minReturnAmount: 9n,
+          flags: 0n,
+        },
+        '0x',
+        '0x',
+      ],
+    });
+    const report = generateJsonReport(data)!;
+    expect(report.risks).toEqual([PHISHING_SPENDER_RISK]);
+    expect(report.severity).toBe('high');
+    expect(isValidReport(report)).toBe(true);
+  });
+
+  it('flags a phishing-listed unoswap recipient', () => {
+    const report = generateJsonReport(
+      encodeFunctionData({
+        abi: ONEINCH_ABI,
+        functionName: 'unoswapTo',
+        args: [PHISHING, TOKEN, 10n, 9n, [BigInt(POOL)]],
+      })
+    )!;
+    expect(report.risks).toEqual([PHISHING_SPENDER_RISK]);
+    expect(report.severity).toBe('high');
+    expect(isValidReport(report)).toBe(true);
+  });
+
+  it('does not raise a hidden-grant warning for a revoke', () => {
+    const report = generateJsonReport(swap({ data: approve(ROUTER, 0n) }))!;
+    expect(report.risks).toEqual([]);
+    expect(report.severity).toBe('info');
+  });
+
+  it('diffs a new inner spender when a swap adds a hidden approve', () => {
+    const baseline = generateJsonReport(
+      swap({ data: transfer(DST_RECEIVER, 1n) })
+    )!;
+    const candidate = generateJsonReport(swap({ data: approve(ROUTER, 8n) }))!;
+    const diff = diffReports(baseline, candidate);
+    expect(diff.candidate.type).toBe('oneinch');
+    expect(diff.addedAddresses).toEqual([
+      { address: ROUTER, role: 'spender' },
+    ]);
+    expect(diff.addedRisks).toEqual([ONEINCH_HIDDEN_GRANT_RISK]);
+    expect(diff.amountChanges.some((c) => c.field === 'executor.amount')).toBe(
+      true
+    );
   });
 });

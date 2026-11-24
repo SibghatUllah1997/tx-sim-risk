@@ -19,6 +19,7 @@ import {
 } from './evm/safe';
 import { UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK } from './evm/universalRouter';
 import { COWSWAP_HIDDEN_GRANT_RISK } from './evm/cowswap';
+import { ONEINCH_HIDDEN_GRANT_RISK } from './evm/oneInch';
 import {
   EIP7702_BROAD_DELEGATE_RISK,
   EIP7702_DELEGATION_RISK,
@@ -58,6 +59,7 @@ export const KNOWN_RISK_IDS = [
   SAFE_MISSING_SIGNATURES_RISK,
   UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK,
   COWSWAP_HIDDEN_GRANT_RISK,
+  ONEINCH_HIDDEN_GRANT_RISK,
   EIP7702_DELEGATION_RISK,
   EIP7702_BROAD_DELEGATE_RISK,
   NATIVE_VALUE_NONPAYABLE_CALL_RISK,
@@ -115,6 +117,7 @@ export const RISK_SEVERITIES: Readonly<Record<KnownRiskId, RiskSeverity>> =
     [SAFE_MISSING_SIGNATURES_RISK]: 'warn',
     [UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK]: 'warn',
     [COWSWAP_HIDDEN_GRANT_RISK]: 'warn',
+    [ONEINCH_HIDDEN_GRANT_RISK]: 'warn',
     [EIP7702_DELEGATION_RISK]: 'high',
     [EIP7702_BROAD_DELEGATE_RISK]: 'high',
     [NATIVE_VALUE_NONPAYABLE_CALL_RISK]: 'warn',
@@ -190,6 +193,8 @@ export const RISK_REASONS: Readonly<Record<KnownRiskId, string>> = Object.freeze
     'A Permit2 allowance is nested inside a Uniswap Universal Router execute plan, where wallets that only show the outer swap can hide the grant.',
   [COWSWAP_HIDDEN_GRANT_RISK]:
     'An approval, permit, or operator grant is nested inside a CowSwap settle interaction, where wallets that only show the outer settlement can hide it.',
+  [ONEINCH_HIDDEN_GRANT_RISK]:
+    'An approval, permit, or operator grant is nested inside a 1inch Aggregation Router swap, where wallets that only show the outer swap can hide the grant.',
   [EIP7702_DELEGATION_RISK]:
     'The type-4 transaction designates a contract whose code will run in place of the sender EOA for later calls, until the designation is cleared.',
   [EIP7702_BROAD_DELEGATE_RISK]:

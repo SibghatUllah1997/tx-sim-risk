@@ -58,6 +58,7 @@ import {
   type CowswapVariant,
 } from './evm/cowswap';
 import {
+  ONEINCH_HIDDEN_GRANT_RISK,
   decodeOneInch,
   type OneInchDecoded,
   type OneInchVariant,
@@ -1169,11 +1170,30 @@ function oneInchReport(
   );
   if (permitNested.report) {
     pushUnique(risks, permitNested.report.risks);
+    if (grantsAccess(permitNested.report)) {
+      pushUnique(risks, [ONEINCH_HIDDEN_GRANT_RISK]);
+    }
     mergeSimulation(simulation, permitNested.report.simulation);
   }
   if (executorNested.report) {
     pushUnique(risks, executorNested.report.risks);
+    if (grantsAccess(executorNested.report)) {
+      pushUnique(risks, [ONEINCH_HIDDEN_GRANT_RISK]);
+    }
     mergeSimulation(simulation, executorNested.report.simulation);
+  }
+  for (const address of [
+    decoded.executor,
+    decoded.srcReceiver,
+    decoded.dstReceiver,
+    decoded.recipient,
+    decoded.clipperExchange,
+  ]) {
+    if (!address) continue;
+    pushUnique(risks, [
+      ...blocklistedSpenderRisks(address, options?.lists),
+      ...phishingSpenderRisks(address, options?.phishingIndex),
+    ]);
   }
   if (decoded.variant === 'swap') {
     pushUnique(simulation.notes, [

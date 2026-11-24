@@ -17,6 +17,7 @@ import {
   SAFE_MISSING_SIGNATURES_RISK,
   UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK,
   COWSWAP_HIDDEN_GRANT_RISK,
+  ONEINCH_HIDDEN_GRANT_RISK,
   EIP7702_DELEGATION_RISK,
   EIP7702_BROAD_DELEGATE_RISK,
   NATIVE_VALUE_NONPAYABLE_CALL_RISK,
@@ -60,6 +61,7 @@ describe('risk reason catalog', () => {
         SAFE_MISSING_SIGNATURES_RISK,
         UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK,
         COWSWAP_HIDDEN_GRANT_RISK,
+        ONEINCH_HIDDEN_GRANT_RISK,
         EIP7702_DELEGATION_RISK,
         EIP7702_BROAD_DELEGATE_RISK,
         NATIVE_VALUE_NONPAYABLE_CALL_RISK,
@@ -144,6 +146,7 @@ describe('risk severity catalog', () => {
     expect(severityForRisk(SAFE_HIDDEN_GRANT_RISK)).toBe('warn');
     expect(severityForRisk(SAFE_MISSING_SIGNATURES_RISK)).toBe('warn');
     expect(severityForRisk(UNIVERSAL_ROUTER_HIDDEN_GRANT_RISK)).toBe('warn');
+    expect(severityForRisk(ONEINCH_HIDDEN_GRANT_RISK)).toBe('warn');
   });
 
   it('defaults unknown ids to warn so they are not dropped as info', () => {

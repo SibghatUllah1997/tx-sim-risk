@@ -106,6 +106,16 @@ function collectAddresses(report: JsonReport, out: DiffAddressHit[]): void {
         if (item.innerReport) collectAddresses(item.innerReport, out);
       }
       return;
+    case 'oneinch':
+      pushAddress(out, report.payload.dstReceiver, 'recipient');
+      pushAddress(out, report.payload.recipient, 'recipient');
+      if (report.payload.permitReport) {
+        collectAddresses(report.payload.permitReport, out);
+      }
+      if (report.payload.executorReport) {
+        collectAddresses(report.payload.executorReport, out);
+      }
+      return;
     case 'erc4337_userop':
       for (const op of report.payload.ops) {
         pushAddress(out, op.paymaster, 'paymaster');
@@ -197,6 +207,16 @@ function collectAmounts(
           collectAmounts(item.innerReport, out, field(`interactions[${index}]`));
         }
       });
+      return;
+    case 'oneinch':
+      set('amount', report.payload.amount);
+      set('minReturn', report.payload.minReturn);
+      if (report.payload.permitReport) {
+        collectAmounts(report.payload.permitReport, out, field('permit'));
+      }
+      if (report.payload.executorReport) {
+        collectAmounts(report.payload.executorReport, out, field('executor'));
+      }
       return;
     case 'erc4337_userop':
       report.payload.ops.forEach((op, opIndex) => {

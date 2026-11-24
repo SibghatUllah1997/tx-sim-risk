@@ -145,6 +145,36 @@ export function formatDetectedHeader(report: JsonReport): string[] {
       if (p.signed != null) lines.push(`Signed: ${p.signed ? 'yes' : 'no'}`);
       return lines;
     }
+    case 'oneinch': {
+      const p = report.payload;
+      const lines = [`Detected: 1inch Aggregation Router ${p.signature}`];
+      if (p.executor) lines.push(`Executor: ${p.executor}`);
+      if (p.srcToken) {
+        lines.push(
+          `Src token: ${p.srcToken}${p.srcIsEth ? ' (native ETH)' : ''}`
+        );
+      }
+      if (p.dstToken) {
+        lines.push(
+          `Dst token: ${p.dstToken}${p.dstIsEth ? ' (native ETH)' : ''}`
+        );
+      }
+      if (p.amount != null) lines.push(`Amount: ${p.amount}`);
+      if (p.minReturn != null) lines.push(`Min return: ${p.minReturn}`);
+      if (p.dstReceiver) lines.push(`Dst receiver: ${p.dstReceiver}`);
+      if (p.recipient) lines.push(`Recipient: ${p.recipient}`);
+      if (p.clipperExchange) {
+        lines.push(`Clipper exchange: ${p.clipperExchange}`);
+      }
+      if (p.pools.length > 0) lines.push(`Pools: ${p.pools.length}`);
+      lines.push(`Permit: ${p.permit === '0x' ? 'none' : 'nested'}`);
+      if (p.variant === 'swap') {
+        lines.push(
+          `Executor data: ${p.executorData === '0x' ? 'none' : 'nested'}`
+        );
+      }
+      return lines;
+    }
     case 'erc4337_userop': {
       const lines = [
         `Detected: ERC-4337 handleOps (${report.payload.version})`,

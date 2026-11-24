@@ -58,6 +58,11 @@ import {
   type CowswapVariant,
 } from './evm/cowswap';
 import {
+  decodeOneInch,
+  type OneInchDecoded,
+  type OneInchVariant,
+} from './evm/oneInch';
+import {
   EIP7702_BROAD_DELEGATE_RISK,
   EIP7702_DELEGATION_RISK,
   hasEip7702BroadDelegate,
@@ -339,6 +344,51 @@ export type JsonReport =
         interactions: CowswapInteractionReport[];
         orderUid: string | null;
         signed: boolean | null;
+      };
+    })
+  | (ReportMeta & {
+      type: 'oneinch';
+      payload: {
+        variant: OneInchVariant;
+        signature: string;
+        executor: string | null;
+        srcToken: string | null;
+        dstToken: string | null;
+        srcReceiver: string | null;
+        dstReceiver: string | null;
+        recipient: string | null;
+        clipperExchange: string | null;
+        amount: string | null;
+        minReturn: string | null;
+        flags: string | null;
+        partialFill: boolean | null;
+        requiresExtraEth: boolean | null;
+        shouldClaim: boolean | null;
+        srcIsEth: boolean;
+        dstIsEth: boolean;
+        pools: string[];
+        poolAddresses: string[];
+        goodUntil: string | null;
+        clipperR: string | null;
+        clipperVs: string | null;
+        permit: string;
+        executorData: string;
+        executorKind: AddressKind | null;
+        executorLabel: AddressLabel | null;
+        srcTokenLabel: AddressLabel | null;
+        dstTokenLabel: AddressLabel | null;
+        srcReceiverKind: AddressKind | null;
+        srcReceiverLabel: AddressLabel | null;
+        dstReceiverKind: AddressKind | null;
+        dstReceiverLabel: AddressLabel | null;
+        recipientKind: AddressKind | null;
+        recipientLabel: AddressLabel | null;
+        clipperExchangeKind: AddressKind | null;
+        clipperExchangeLabel: AddressLabel | null;
+        permitReport: JsonReport | null;
+        executorReport: JsonReport | null;
+        permitDepthLimited: boolean;
+        executorDepthLimited: boolean;
       };
     })
   | (ReportMeta & {
@@ -670,6 +720,13 @@ function grantsAccess(report: JsonReport): boolean {
     case 'cowswap':
       return report.payload.interactions.some(
         (item) => item.innerReport != null && grantsAccess(item.innerReport)
+      );
+    case 'oneinch':
+      return (
+        (report.payload.permitReport != null &&
+          grantsAccess(report.payload.permitReport)) ||
+        (report.payload.executorReport != null &&
+          grantsAccess(report.payload.executorReport))
       );
     default:
       return false;
@@ -1067,6 +1124,130 @@ function cowswapReport(
   };
 }
 
+function nestedCalldataReport(
+  data: string,
+  options: ReportOptions | undefined,
+  depth: number
+): { report: JsonReport | null; depthLimited: boolean } {
+  if (data === '0x') return { report: null, depthLimited: false };
+  if (depth + 1 >= MAX_MULTICALL_DEPTH) {
+    return { report: null, depthLimited: true };
+  }
+  try {
+    return {
+      report: generateJsonReportAt(data, options, depth + 1),
+      depthLimited: false,
+    };
+  } catch {
+    return { report: null, depthLimited: false };
+  }
+}
+
+function labeledKind(
+  address: string | null,
+  options?: ReportOptions
+): { kind: AddressKind | null; label: AddressLabel | null } {
+  if (!address) return { kind: null, label: null };
+  return {
+    kind: spenderKindFor(address, options),
+    label: labelFor(address, options),
+  };
+}
+
+function oneInchReport(
+  decoded: OneInchDecoded,
+  options: ReportOptions | undefined,
+  depth: number
+): JsonReport {
+  const risks: string[] = [];
+  const simulation = emptySimulation();
+  const permitNested = nestedCalldataReport(decoded.permit, options, depth);
+  const executorNested = nestedCalldataReport(
+    decoded.executorData,
+    options,
+    depth
+  );
+  if (permitNested.report) {
+    pushUnique(risks, permitNested.report.risks);
+    mergeSimulation(simulation, permitNested.report.simulation);
+  }
+  if (executorNested.report) {
+    pushUnique(risks, executorNested.report.risks);
+    mergeSimulation(simulation, executorNested.report.simulation);
+  }
+  if (decoded.variant === 'swap') {
+    pushUnique(simulation.notes, [
+      'The Aggregation Router calls the named executor with the attached data. Tokens move through srcReceiver, then out to dstReceiver.',
+    ]);
+  } else if (
+    decoded.variant === 'unoswap_to' ||
+    decoded.variant === 'unoswap_to_with_permit'
+  ) {
+    pushUnique(simulation.notes, [
+      'unoswapTo walks the packed pool list as the router contract and sends the output to the named recipient.',
+    ]);
+  } else {
+    pushUnique(simulation.notes, [
+      'clipperSwapTo fills against the named Clipper exchange and sends the output to the named recipient.',
+    ]);
+  }
+  const executor = labeledKind(decoded.executor, options);
+  const srcReceiver = labeledKind(decoded.srcReceiver, options);
+  const dstReceiver = labeledKind(decoded.dstReceiver, options);
+  const recipient = labeledKind(decoded.recipient, options);
+  const clipper = labeledKind(decoded.clipperExchange, options);
+  return {
+    type: 'oneinch',
+    payload: {
+      variant: decoded.variant,
+      signature: decoded.signature,
+      executor: decoded.executor,
+      srcToken: decoded.srcToken,
+      dstToken: decoded.dstToken,
+      srcReceiver: decoded.srcReceiver,
+      dstReceiver: decoded.dstReceiver,
+      recipient: decoded.recipient,
+      clipperExchange: decoded.clipperExchange,
+      amount: stringifyNullable(decoded.amount),
+      minReturn: stringifyNullable(decoded.minReturn),
+      flags: stringifyNullable(decoded.flags),
+      partialFill: decoded.partialFill,
+      requiresExtraEth: decoded.requiresExtraEth,
+      shouldClaim: decoded.shouldClaim,
+      srcIsEth: decoded.srcIsEth,
+      dstIsEth: decoded.dstIsEth,
+      pools: decoded.pools,
+      poolAddresses: decoded.poolAddresses,
+      goodUntil:
+        decoded.goodUntil == null ? null : String(decoded.goodUntil),
+      clipperR: decoded.clipperR,
+      clipperVs: decoded.clipperVs,
+      permit: decoded.permit,
+      executorData: decoded.executorData,
+      executorKind: executor.kind,
+      executorLabel: executor.label,
+      srcTokenLabel: labelFor(decoded.srcToken, options),
+      dstTokenLabel: labelFor(decoded.dstToken, options),
+      srcReceiverKind: srcReceiver.kind,
+      srcReceiverLabel: srcReceiver.label,
+      dstReceiverKind: dstReceiver.kind,
+      dstReceiverLabel: dstReceiver.label,
+      recipientKind: recipient.kind,
+      recipientLabel: recipient.label,
+      clipperExchangeKind: clipper.kind,
+      clipperExchangeLabel: clipper.label,
+      permitReport: permitNested.report,
+      executorReport: executorNested.report,
+      permitDepthLimited: permitNested.depthLimited,
+      executorDepthLimited: executorNested.depthLimited,
+    },
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
+    simulation,
+  };
+}
+
 function userOpReport(
   decoded: HandleOpsDecoded,
   options: ReportOptions | undefined,
@@ -1288,9 +1469,10 @@ function eip7702Report(
 
 /**
  * Decode EVM calldata into a report. Batches (`multicall`, Multicall3
- * `aggregate*`), Safe `execTransaction`, and Uniswap Universal Router
- * `execute` envelopes are split and every inner call is analyzed with
- * the same rules, up to `MAX_MULTICALL_DEPTH` levels of nesting.
+ * `aggregate*`), Safe `execTransaction`, Uniswap Universal Router
+ * `execute`, CowSwap `settle`, and 1inch Aggregation Router `swap`
+ * envelopes are split and every inner call is analyzed with the same
+ * rules, up to `MAX_MULTICALL_DEPTH` levels of nesting.
  */
 export function generateJsonReport(
   data: string,
@@ -1459,6 +1641,11 @@ function generateJsonReportAt(
   const cowswap = decodeCowswap(data);
   if (cowswap) {
     return cowswapReport(cowswap, options, depth);
+  }
+
+  const oneInch = decodeOneInch(data);
+  if (oneInch) {
+    return oneInchReport(oneInch, options, depth);
   }
 
   // Calls without a dedicated risk rule (transferFrom, safeTransferFrom,

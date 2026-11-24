@@ -12,6 +12,7 @@
     { "$ref": "#/$defs/safeExecReport" },
     { "$ref": "#/$defs/universalRouterReport" },
     { "$ref": "#/$defs/cowswapReport" },
+    { "$ref": "#/$defs/oneinchReport" },
     { "$ref": "#/$defs/eip7702Report" },
     { "$ref": "#/$defs/nativeTransferReport" },
     { "$ref": "#/$defs/erc20TransferReport" },
@@ -888,6 +889,168 @@
         }
       }
     },
+    "oneinchVariant": {
+      "type": "string",
+      "enum": [
+        "swap",
+        "unoswap_to",
+        "unoswap_to_with_permit",
+        "clipper_swap_to",
+        "clipper_swap_to_with_permit"
+      ]
+    },
+    "nullableEvmAddress": {
+      "anyOf": [
+        { "$ref": "#/$defs/evmAddress" },
+        { "type": "null" }
+      ]
+    },
+    "nullableAddressKind": {
+      "anyOf": [
+        { "$ref": "#/$defs/addressKind" },
+        { "type": "null" }
+      ]
+    },
+    "oneinchPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variant",
+        "signature",
+        "executor",
+        "srcToken",
+        "dstToken",
+        "srcReceiver",
+        "dstReceiver",
+        "recipient",
+        "clipperExchange",
+        "amount",
+        "minReturn",
+        "flags",
+        "partialFill",
+        "requiresExtraEth",
+        "shouldClaim",
+        "srcIsEth",
+        "dstIsEth",
+        "pools",
+        "poolAddresses",
+        "goodUntil",
+        "clipperR",
+        "clipperVs",
+        "permit",
+        "executorData",
+        "executorKind",
+        "executorLabel",
+        "srcTokenLabel",
+        "dstTokenLabel",
+        "srcReceiverKind",
+        "srcReceiverLabel",
+        "dstReceiverKind",
+        "dstReceiverLabel",
+        "recipientKind",
+        "recipientLabel",
+        "clipperExchangeKind",
+        "clipperExchangeLabel",
+        "permitReport",
+        "executorReport",
+        "permitDepthLimited",
+        "executorDepthLimited"
+      ],
+      "properties": {
+        "variant": { "$ref": "#/$defs/oneinchVariant" },
+        "signature": { "$ref": "#/$defs/nonEmptyString" },
+        "executor": { "$ref": "#/$defs/nullableEvmAddress" },
+        "srcToken": { "$ref": "#/$defs/nullableEvmAddress" },
+        "dstToken": { "$ref": "#/$defs/nullableEvmAddress" },
+        "srcReceiver": { "$ref": "#/$defs/nullableEvmAddress" },
+        "dstReceiver": { "$ref": "#/$defs/nullableEvmAddress" },
+        "recipient": { "$ref": "#/$defs/nullableEvmAddress" },
+        "clipperExchange": { "$ref": "#/$defs/nullableEvmAddress" },
+        "amount": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "minReturn": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "flags": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "partialFill": {
+          "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+        },
+        "requiresExtraEth": {
+          "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+        },
+        "shouldClaim": {
+          "anyOf": [{ "type": "boolean" }, { "type": "null" }]
+        },
+        "srcIsEth": { "type": "boolean" },
+        "dstIsEth": { "type": "boolean" },
+        "pools": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hexBytes" }
+        },
+        "poolAddresses": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evmAddress" }
+        },
+        "goodUntil": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "clipperR": {
+          "anyOf": [
+            { "$ref": "#/$defs/hexBytes" },
+            { "type": "null" }
+          ]
+        },
+        "clipperVs": {
+          "anyOf": [
+            { "$ref": "#/$defs/hexBytes" },
+            { "type": "null" }
+          ]
+        },
+        "permit": { "$ref": "#/$defs/hexBytes" },
+        "executorData": { "$ref": "#/$defs/hexBytes" },
+        "executorKind": { "$ref": "#/$defs/nullableAddressKind" },
+        "executorLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "srcTokenLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "dstTokenLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "srcReceiverKind": { "$ref": "#/$defs/nullableAddressKind" },
+        "srcReceiverLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "dstReceiverKind": { "$ref": "#/$defs/nullableAddressKind" },
+        "dstReceiverLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "recipientKind": { "$ref": "#/$defs/nullableAddressKind" },
+        "recipientLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "clipperExchangeKind": { "$ref": "#/$defs/nullableAddressKind" },
+        "clipperExchangeLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "permitReport": {
+          "anyOf": [
+            { "$ref": "#/$defs/decodedEvmReport" },
+            { "type": "null" }
+          ]
+        },
+        "executorReport": {
+          "anyOf": [
+            { "$ref": "#/$defs/decodedEvmReport" },
+            { "type": "null" }
+          ]
+        },
+        "permitDepthLimited": { "type": "boolean" },
+        "executorDepthLimited": { "type": "boolean" }
+      }
+    },
     "eip7702Payload": {
       "type": "object",
       "additionalProperties": false,
@@ -1427,6 +1590,20 @@
         }
       ]
     },
+    "oneinchReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "oneinch" },
+            "payload": { "$ref": "#/$defs/oneinchPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
     "decodedEvmReport": {
       "description": "Any report the EVM calldata decoder can emit; used for calls nested inside a multicall batch.",
       "oneOf": [
@@ -1438,6 +1615,7 @@
         { "$ref": "#/$defs/safeExecReport" },
         { "$ref": "#/$defs/universalRouterReport" },
         { "$ref": "#/$defs/cowswapReport" },
+        { "$ref": "#/$defs/oneinchReport" },
         { "$ref": "#/$defs/eip7702Report" },
         { "$ref": "#/$defs/erc20TransferReport" },
         { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },

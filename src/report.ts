@@ -1832,6 +1832,61 @@ export function formatCowswapLines(
     if (item.innerReport?.type === 'cowswap') {
       lines.push(...formatCowswapLines(item.innerReport, `${indent}  `));
     }
+    if (item.innerReport?.type === 'oneinch') {
+      lines.push(...formatOneInchLines(item.innerReport, `${indent}  `));
+    }
+  }
+  return lines;
+}
+
+/** One line per nested 1inch permit and executor call. */
+export function formatOneInchLines(
+  report: Extract<JsonReport, { type: 'oneinch' }>,
+  indent: string
+): string[] {
+  const lines: string[] = [];
+  const dest = report.payload.dstReceiver ?? report.payload.recipient;
+  if (dest) {
+    const named = formatAddressLabel(
+      report.payload.dstReceiverLabel ?? report.payload.recipientLabel
+    );
+    lines.push(`${indent}Recipient: ${named ? `${dest} (${named})` : dest}`);
+  }
+  if (report.payload.permitReport || report.payload.permitDepthLimited) {
+    const what = report.payload.permitDepthLimited
+      ? 'nested call not analyzed (depth limit)'
+      : describeInnerReport(report.payload.permitReport);
+    lines.push(`${indent}Permit: ${what}`);
+    if (report.payload.permitReport?.type === 'oneinch') {
+      lines.push(
+        ...formatOneInchLines(report.payload.permitReport, `${indent}  `)
+      );
+    }
+  }
+  if (report.payload.executorReport || report.payload.executorDepthLimited) {
+    const named = formatAddressLabel(report.payload.executorLabel);
+    const target = report.payload.executor
+      ? named
+        ? `${report.payload.executor} (${named})`
+        : report.payload.executor
+      : 'executor';
+    const what = report.payload.executorDepthLimited
+      ? 'nested call not analyzed (depth limit)'
+      : describeInnerReport(report.payload.executorReport);
+    lines.push(`${indent}Executor ${target}: ${what}`);
+    if (report.payload.executorReport?.type === 'multicall') {
+      lines.push(
+        ...formatMulticallCallLines(
+          report.payload.executorReport.payload.calls,
+          `${indent}  `
+        )
+      );
+    }
+    if (report.payload.executorReport?.type === 'oneinch') {
+      lines.push(
+        ...formatOneInchLines(report.payload.executorReport, `${indent}  `)
+      );
+    }
   }
   return lines;
 }
@@ -1919,6 +1974,9 @@ export function formatReportFooter(report: JsonReport): string[] {
       break;
     case 'cowswap':
       lines.push(...formatCowswapLines(report, ''));
+      break;
+    case 'oneinch':
+      lines.push(...formatOneInchLines(report, ''));
       break;
     case 'safe_exec': {
       lines.push(`Target kind: ${report.payload.targetKind}`);

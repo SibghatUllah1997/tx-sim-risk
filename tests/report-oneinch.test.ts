@@ -8,8 +8,10 @@ import {
   UNLIMITED_PERMIT_RISK,
   diffReports,
   formatDetectedHeader,
+  formatReportFooter,
   generateJsonReport,
   isValidReport,
+  renderHtmlReport,
 } from '../src';
 
 const TOKEN: Hex = '0xcccccccccccccccccccccccccccccccccccccccc';
@@ -274,5 +276,27 @@ describe('oneinch reports', () => {
     expect(diff.amountChanges.some((c) => c.field === 'executor.amount')).toBe(
       true
     );
+  });
+
+  it('prints nested executor details in the text footer and HTML table', () => {
+    const report = generateJsonReport(
+      swap({ data: approve(ROUTER, MAX_UINT256) })
+    )!;
+    const footer = formatReportFooter(report);
+    expect(
+      footer.some((line) => line.startsWith(`Recipient: ${DST_RECEIVER}`))
+    ).toBe(true);
+    expect(
+      footer.some((line) =>
+        line.startsWith(`Executor ${EXECUTOR}: erc20_approve [high:`)
+      )
+    ).toBe(true);
+    const html = renderHtmlReport(report);
+    expect(html).toContain('<code>oneinch</code>');
+    expect(html).toContain('<th>variant</th><td>swap</td>');
+    expect(html).toContain('executor data');
+    expect(html).toContain(UNLIMITED_APPROVAL_RISK);
+    expect(html).toContain(ONEINCH_HIDDEN_GRANT_RISK);
+    expect(html).not.toContain('<script');
   });
 });

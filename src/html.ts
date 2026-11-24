@@ -79,6 +79,65 @@ function payloadRows(report: JsonReport): string[] {
       ),
     ];
   }
+  if (report.type === 'oneinch') {
+    const payload = report.payload;
+    const rows = [
+      row('variant', payload.variant),
+      row('signature', payload.signature),
+      row('amount', payload.amount ?? ''),
+      row('minReturn', payload.minReturn ?? ''),
+    ];
+    if (payload.executor) rows.push(row('executor', payload.executor));
+    if (payload.srcToken) {
+      rows.push(
+        row(
+          'srcToken',
+          `${payload.srcToken}${payload.srcIsEth ? ' (native ETH)' : ''}`
+        )
+      );
+    }
+    if (payload.dstToken) {
+      rows.push(
+        row(
+          'dstToken',
+          `${payload.dstToken}${payload.dstIsEth ? ' (native ETH)' : ''}`
+        )
+      );
+    }
+    if (payload.dstReceiver) rows.push(row('dstReceiver', payload.dstReceiver));
+    if (payload.recipient) rows.push(row('recipient', payload.recipient));
+    if (payload.clipperExchange) {
+      rows.push(row('clipperExchange', payload.clipperExchange));
+    }
+    if (payload.pools.length > 0) {
+      rows.push(row('pools', String(payload.pools.length)));
+    }
+    rows.push(
+      row(
+        'permit',
+        payload.permitReport
+          ? `${payload.permitReport.type} risks=${payload.permitReport.risks.join(',')}`
+          : payload.permit === '0x'
+            ? 'none'
+            : payload.permitDepthLimited
+              ? 'not analyzed (depth limit)'
+              : 'unknown'
+      )
+    );
+    rows.push(
+      row(
+        'executor data',
+        payload.executorReport
+          ? `${payload.executorReport.type} risks=${payload.executorReport.risks.join(',')}`
+          : payload.executorData === '0x'
+            ? 'none'
+            : payload.executorDepthLimited
+              ? 'not analyzed (depth limit)'
+              : 'unknown'
+      )
+    );
+    return rows;
+  }
   if (report.type === 'cowswap') {
     const payload = report.payload;
     const rows = [

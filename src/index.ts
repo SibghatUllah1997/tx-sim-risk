@@ -45,6 +45,7 @@ export {
   formatMulticallCallLines,
   formatUniversalRouterCommandLines,
   formatCowswapLines,
+  formatOneInchLines,
   MULTICALL3_ADDRESS,
 } from './report';
 export type {

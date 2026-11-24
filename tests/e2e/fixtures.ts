@@ -109,6 +109,37 @@ const COW_TOKEN_OUT: Hex = `0x${'dd'.repeat(20)}`;
 const COW_RECEIVER: Hex = `0x${'aa'.repeat(20)}`;
 const COW_APP: Hex = `0x${'11'.repeat(32)}`;
 
+const ONEINCH_ABI = parseAbi([
+  'function swap(address executor, (address srcToken, address dstToken, address srcReceiver, address dstReceiver, uint256 amount, uint256 minReturnAmount, uint256 flags) desc, bytes permit, bytes data)',
+]);
+const ONEINCH_EXECUTOR: Hex = `0x${'11'.repeat(20)}`;
+const ONEINCH_SRC_RECEIVER: Hex = `0x${'22'.repeat(20)}`;
+const ONEINCH_DST_RECEIVER: Hex = `0x${'aa'.repeat(20)}`;
+const ONEINCH_TOKEN: Hex = `0x${'cc'.repeat(20)}`;
+const ONEINCH_TOKEN_OUT: Hex = `0x${'dd'.repeat(20)}`;
+
+/** 1inch Aggregation Router swap wrapping executor calldata. */
+export function oneInchSwapCalldata(callData: Hex, permit: Hex = '0x'): Hex {
+  return encodeFunctionData({
+    abi: ONEINCH_ABI,
+    functionName: 'swap',
+    args: [
+      ONEINCH_EXECUTOR,
+      {
+        srcToken: ONEINCH_TOKEN,
+        dstToken: ONEINCH_TOKEN_OUT,
+        srcReceiver: ONEINCH_SRC_RECEIVER,
+        dstReceiver: ONEINCH_DST_RECEIVER,
+        amount: 10n,
+        minReturnAmount: 9n,
+        flags: 0n,
+      },
+      permit,
+      callData,
+    ],
+  });
+}
+
 /** CowSwap GPv2Settlement settle wrapping one pre-interaction. */
 export function cowswapSettleCalldata(callData: Hex, target: Hex = COW_TOKEN): Hex {
   return encodeFunctionData({

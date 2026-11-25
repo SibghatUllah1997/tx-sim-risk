@@ -1739,9 +1739,10 @@ function eip7702Report(
 /**
  * Decode EVM calldata into a report. Batches (`multicall`, Multicall3
  * `aggregate*`), Safe `execTransaction`, Uniswap Universal Router
- * `execute`, CowSwap `settle`, and 1inch Aggregation Router `swap`
- * envelopes are split and every inner call is analyzed with the same
- * rules, up to `MAX_MULTICALL_DEPTH` levels of nesting.
+ * `execute`, CowSwap `settle`, 1inch Aggregation Router `swap`, and 0x
+ * Exchange Proxy `transformERC20` / meta-transaction envelopes are split
+ * and every inner call is analyzed with the same rules, up to
+ * `MAX_MULTICALL_DEPTH` levels of nesting.
  */
 export function generateJsonReport(
   data: string,

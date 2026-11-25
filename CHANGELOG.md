@@ -1,3 +1,8 @@
+## 2026-11-25
+
+- Decode 0x Exchange Proxy `transformERC20`, `executeMetaTransaction` / `executeMetaTransactionV2`, and native `fillLimitOrder` / `fillRfqOrder` / `fillOtcOrder` into `zeroex` reports, and recursively analyze transformer data and meta-tx calldata.
+- Flag an approval hidden inside the envelope (`zeroex_hidden_grant`) and reuse phishing/block-list checks on exclusive takers, fee recipients, senders, and tx origins. Marked Days 51–52 done.
+
 ## 2026-11-24
 
 - Decode 1inch Aggregation Router V5 `swap`, `unoswapTo`, and `clipperSwapTo` (plus the WithPermit variants) into `oneinch` reports, and recursively analyze attached permit bytes and executor calldata.

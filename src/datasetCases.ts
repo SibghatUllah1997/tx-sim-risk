@@ -255,6 +255,56 @@ const ONEINCH_ABI = parseAbi([
   'function unoswapTo(address recipient, address srcToken, uint256 amount, uint256 minReturn, uint256[] pools)',
 ]);
 
+const ZEROEX_MAKER: Hex = `0x${'11'.repeat(20)}`;
+const ZEROEX_POOL: Hex = `0x${'ab'.repeat(32)}`;
+const ZEROEX_SIG_R: Hex = `0x${'11'.repeat(32)}`;
+const ZEROEX_SIG_S: Hex = `0x${'22'.repeat(32)}`;
+const ZEROEX_ABI = parseAbi([
+  'function transformERC20(address inputToken, address outputToken, uint256 inputTokenAmount, uint256 minOutputTokenAmount, (uint32 deploymentNonce, bytes data)[] transformations)',
+  'function fillLimitOrder((address makerToken, address takerToken, uint128 makerAmount, uint128 takerAmount, uint128 takerTokenFeeAmount, address maker, address taker, address sender, address feeRecipient, bytes32 pool, uint64 expiry, uint256 salt) order, (uint8 signatureType, uint8 v, bytes32 r, bytes32 s) signature, uint128 takerTokenFillAmount)',
+]);
+
+function zeroExTransform(callData: Hex = '0x'): Hex {
+  return encodeFunctionData({
+    abi: ZEROEX_ABI,
+    functionName: 'transformERC20',
+    args: [
+      TOKEN,
+      TOKEN_OUT,
+      10n,
+      9n,
+      [{ deploymentNonce: 3, data: callData }],
+    ],
+  });
+}
+
+function zeroExFillLimit(opts: { feeRecipient?: string; taker?: string } = {}): Hex {
+  const feeRecipient = `0x${(opts.feeRecipient ?? '0'.repeat(40)).toLowerCase()}` as Hex;
+  const taker = `0x${(opts.taker ?? RECIPIENT).toLowerCase()}` as Hex;
+  return encodeFunctionData({
+    abi: ZEROEX_ABI,
+    functionName: 'fillLimitOrder',
+    args: [
+      {
+        makerToken: TOKEN_OUT,
+        takerToken: TOKEN,
+        makerAmount: 9n,
+        takerAmount: 10n,
+        takerTokenFeeAmount: 1n,
+        maker: ZEROEX_MAKER,
+        taker,
+        sender: `0x${'0'.repeat(40)}`,
+        feeRecipient,
+        pool: ZEROEX_POOL,
+        expiry: 1_900_000_000n,
+        salt: 8n,
+      },
+      { signatureType: 2, v: 27, r: ZEROEX_SIG_R, s: ZEROEX_SIG_S },
+      10n,
+    ],
+  });
+}
+
 function oneInchSwap(opts: { callData?: Hex; dstReceiver?: string } = {}): Hex {
   const dstReceiver = `0x${(opts.dstReceiver ?? RECIPIENT).toLowerCase()}` as Hex;
   return encodeFunctionData({
@@ -635,6 +685,15 @@ export function buildExampleDataset(): Dataset {
         args: [`0x${RECIPIENT}`, TOKEN, 10n, 9n, [1n]],
       }),
       { type: 'oneinch', risks: [], severity: 'info' }),
+    evm('zeroex-hidden-unlimited-approve', '0x transformERC20 whose first transformer is an unlimited approve.',
+      zeroExTransform(approve(ROUTER, MAX_UINT)),
+      { type: 'zeroex', risks: ['unlimited_approval', 'zeroex_hidden_grant'], severity: 'high' }),
+    evm('zeroex-phishing-fee-recipient', '0x fillLimitOrder whose feeRecipient is on the phishing seed list.',
+      zeroExFillLimit({ feeRecipient: PHISHING_DRAINER, taker: '0'.repeat(40) }),
+      { type: 'zeroex', risks: ['phishing_spender'], severity: 'high' }),
+    evm('zeroex-fill-limit', '0x fillLimitOrder of 10 units to a normal exclusive taker.',
+      zeroExFillLimit(),
+      { type: 'zeroex', risks: [], severity: 'info' }),
     evm('erc20-plain-transfer', 'transfer() of 255 units from a named sender.',
       transfer(RECIPIENT, 'ff'),
       { type: 'erc20_transfer', risks: [], severity: 'info' },

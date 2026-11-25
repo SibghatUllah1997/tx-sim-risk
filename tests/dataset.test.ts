@@ -75,6 +75,7 @@ describe('example dataset file', () => {
       'universal_router_hidden_grant',
       'cowswap_hidden_grant',
       'oneinch_hidden_grant',
+      'zeroex_hidden_grant',
     ]) {
       expect(risks, id).toContain(id);
     }

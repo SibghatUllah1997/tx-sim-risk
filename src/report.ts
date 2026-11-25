@@ -64,6 +64,7 @@ import {
   type OneInchVariant,
 } from './evm/oneInch';
 import {
+  ZEROEX_HIDDEN_GRANT_RISK,
   decodeZeroEx,
   type ZeroExDecoded,
   type ZeroExSignatureKind,
@@ -1229,6 +1230,9 @@ function zeroExReport(
       const nested = nestedCalldataReport(item.data, options, depth);
       if (nested.report) {
         pushUnique(risks, nested.report.risks);
+        if (grantsAccess(nested.report)) {
+          pushUnique(risks, [ZEROEX_HIDDEN_GRANT_RISK]);
+        }
         mergeSimulation(simulation, nested.report.simulation);
       }
       return {
@@ -1243,7 +1247,23 @@ function zeroExReport(
   const callNested = nestedCalldataReport(decoded.callData, options, depth);
   if (callNested.report) {
     pushUnique(risks, callNested.report.risks);
+    if (grantsAccess(callNested.report)) {
+      pushUnique(risks, [ZEROEX_HIDDEN_GRANT_RISK]);
+    }
     mergeSimulation(simulation, callNested.report.simulation);
+  }
+  for (const address of [
+    decoded.taker,
+    decoded.sender,
+    decoded.txOrigin,
+    decoded.feeRecipient,
+    ...decoded.fees.map((item) => item.recipient),
+  ]) {
+    if (!address) continue;
+    pushUnique(risks, [
+      ...blocklistedSpenderRisks(address, options?.lists),
+      ...phishingSpenderRisks(address, options?.phishingIndex),
+    ]);
   }
   if (decoded.variant === 'transform_erc20') {
     pushUnique(simulation.notes, [

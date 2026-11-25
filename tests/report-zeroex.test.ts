@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { encodeFunctionData, parseAbi, type Hex } from 'viem';
 import {
+  PHISHING_SPENDER_RISK,
   UNLIMITED_APPROVAL_RISK,
+  ZEROEX_HIDDEN_GRANT_RISK,
   ZEROEX_SIGNATURES,
   formatDetectedHeader,
   generateJsonReport,
@@ -16,6 +18,7 @@ const SENDER: Hex = '0x3333333333333333333333333333333333333333';
 const FEE_RECIPIENT: Hex = '0x4444444444444444444444444444444444444444';
 const SIGNER: Hex = '0x5555555555555555555555555555555555555555';
 const ZERO: Hex = '0x0000000000000000000000000000000000000000';
+const PHISHING: Hex = '0xbad0000000000000000000000000000000000001';
 const ROUTER: Hex = '0x7a250d5630b4cf539739df2c5dacb4c659f2488d';
 const POOL: Hex = `0x${'ab'.repeat(32)}`;
 const SIG_R: Hex = `0x${'11'.repeat(32)}`;
@@ -109,7 +112,10 @@ describe('zeroex reports', () => {
       UNLIMITED_APPROVAL_RISK,
     ]);
     expect(report.payload.callReport).toBeNull();
-    expect(report.risks).toEqual([UNLIMITED_APPROVAL_RISK]);
+    expect(report.risks).toEqual([
+      UNLIMITED_APPROVAL_RISK,
+      ZEROEX_HIDDEN_GRANT_RISK,
+    ]);
     expect(report.severity).toBe('high');
     expect(report.payload.transformations[0]?.depthLimited).toBe(false);
     expect(isValidReport(report)).toBe(true);
@@ -125,7 +131,10 @@ describe('zeroex reports', () => {
     expect(report.payload.signer).toBe(SIGNER);
     expect(report.payload.callReport?.type).toBe('erc20_approve');
     expect(report.payload.callReport?.risks).toEqual([UNLIMITED_APPROVAL_RISK]);
-    expect(report.risks).toEqual([UNLIMITED_APPROVAL_RISK]);
+    expect(report.risks).toEqual([
+      UNLIMITED_APPROVAL_RISK,
+      ZEROEX_HIDDEN_GRANT_RISK,
+    ]);
     expect(report.severity).toBe('high');
     expect(isValidReport(report)).toBe(true);
   });
@@ -206,5 +215,71 @@ describe('zeroex reports', () => {
       'Fill amount: 10',
     ]);
     expect(isValidReport(report)).toBe(true);
+  });
+
+  it('flags a phishing-listed limit-order fee recipient', () => {
+    const report = generateJsonReport(
+      encodeFunctionData({
+        abi: ZEROEX_ABI,
+        functionName: 'fillLimitOrder',
+        args: [
+          {
+            makerToken: TOKEN_OUT,
+            takerToken: TOKEN,
+            makerAmount: 9n,
+            takerAmount: 10n,
+            takerTokenFeeAmount: 1n,
+            maker: MAKER,
+            taker: ZERO,
+            sender: ZERO,
+            feeRecipient: PHISHING,
+            pool: POOL,
+            expiry: 1_900_000_000n,
+            salt: 8n,
+          },
+          eip712Sig,
+          10n,
+        ],
+      })
+    )!;
+    expect(report.risks).toEqual([PHISHING_SPENDER_RISK]);
+    expect(report.severity).toBe('high');
+    expect(isValidReport(report)).toBe(true);
+  });
+
+  it('flags a phishing-listed exclusive taker', () => {
+    const report = generateJsonReport(
+      encodeFunctionData({
+        abi: ZEROEX_ABI,
+        functionName: 'fillLimitOrder',
+        args: [
+          {
+            makerToken: TOKEN_OUT,
+            takerToken: TOKEN,
+            makerAmount: 9n,
+            takerAmount: 10n,
+            takerTokenFeeAmount: 0n,
+            maker: MAKER,
+            taker: PHISHING,
+            sender: ZERO,
+            feeRecipient: ZERO,
+            pool: POOL,
+            expiry: 1_900_000_000n,
+            salt: 8n,
+          },
+          eip712Sig,
+          10n,
+        ],
+      })
+    )!;
+    expect(report.risks).toEqual([PHISHING_SPENDER_RISK]);
+    expect(report.severity).toBe('high');
+    expect(isValidReport(report)).toBe(true);
+  });
+
+  it('does not raise a hidden-grant warning for a revoke', () => {
+    const report = generateJsonReport(transform(approve(ROUTER, 0n)))!;
+    expect(report.risks).toEqual([]);
+    expect(report.severity).toBe('info');
   });
 });

@@ -5,9 +5,12 @@ import {
   UNLIMITED_APPROVAL_RISK,
   ZEROEX_HIDDEN_GRANT_RISK,
   ZEROEX_SIGNATURES,
+  diffReports,
   formatDetectedHeader,
+  formatReportFooter,
   generateJsonReport,
   isValidReport,
+  renderHtmlReport,
 } from '../src';
 
 const TOKEN: Hex = '0xcccccccccccccccccccccccccccccccccccccccc';
@@ -281,5 +284,38 @@ describe('zeroex reports', () => {
     const report = generateJsonReport(transform(approve(ROUTER, 0n)))!;
     expect(report.risks).toEqual([]);
     expect(report.severity).toBe('info');
+  });
+
+  it('diffs a new inner spender when a transform adds a hidden approve', () => {
+    const baseline = generateJsonReport(transform(transfer(TAKER, 1n)))!;
+    const candidate = generateJsonReport(transform(approve(ROUTER, 8n)))!;
+    const diff = diffReports(baseline, candidate);
+    expect(diff.candidate.type).toBe('zeroex');
+    expect(diff.addedAddresses).toEqual([
+      { address: ROUTER, role: 'spender' },
+    ]);
+    expect(diff.addedRisks).toEqual([ZEROEX_HIDDEN_GRANT_RISK]);
+    expect(
+      diff.amountChanges.some((c) => c.field === 'transformations[0].amount')
+    ).toBe(true);
+  });
+
+  it('prints nested transformer details in the text footer and HTML table', () => {
+    const report = generateJsonReport(
+      transform(approve(ROUTER, MAX_UINT256))
+    )!;
+    const footer = formatReportFooter(report);
+    expect(
+      footer.some((line) =>
+        line.startsWith('Transform [0] nonce=3: erc20_approve [high:')
+      )
+    ).toBe(true);
+    const html = renderHtmlReport(report);
+    expect(html).toContain('<code>zeroex</code>');
+    expect(html).toContain('<th>variant</th><td>transform_erc20</td>');
+    expect(html).toContain('transform 0');
+    expect(html).toContain(UNLIMITED_APPROVAL_RISK);
+    expect(html).toContain(ZEROEX_HIDDEN_GRANT_RISK);
+    expect(html).not.toContain('<script');
   });
 });

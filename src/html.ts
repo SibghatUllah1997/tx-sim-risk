@@ -138,6 +138,70 @@ function payloadRows(report: JsonReport): string[] {
     );
     return rows;
   }
+  if (report.type === 'zeroex') {
+    const payload = report.payload;
+    const rows = [
+      row('variant', payload.variant),
+      row('signature', payload.signature),
+    ];
+    if (payload.inputToken) {
+      rows.push(
+        row(
+          'inputToken',
+          `${payload.inputToken}${payload.inputIsEth ? ' (native ETH)' : ''}`
+        )
+      );
+    }
+    if (payload.outputToken) {
+      rows.push(
+        row(
+          'outputToken',
+          `${payload.outputToken}${payload.outputIsEth ? ' (native ETH)' : ''}`
+        )
+      );
+    }
+    if (payload.inputTokenAmount != null) {
+      rows.push(row('amount', payload.inputTokenAmount));
+    }
+    if (payload.minOutputTokenAmount != null) {
+      rows.push(row('minReturn', payload.minOutputTokenAmount));
+    }
+    if (payload.signer) rows.push(row('signer', payload.signer));
+    if (payload.maker) rows.push(row('maker', payload.maker));
+    if (payload.taker) rows.push(row('taker', payload.taker));
+    if (payload.feeRecipient) {
+      rows.push(row('feeRecipient', payload.feeRecipient));
+    }
+    if (payload.takerTokenFillAmount != null) {
+      rows.push(row('fillAmount', payload.takerTokenFillAmount));
+    }
+    payload.transformations.forEach((item) => {
+      rows.push(
+        row(
+          `transform ${item.index}`,
+          `nonce=${item.deploymentNonce} type=${item.innerReport?.type ?? 'none'} risks=${(item.innerReport?.risks ?? []).join(',')}`
+        )
+      );
+    });
+    if (
+      payload.variant === 'execute_meta_transaction' ||
+      payload.variant === 'execute_meta_transaction_v2'
+    ) {
+      rows.push(
+        row(
+          'call data',
+          payload.callReport
+            ? `${payload.callReport.type} risks=${payload.callReport.risks.join(',')}`
+            : payload.callData === '0x'
+              ? 'none'
+              : payload.callDepthLimited
+                ? 'not analyzed (depth limit)'
+                : 'unknown'
+        )
+      );
+    }
+    return rows;
+  }
   if (report.type === 'cowswap') {
     const payload = report.payload;
     const rows = [

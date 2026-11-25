@@ -118,6 +118,27 @@ const ONEINCH_DST_RECEIVER: Hex = `0x${'aa'.repeat(20)}`;
 const ONEINCH_TOKEN: Hex = `0x${'cc'.repeat(20)}`;
 const ONEINCH_TOKEN_OUT: Hex = `0x${'dd'.repeat(20)}`;
 
+const ZEROEX_ABI = parseAbi([
+  'function transformERC20(address inputToken, address outputToken, uint256 inputTokenAmount, uint256 minOutputTokenAmount, (uint32 deploymentNonce, bytes data)[] transformations)',
+]);
+const ZEROEX_TOKEN: Hex = `0x${'cc'.repeat(20)}`;
+const ZEROEX_TOKEN_OUT: Hex = `0x${'dd'.repeat(20)}`;
+
+/** 0x Exchange Proxy transformERC20 wrapping transformer calldata. */
+export function zeroExTransformCalldata(callData: Hex): Hex {
+  return encodeFunctionData({
+    abi: ZEROEX_ABI,
+    functionName: 'transformERC20',
+    args: [
+      ZEROEX_TOKEN,
+      ZEROEX_TOKEN_OUT,
+      10n,
+      9n,
+      [{ deploymentNonce: 3, data: callData }],
+    ],
+  });
+}
+
 /** 1inch Aggregation Router swap wrapping executor calldata. */
 export function oneInchSwapCalldata(callData: Hex, permit: Hex = '0x'): Hex {
   return encodeFunctionData({

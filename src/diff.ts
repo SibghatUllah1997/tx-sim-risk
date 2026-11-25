@@ -116,6 +116,20 @@ function collectAddresses(report: JsonReport, out: DiffAddressHit[]): void {
         collectAddresses(report.payload.executorReport, out);
       }
       return;
+    case 'zeroex':
+      pushAddress(out, report.payload.taker, 'recipient');
+      pushAddress(out, report.payload.feeRecipient, 'recipient');
+      pushAddress(out, report.payload.txOrigin, 'recipient');
+      for (const fee of report.payload.fees) {
+        pushAddress(out, fee.recipient, 'recipient');
+      }
+      if (report.payload.callReport) {
+        collectAddresses(report.payload.callReport, out);
+      }
+      for (const item of report.payload.transformations) {
+        if (item.innerReport) collectAddresses(item.innerReport, out);
+      }
+      return;
     case 'erc4337_userop':
       for (const op of report.payload.ops) {
         pushAddress(out, op.paymaster, 'paymaster');
@@ -217,6 +231,23 @@ function collectAmounts(
       if (report.payload.executorReport) {
         collectAmounts(report.payload.executorReport, out, field('executor'));
       }
+      return;
+    case 'zeroex':
+      set('amount', report.payload.inputTokenAmount);
+      set('minReturn', report.payload.minOutputTokenAmount);
+      set('takerTokenFillAmount', report.payload.takerTokenFillAmount);
+      if (report.payload.callReport) {
+        collectAmounts(report.payload.callReport, out, field('call'));
+      }
+      report.payload.transformations.forEach((item, index) => {
+        if (item.innerReport) {
+          collectAmounts(
+            item.innerReport,
+            out,
+            field(`transformations[${index}]`)
+          );
+        }
+      });
       return;
     case 'erc4337_userop':
       report.payload.ops.forEach((op, opIndex) => {

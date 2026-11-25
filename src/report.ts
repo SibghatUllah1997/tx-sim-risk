@@ -2089,6 +2089,9 @@ export function formatCowswapLines(
     if (item.innerReport?.type === 'oneinch') {
       lines.push(...formatOneInchLines(item.innerReport, `${indent}  `));
     }
+    if (item.innerReport?.type === 'zeroex') {
+      lines.push(...formatZeroExLines(item.innerReport, `${indent}  `));
+    }
   }
   return lines;
 }
@@ -2140,6 +2143,75 @@ export function formatOneInchLines(
       lines.push(
         ...formatOneInchLines(report.payload.executorReport, `${indent}  `)
       );
+    }
+    if (report.payload.executorReport?.type === 'zeroex') {
+      lines.push(
+        ...formatZeroExLines(report.payload.executorReport, `${indent}  `)
+      );
+    }
+  }
+  return lines;
+}
+
+/** One line per nested 0x transformer step and meta-tx calldata. */
+export function formatZeroExLines(
+  report: Extract<JsonReport, { type: 'zeroex' }>,
+  indent: string
+): string[] {
+  const lines: string[] = [];
+  if (report.payload.feeRecipient) {
+    const named = formatAddressLabel(report.payload.feeRecipientLabel);
+    lines.push(
+      `${indent}Fee recipient: ${named ? `${report.payload.feeRecipient} (${named})` : report.payload.feeRecipient}`
+    );
+  }
+  if (report.payload.taker) {
+    const named = formatAddressLabel(report.payload.takerLabel);
+    lines.push(
+      `${indent}Taker: ${named ? `${report.payload.taker} (${named})` : report.payload.taker}`
+    );
+  }
+  for (const item of report.payload.transformations) {
+    const what = item.depthLimited
+      ? 'nested call not analyzed (depth limit)'
+      : describeInnerReport(item.innerReport);
+    lines.push(
+      item.innerReport || item.depthLimited
+        ? `${indent}Transform [${item.index}] nonce=${item.deploymentNonce}: ${what}`
+        : `${indent}Transform [${item.index}] nonce=${item.deploymentNonce}`
+    );
+    if (item.innerReport?.type === 'multicall') {
+      lines.push(
+        ...formatMulticallCallLines(item.innerReport.payload.calls, `${indent}  `)
+      );
+    }
+    if (item.innerReport?.type === 'oneinch') {
+      lines.push(...formatOneInchLines(item.innerReport, `${indent}  `));
+    }
+    if (item.innerReport?.type === 'zeroex') {
+      lines.push(...formatZeroExLines(item.innerReport, `${indent}  `));
+    }
+  }
+  if (report.payload.callReport || report.payload.callDepthLimited) {
+    const what = report.payload.callDepthLimited
+      ? 'nested call not analyzed (depth limit)'
+      : describeInnerReport(report.payload.callReport);
+    lines.push(`${indent}Call data: ${what}`);
+    if (report.payload.callReport?.type === 'multicall') {
+      lines.push(
+        ...formatMulticallCallLines(
+          report.payload.callReport.payload.calls,
+          `${indent}  `
+        )
+      );
+    }
+    if (report.payload.callReport?.type === 'oneinch') {
+      lines.push(
+        ...formatOneInchLines(report.payload.callReport, `${indent}  `)
+      );
+    }
+    if (report.payload.callReport?.type === 'zeroex') {
+      lines.push(...formatZeroExLines(report.payload.callReport, `${indent}  `));
     }
   }
   return lines;
@@ -2231,6 +2303,9 @@ export function formatReportFooter(report: JsonReport): string[] {
       break;
     case 'oneinch':
       lines.push(...formatOneInchLines(report, ''));
+      break;
+    case 'zeroex':
+      lines.push(...formatZeroExLines(report, ''));
       break;
     case 'safe_exec': {
       lines.push(`Target kind: ${report.payload.targetKind}`);

@@ -64,6 +64,12 @@ import {
   type OneInchVariant,
 } from './evm/oneInch';
 import {
+  decodeZeroEx,
+  type ZeroExDecoded,
+  type ZeroExSignatureKind,
+  type ZeroExVariant,
+} from './evm/zeroEx';
+import {
   EIP7702_BROAD_DELEGATE_RISK,
   EIP7702_DELEGATION_RISK,
   hasEip7702BroadDelegate,
@@ -393,6 +399,66 @@ export type JsonReport =
       };
     })
   | (ReportMeta & {
+      type: 'zeroex';
+      payload: {
+        variant: ZeroExVariant;
+        signature: string;
+        inputToken: string | null;
+        outputToken: string | null;
+        inputTokenAmount: string | null;
+        minOutputTokenAmount: string | null;
+        inputIsEth: boolean;
+        outputIsEth: boolean;
+        transformations: ZeroExTransformationReport[];
+        signer: string | null;
+        sender: string | null;
+        minGasPrice: string | null;
+        maxGasPrice: string | null;
+        expirationTimeSeconds: string | null;
+        salt: string | null;
+        callData: string;
+        value: string | null;
+        feeToken: string | null;
+        feeAmount: string | null;
+        fees: ZeroExFeeReport[];
+        makerToken: string | null;
+        takerToken: string | null;
+        makerAmount: string | null;
+        takerAmount: string | null;
+        takerTokenFeeAmount: string | null;
+        maker: string | null;
+        taker: string | null;
+        txOrigin: string | null;
+        feeRecipient: string | null;
+        pool: string | null;
+        expiry: string | null;
+        expiryAndNonce: string | null;
+        takerTokenFillAmount: string | null;
+        signatureType: number | null;
+        signatureKind: ZeroExSignatureKind | null;
+        signatureV: number | null;
+        signatureR: string | null;
+        signatureS: string | null;
+        inputTokenLabel: AddressLabel | null;
+        outputTokenLabel: AddressLabel | null;
+        signerKind: AddressKind | null;
+        signerLabel: AddressLabel | null;
+        senderKind: AddressKind | null;
+        senderLabel: AddressLabel | null;
+        feeTokenLabel: AddressLabel | null;
+        makerKind: AddressKind | null;
+        makerLabel: AddressLabel | null;
+        takerKind: AddressKind | null;
+        takerLabel: AddressLabel | null;
+        txOriginKind: AddressKind | null;
+        txOriginLabel: AddressLabel | null;
+        feeRecipientKind: AddressKind | null;
+        feeRecipientLabel: AddressLabel | null;
+        callReport: JsonReport | null;
+        callDepthLimited: boolean;
+      };
+    })
+  | (ReportMeta & {
       type: 'eip7702';
       payload: {
         chainId: string;
@@ -583,6 +649,24 @@ export type UniversalRouterCommandReport = {
   depthLimited: boolean;
 };
 
+/** One 0x `transformERC20` step with its nested inner report. */
+export type ZeroExTransformationReport = {
+  index: number;
+  deploymentNonce: number;
+  data: string;
+  innerReport: JsonReport | null;
+  depthLimited: boolean;
+};
+
+/** One 0x meta-transaction V2 fee. */
+export type ZeroExFeeReport = {
+  index: number;
+  recipient: string;
+  amount: string;
+  recipientKind: AddressKind;
+  recipientLabel: AddressLabel | null;
+};
+
 /** One inner call of a `multicall` report with its own nested report. */
 export type MulticallCallReport = {
   index: number;
@@ -728,6 +812,14 @@ function grantsAccess(report: JsonReport): boolean {
           grantsAccess(report.payload.permitReport)) ||
         (report.payload.executorReport != null &&
           grantsAccess(report.payload.executorReport))
+      );
+    case 'zeroex':
+      return (
+        (report.payload.callReport != null &&
+          grantsAccess(report.payload.callReport)) ||
+        report.payload.transformations.some(
+          (item) => item.innerReport != null && grantsAccess(item.innerReport)
+        )
       );
     default:
       return false;
@@ -1117,6 +1209,143 @@ function cowswapReport(
       interactions,
       orderUid: decoded.orderUid,
       signed: decoded.signed,
+    },
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
+    simulation,
+  };
+}
+
+function zeroExReport(
+  decoded: ZeroExDecoded,
+  options: ReportOptions | undefined,
+  depth: number
+): JsonReport {
+  const risks: string[] = [];
+  const simulation = emptySimulation();
+  const transformations = decoded.transformations.map(
+    (item): ZeroExTransformationReport => {
+      const nested = nestedCalldataReport(item.data, options, depth);
+      if (nested.report) {
+        pushUnique(risks, nested.report.risks);
+        mergeSimulation(simulation, nested.report.simulation);
+      }
+      return {
+        index: item.index,
+        deploymentNonce: item.deploymentNonce,
+        data: item.data,
+        innerReport: nested.report,
+        depthLimited: nested.depthLimited,
+      };
+    }
+  );
+  const callNested = nestedCalldataReport(decoded.callData, options, depth);
+  if (callNested.report) {
+    pushUnique(risks, callNested.report.risks);
+    mergeSimulation(simulation, callNested.report.simulation);
+  }
+  if (decoded.variant === 'transform_erc20') {
+    pushUnique(simulation.notes, [
+      'transformERC20 runs each transformer in sequence inside the Exchange Proxy flash wallet, then returns the output token to the caller.',
+    ]);
+  } else if (
+    decoded.variant === 'execute_meta_transaction' ||
+    decoded.variant === 'execute_meta_transaction_v2'
+  ) {
+    pushUnique(simulation.notes, [
+      'The Exchange Proxy executes the attached calldata on behalf of the named signer.',
+    ]);
+  } else if (decoded.variant === 'fill_limit_order') {
+    pushUnique(simulation.notes, [
+      'fillLimitOrder settles a signed limit order. Taker tokens move to the maker; maker tokens and any taker-token fee go to the caller and feeRecipient.',
+    ]);
+  } else if (decoded.variant === 'fill_rfq_order') {
+    pushUnique(simulation.notes, [
+      'fillRfqOrder settles a signed RFQ order for the named txOrigin.',
+    ]);
+  } else {
+    pushUnique(simulation.notes, [
+      'fillOtcOrder settles a signed OTC order packed with expiry and nonce.',
+    ]);
+  }
+  const signer = labeledKind(decoded.signer, options);
+  const sender = labeledKind(decoded.sender, options);
+  const maker = labeledKind(decoded.maker, options);
+  const taker = labeledKind(decoded.taker, options);
+  const txOrigin = labeledKind(decoded.txOrigin, options);
+  const feeRecipient = labeledKind(decoded.feeRecipient, options);
+  const fees = decoded.fees.map((item): ZeroExFeeReport => {
+    const labeled = labeledKind(item.recipient, options);
+    return {
+      index: item.index,
+      recipient: item.recipient,
+      amount: item.amount.toString(),
+      recipientKind: labeled.kind ?? 'unknown',
+      recipientLabel: labeled.label,
+    };
+  });
+  return {
+    type: 'zeroex',
+    payload: {
+      variant: decoded.variant,
+      signature: decoded.signature,
+      inputToken: decoded.inputToken,
+      outputToken: decoded.outputToken,
+      inputTokenAmount: stringifyNullable(decoded.inputTokenAmount),
+      minOutputTokenAmount: stringifyNullable(decoded.minOutputTokenAmount),
+      inputIsEth: decoded.inputIsEth,
+      outputIsEth: decoded.outputIsEth,
+      transformations,
+      signer: decoded.signer,
+      sender: decoded.sender,
+      minGasPrice: stringifyNullable(decoded.minGasPrice),
+      maxGasPrice: stringifyNullable(decoded.maxGasPrice),
+      expirationTimeSeconds:
+        decoded.expirationTimeSeconds == null
+          ? null
+          : String(decoded.expirationTimeSeconds),
+      salt: stringifyNullable(decoded.salt),
+      callData: decoded.callData,
+      value: stringifyNullable(decoded.value),
+      feeToken: decoded.feeToken,
+      feeAmount: stringifyNullable(decoded.feeAmount),
+      fees,
+      makerToken: decoded.makerToken,
+      takerToken: decoded.takerToken,
+      makerAmount: stringifyNullable(decoded.makerAmount),
+      takerAmount: stringifyNullable(decoded.takerAmount),
+      takerTokenFeeAmount: stringifyNullable(decoded.takerTokenFeeAmount),
+      maker: decoded.maker,
+      taker: decoded.taker,
+      txOrigin: decoded.txOrigin,
+      feeRecipient: decoded.feeRecipient,
+      pool: decoded.pool,
+      expiry: decoded.expiry == null ? null : String(decoded.expiry),
+      expiryAndNonce: stringifyNullable(decoded.expiryAndNonce),
+      takerTokenFillAmount: stringifyNullable(decoded.takerTokenFillAmount),
+      signatureType: decoded.signatureType,
+      signatureKind: decoded.signatureKind,
+      signatureV: decoded.signatureV,
+      signatureR: decoded.signatureR,
+      signatureS: decoded.signatureS,
+      inputTokenLabel: labelFor(decoded.inputToken, options),
+      outputTokenLabel: labelFor(decoded.outputToken, options),
+      signerKind: signer.kind,
+      signerLabel: signer.label,
+      senderKind: sender.kind,
+      senderLabel: sender.label,
+      feeTokenLabel: labelFor(decoded.feeToken, options),
+      makerKind: maker.kind,
+      makerLabel: maker.label,
+      takerKind: taker.kind,
+      takerLabel: taker.label,
+      txOriginKind: txOrigin.kind,
+      txOriginLabel: txOrigin.label,
+      feeRecipientKind: feeRecipient.kind,
+      feeRecipientLabel: feeRecipient.label,
+      callReport: callNested.report,
+      callDepthLimited: callNested.depthLimited,
     },
     risks,
     riskDetails: describeRisks(risks),
@@ -1666,6 +1895,11 @@ function generateJsonReportAt(
   const oneInch = decodeOneInch(data);
   if (oneInch) {
     return oneInchReport(oneInch, options, depth);
+  }
+
+  const zeroEx = decodeZeroEx(data);
+  if (zeroEx) {
+    return zeroExReport(zeroEx, options, depth);
   }
 
   // Calls without a dedicated risk rule (transferFrom, safeTransferFrom,

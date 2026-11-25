@@ -175,6 +175,45 @@ export function formatDetectedHeader(report: JsonReport): string[] {
       }
       return lines;
     }
+    case 'zeroex': {
+      const p = report.payload;
+      const lines = [`Detected: 0x Exchange Proxy ${p.signature}`];
+      if (p.inputToken) {
+        lines.push(
+          `Input token: ${p.inputToken}${p.inputIsEth ? ' (native ETH)' : ''}`
+        );
+      }
+      if (p.outputToken) {
+        lines.push(
+          `Output token: ${p.outputToken}${p.outputIsEth ? ' (native ETH)' : ''}`
+        );
+      }
+      if (p.inputTokenAmount != null) {
+        lines.push(`Amount: ${p.inputTokenAmount}`);
+      }
+      if (p.minOutputTokenAmount != null) {
+        lines.push(`Min return: ${p.minOutputTokenAmount}`);
+      }
+      if (p.transformations.length > 0) {
+        lines.push(`Transformations: ${p.transformations.length}`);
+      }
+      if (p.signer) lines.push(`Signer: ${p.signer}`);
+      if (p.maker) lines.push(`Maker: ${p.maker}`);
+      if (p.taker) lines.push(`Taker: ${p.taker}`);
+      if (p.feeRecipient) lines.push(`Fee recipient: ${p.feeRecipient}`);
+      if (p.takerTokenFillAmount != null) {
+        lines.push(`Fill amount: ${p.takerTokenFillAmount}`);
+      }
+      if (
+        p.variant === 'execute_meta_transaction' ||
+        p.variant === 'execute_meta_transaction_v2'
+      ) {
+        lines.push(
+          `Call data: ${p.callData === '0x' ? 'none' : 'nested'}`
+        );
+      }
+      return lines;
+    }
     case 'erc4337_userop': {
       const lines = [
         `Detected: ERC-4337 handleOps (${report.payload.version})`,

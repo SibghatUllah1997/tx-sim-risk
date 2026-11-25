@@ -13,6 +13,7 @@
     { "$ref": "#/$defs/universalRouterReport" },
     { "$ref": "#/$defs/cowswapReport" },
     { "$ref": "#/$defs/oneinchReport" },
+    { "$ref": "#/$defs/zeroexReport" },
     { "$ref": "#/$defs/eip7702Report" },
     { "$ref": "#/$defs/nativeTransferReport" },
     { "$ref": "#/$defs/erc20TransferReport" },
@@ -1051,6 +1052,292 @@
         "executorDepthLimited": { "type": "boolean" }
       }
     },
+    "zeroexVariant": {
+      "type": "string",
+      "enum": [
+        "transform_erc20",
+        "execute_meta_transaction",
+        "execute_meta_transaction_v2",
+        "fill_limit_order",
+        "fill_rfq_order",
+        "fill_otc_order"
+      ]
+    },
+    "zeroexSignatureKind": {
+      "type": "string",
+      "enum": [
+        "illegal",
+        "invalid",
+        "eip712",
+        "ethsign",
+        "presigned",
+        "unknown"
+      ]
+    },
+    "zeroexTransformation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "deploymentNonce",
+        "data",
+        "innerReport",
+        "depthLimited"
+      ],
+      "properties": {
+        "index": { "$ref": "#/$defs/uint" },
+        "deploymentNonce": { "$ref": "#/$defs/uint" },
+        "data": { "$ref": "#/$defs/hexBytes" },
+        "innerReport": {
+          "anyOf": [
+            { "$ref": "#/$defs/decodedEvmReport" },
+            { "type": "null" }
+          ]
+        },
+        "depthLimited": { "type": "boolean" }
+      }
+    },
+    "zeroexFee": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "recipient", "amount", "recipientKind", "recipientLabel"],
+      "properties": {
+        "index": { "$ref": "#/$defs/uint" },
+        "recipient": { "$ref": "#/$defs/evmAddress" },
+        "amount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "recipientKind": { "$ref": "#/$defs/addressKind" },
+        "recipientLabel": { "$ref": "#/$defs/nullableAddressLabel" }
+      }
+    },
+    "zeroexPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variant",
+        "signature",
+        "inputToken",
+        "outputToken",
+        "inputTokenAmount",
+        "minOutputTokenAmount",
+        "inputIsEth",
+        "outputIsEth",
+        "transformations",
+        "signer",
+        "sender",
+        "minGasPrice",
+        "maxGasPrice",
+        "expirationTimeSeconds",
+        "salt",
+        "callData",
+        "value",
+        "feeToken",
+        "feeAmount",
+        "fees",
+        "makerToken",
+        "takerToken",
+        "makerAmount",
+        "takerAmount",
+        "takerTokenFeeAmount",
+        "maker",
+        "taker",
+        "txOrigin",
+        "feeRecipient",
+        "pool",
+        "expiry",
+        "expiryAndNonce",
+        "takerTokenFillAmount",
+        "signatureType",
+        "signatureKind",
+        "signatureV",
+        "signatureR",
+        "signatureS",
+        "inputTokenLabel",
+        "outputTokenLabel",
+        "signerKind",
+        "signerLabel",
+        "senderKind",
+        "senderLabel",
+        "feeTokenLabel",
+        "makerKind",
+        "makerLabel",
+        "takerKind",
+        "takerLabel",
+        "txOriginKind",
+        "txOriginLabel",
+        "feeRecipientKind",
+        "feeRecipientLabel",
+        "callReport",
+        "callDepthLimited"
+      ],
+      "properties": {
+        "variant": { "$ref": "#/$defs/zeroexVariant" },
+        "signature": { "$ref": "#/$defs/nonEmptyString" },
+        "inputToken": { "$ref": "#/$defs/nullableEvmAddress" },
+        "outputToken": { "$ref": "#/$defs/nullableEvmAddress" },
+        "inputTokenAmount": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "minOutputTokenAmount": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "inputIsEth": { "type": "boolean" },
+        "outputIsEth": { "type": "boolean" },
+        "transformations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/zeroexTransformation" }
+        },
+        "signer": { "$ref": "#/$defs/nullableEvmAddress" },
+        "sender": { "$ref": "#/$defs/nullableEvmAddress" },
+        "minGasPrice": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "maxGasPrice": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "expirationTimeSeconds": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "salt": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "callData": { "$ref": "#/$defs/hexBytes" },
+        "value": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "feeToken": { "$ref": "#/$defs/nullableEvmAddress" },
+        "feeAmount": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "fees": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/zeroexFee" }
+        },
+        "makerToken": { "$ref": "#/$defs/nullableEvmAddress" },
+        "takerToken": { "$ref": "#/$defs/nullableEvmAddress" },
+        "makerAmount": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "takerAmount": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "takerTokenFeeAmount": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "maker": { "$ref": "#/$defs/nullableEvmAddress" },
+        "taker": { "$ref": "#/$defs/nullableEvmAddress" },
+        "txOrigin": { "$ref": "#/$defs/nullableEvmAddress" },
+        "feeRecipient": { "$ref": "#/$defs/nullableEvmAddress" },
+        "pool": {
+          "anyOf": [
+            { "$ref": "#/$defs/hexBytes" },
+            { "type": "null" }
+          ]
+        },
+        "expiry": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "expiryAndNonce": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "takerTokenFillAmount": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "signatureType": {
+          "anyOf": [
+            { "$ref": "#/$defs/uint" },
+            { "type": "null" }
+          ]
+        },
+        "signatureKind": {
+          "anyOf": [
+            { "$ref": "#/$defs/zeroexSignatureKind" },
+            { "type": "null" }
+          ]
+        },
+        "signatureV": {
+          "anyOf": [
+            { "$ref": "#/$defs/uint" },
+            { "type": "null" }
+          ]
+        },
+        "signatureR": {
+          "anyOf": [
+            { "$ref": "#/$defs/hexBytes" },
+            { "type": "null" }
+          ]
+        },
+        "signatureS": {
+          "anyOf": [
+            { "$ref": "#/$defs/hexBytes" },
+            { "type": "null" }
+          ]
+        },
+        "inputTokenLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "outputTokenLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "signerKind": { "$ref": "#/$defs/nullableAddressKind" },
+        "signerLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "senderKind": { "$ref": "#/$defs/nullableAddressKind" },
+        "senderLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "feeTokenLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "makerKind": { "$ref": "#/$defs/nullableAddressKind" },
+        "makerLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "takerKind": { "$ref": "#/$defs/nullableAddressKind" },
+        "takerLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "txOriginKind": { "$ref": "#/$defs/nullableAddressKind" },
+        "txOriginLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "feeRecipientKind": { "$ref": "#/$defs/nullableAddressKind" },
+        "feeRecipientLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "callReport": {
+          "anyOf": [
+            { "$ref": "#/$defs/decodedEvmReport" },
+            { "type": "null" }
+          ]
+        },
+        "callDepthLimited": { "type": "boolean" }
+      }
+    },
     "eip7702Payload": {
       "type": "object",
       "additionalProperties": false,
@@ -1604,6 +1891,20 @@
         }
       ]
     },
+    "zeroexReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "zeroex" },
+            "payload": { "$ref": "#/$defs/zeroexPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
     "decodedEvmReport": {
       "description": "Any report the EVM calldata decoder can emit; used for calls nested inside a multicall batch.",
       "oneOf": [
@@ -1616,6 +1917,7 @@
         { "$ref": "#/$defs/universalRouterReport" },
         { "$ref": "#/$defs/cowswapReport" },
         { "$ref": "#/$defs/oneinchReport" },
+        { "$ref": "#/$defs/zeroexReport" },
         { "$ref": "#/$defs/eip7702Report" },
         { "$ref": "#/$defs/erc20TransferReport" },
         { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },

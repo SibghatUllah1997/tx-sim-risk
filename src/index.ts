@@ -56,6 +56,8 @@ export type {
   MulticallCallReport,
   ReportOptions,
   UniversalRouterCommandReport,
+  ZeroExFeeReport,
+  ZeroExTransformationReport,
 } from './report';
 export * from './samples';
 export * from './pages';

@@ -53,6 +53,7 @@ const REPORT_TYPES: readonly JsonReport['type'][] = [
   'universal_router',
   'cowswap',
   'oneinch',
+  'zeroex',
   'eip7702',
   'native_transfer',
   'erc20_transfer',

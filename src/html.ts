@@ -202,6 +202,40 @@ function payloadRows(report: JsonReport): string[] {
     }
     return rows;
   }
+  if (report.type === 'seaport') {
+    const payload = report.payload;
+    const rows = [
+      row('variant', payload.variant),
+      row('signature', payload.signature),
+      row('offerer', payload.offerer),
+      row('orderKind', payload.orderKind),
+      row('offer items', String(payload.offer.length)),
+      row('consideration items', String(payload.consideration.length)),
+    ];
+    if (payload.basicRoute) rows.push(row('route', payload.basicRoute));
+    if (payload.recipient) rows.push(row('recipient', payload.recipient));
+    payload.consideration.forEach((item) => {
+      rows.push(
+        row(
+          `consideration ${item.index}`,
+          `${item.itemKind} ${item.startAmount} -> ${item.recipient}`
+        )
+      );
+    });
+    rows.push(
+      row(
+        'extra data',
+        payload.extraReport
+          ? `${payload.extraReport.type} risks=${payload.extraReport.risks.join(',')}`
+          : payload.extraData === '0x'
+            ? 'none'
+            : payload.extraDepthLimited
+              ? 'not analyzed (depth limit)'
+              : 'unknown'
+      )
+    );
+    return rows;
+  }
   if (report.type === 'cowswap') {
     const payload = report.payload;
     const rows = [

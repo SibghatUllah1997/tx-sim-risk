@@ -14,6 +14,7 @@
     { "$ref": "#/$defs/cowswapReport" },
     { "$ref": "#/$defs/oneinchReport" },
     { "$ref": "#/$defs/zeroexReport" },
+    { "$ref": "#/$defs/seaportReport" },
     { "$ref": "#/$defs/eip7702Report" },
     { "$ref": "#/$defs/nativeTransferReport" },
     { "$ref": "#/$defs/erc20TransferReport" },
@@ -1338,6 +1339,257 @@
         "callDepthLimited": { "type": "boolean" }
       }
     },
+    "seaportVariant": {
+      "type": "string",
+      "enum": [
+        "fulfill_order",
+        "fulfill_advanced_order",
+        "fulfill_basic_order",
+        "fulfill_basic_order_efficient"
+      ]
+    },
+    "seaportItemKind": {
+      "type": "string",
+      "enum": [
+        "native",
+        "erc20",
+        "erc721",
+        "erc1155",
+        "erc721_with_criteria",
+        "erc1155_with_criteria",
+        "unknown"
+      ]
+    },
+    "seaportOrderKind": {
+      "type": "string",
+      "enum": [
+        "full_open",
+        "partial_open",
+        "full_restricted",
+        "partial_restricted",
+        "contract",
+        "unknown"
+      ]
+    },
+    "seaportBasicRoute": {
+      "type": "string",
+      "enum": [
+        "eth_to_erc721",
+        "eth_to_erc1155",
+        "erc20_to_erc721",
+        "erc20_to_erc1155",
+        "erc721_to_erc20",
+        "erc1155_to_erc20",
+        "unknown"
+      ]
+    },
+    "seaportSide": {
+      "type": "string",
+      "enum": ["offer", "consideration", "unknown"]
+    },
+    "seaportOfferItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "itemType",
+        "itemKind",
+        "token",
+        "identifier",
+        "startAmount",
+        "endAmount",
+        "tokenLabel"
+      ],
+      "properties": {
+        "index": { "$ref": "#/$defs/uint" },
+        "itemType": { "$ref": "#/$defs/uint" },
+        "itemKind": { "$ref": "#/$defs/seaportItemKind" },
+        "token": { "$ref": "#/$defs/evmAddress" },
+        "identifier": { "$ref": "#/$defs/unsignedDecimalString" },
+        "startAmount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "endAmount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "tokenLabel": { "$ref": "#/$defs/nullableAddressLabel" }
+      }
+    },
+    "seaportConsiderationItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "itemType",
+        "itemKind",
+        "token",
+        "identifier",
+        "startAmount",
+        "endAmount",
+        "tokenLabel",
+        "recipient",
+        "recipientKind",
+        "recipientLabel"
+      ],
+      "properties": {
+        "index": { "$ref": "#/$defs/uint" },
+        "itemType": { "$ref": "#/$defs/uint" },
+        "itemKind": { "$ref": "#/$defs/seaportItemKind" },
+        "token": { "$ref": "#/$defs/evmAddress" },
+        "identifier": { "$ref": "#/$defs/unsignedDecimalString" },
+        "startAmount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "endAmount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "tokenLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "recipient": { "$ref": "#/$defs/evmAddress" },
+        "recipientKind": { "$ref": "#/$defs/addressKind" },
+        "recipientLabel": { "$ref": "#/$defs/nullableAddressLabel" }
+      }
+    },
+    "seaportAdditionalRecipient": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "amount", "recipient", "recipientKind", "recipientLabel"],
+      "properties": {
+        "index": { "$ref": "#/$defs/uint" },
+        "amount": { "$ref": "#/$defs/unsignedDecimalString" },
+        "recipient": { "$ref": "#/$defs/evmAddress" },
+        "recipientKind": { "$ref": "#/$defs/addressKind" },
+        "recipientLabel": { "$ref": "#/$defs/nullableAddressLabel" }
+      }
+    },
+    "seaportCriteriaResolver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "orderIndex",
+        "side",
+        "itemIndex",
+        "identifier",
+        "criteriaProof"
+      ],
+      "properties": {
+        "index": { "$ref": "#/$defs/uint" },
+        "orderIndex": { "$ref": "#/$defs/unsignedDecimalString" },
+        "side": { "$ref": "#/$defs/seaportSide" },
+        "itemIndex": { "$ref": "#/$defs/unsignedDecimalString" },
+        "identifier": { "$ref": "#/$defs/unsignedDecimalString" },
+        "criteriaProof": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/hexBytes" }
+        }
+      }
+    },
+    "seaportPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variant",
+        "signature",
+        "offerer",
+        "zone",
+        "offer",
+        "consideration",
+        "orderType",
+        "orderKind",
+        "startTime",
+        "endTime",
+        "zoneHash",
+        "salt",
+        "conduitKey",
+        "totalOriginalConsiderationItems",
+        "fulfillerConduitKey",
+        "orderSignature",
+        "numerator",
+        "denominator",
+        "extraData",
+        "recipient",
+        "basicOrderType",
+        "basicRoute",
+        "additionalRecipients",
+        "criteriaResolvers",
+        "offererKind",
+        "offererLabel",
+        "zoneKind",
+        "zoneLabel",
+        "recipientKind",
+        "recipientLabel",
+        "extraReport",
+        "extraDepthLimited"
+      ],
+      "properties": {
+        "variant": { "$ref": "#/$defs/seaportVariant" },
+        "signature": { "$ref": "#/$defs/nonEmptyString" },
+        "offerer": { "$ref": "#/$defs/evmAddress" },
+        "zone": { "$ref": "#/$defs/evmAddress" },
+        "offer": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/seaportOfferItem" }
+        },
+        "consideration": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/seaportConsiderationItem" }
+        },
+        "orderType": { "$ref": "#/$defs/uint" },
+        "orderKind": { "$ref": "#/$defs/seaportOrderKind" },
+        "startTime": { "$ref": "#/$defs/unsignedDecimalString" },
+        "endTime": { "$ref": "#/$defs/unsignedDecimalString" },
+        "zoneHash": { "$ref": "#/$defs/hexBytes" },
+        "salt": { "$ref": "#/$defs/unsignedDecimalString" },
+        "conduitKey": { "$ref": "#/$defs/hexBytes" },
+        "totalOriginalConsiderationItems": { "$ref": "#/$defs/uint" },
+        "fulfillerConduitKey": {
+          "anyOf": [
+            { "$ref": "#/$defs/hexBytes" },
+            { "type": "null" }
+          ]
+        },
+        "orderSignature": { "$ref": "#/$defs/hexBytes" },
+        "numerator": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "denominator": {
+          "anyOf": [
+            { "$ref": "#/$defs/unsignedDecimalString" },
+            { "type": "null" }
+          ]
+        },
+        "extraData": { "$ref": "#/$defs/hexBytes" },
+        "recipient": { "$ref": "#/$defs/nullableEvmAddress" },
+        "basicOrderType": {
+          "anyOf": [
+            { "$ref": "#/$defs/uint" },
+            { "type": "null" }
+          ]
+        },
+        "basicRoute": {
+          "anyOf": [
+            { "$ref": "#/$defs/seaportBasicRoute" },
+            { "type": "null" }
+          ]
+        },
+        "additionalRecipients": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/seaportAdditionalRecipient" }
+        },
+        "criteriaResolvers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/seaportCriteriaResolver" }
+        },
+        "offererKind": { "$ref": "#/$defs/addressKind" },
+        "offererLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "zoneKind": { "$ref": "#/$defs/addressKind" },
+        "zoneLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "recipientKind": { "$ref": "#/$defs/nullableAddressKind" },
+        "recipientLabel": { "$ref": "#/$defs/nullableAddressLabel" },
+        "extraReport": {
+          "anyOf": [
+            { "$ref": "#/$defs/decodedEvmReport" },
+            { "type": "null" }
+          ]
+        },
+        "extraDepthLimited": { "type": "boolean" }
+      }
+    },
     "eip7702Payload": {
       "type": "object",
       "additionalProperties": false,
@@ -1905,6 +2157,20 @@
         }
       ]
     },
+    "seaportReport": {
+      "unevaluatedProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/typedReport" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "seaport" },
+            "payload": { "$ref": "#/$defs/seaportPayload" }
+          },
+          "required": ["type", "payload"]
+        }
+      ]
+    },
     "decodedEvmReport": {
       "description": "Any report the EVM calldata decoder can emit; used for calls nested inside a multicall batch.",
       "oneOf": [
@@ -1918,6 +2184,7 @@
         { "$ref": "#/$defs/cowswapReport" },
         { "$ref": "#/$defs/oneinchReport" },
         { "$ref": "#/$defs/zeroexReport" },
+        { "$ref": "#/$defs/seaportReport" },
         { "$ref": "#/$defs/eip7702Report" },
         { "$ref": "#/$defs/erc20TransferReport" },
         { "$ref": "#/$defs/erc20IncreaseAllowanceReport" },

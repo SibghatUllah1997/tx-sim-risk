@@ -49,6 +49,7 @@ export {
   formatCowswapLines,
   formatOneInchLines,
   formatZeroExLines,
+  formatSeaportLines,
   MULTICALL3_ADDRESS,
 } from './report';
 export type {
@@ -57,6 +58,10 @@ export type {
   JsonReport,
   MulticallCallReport,
   ReportOptions,
+  SeaportAdditionalRecipientReport,
+  SeaportConsiderationReport,
+  SeaportCriteriaResolverReport,
+  SeaportOfferReport,
   UniversalRouterCommandReport,
   ZeroExFeeReport,
   ZeroExTransformationReport,

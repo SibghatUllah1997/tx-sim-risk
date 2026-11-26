@@ -175,6 +175,17 @@ export function formatDetectedHeader(report: JsonReport): string[] {
       }
       return lines;
     }
+    case 'seaport': {
+      const p = report.payload;
+      const lines = [`Detected: Seaport ${p.signature}`];
+      lines.push(`Offerer: ${p.offerer}`);
+      if (p.basicRoute) lines.push(`Route: ${p.basicRoute}`);
+      lines.push(`Offer items: ${p.offer.length}`);
+      lines.push(`Consideration items: ${p.consideration.length}`);
+      if (p.recipient) lines.push(`Recipient: ${p.recipient}`);
+      if (p.extraData !== '0x') lines.push('Extra data: nested');
+      return lines;
+    }
     case 'zeroex': {
       const p = report.payload;
       const lines = [`Detected: 0x Exchange Proxy ${p.signature}`];

@@ -71,6 +71,16 @@ import {
   type ZeroExVariant,
 } from './evm/zeroEx';
 import {
+  SEAPORT_HIDDEN_GRANT_RISK,
+  decodeSeaport,
+  type SeaportBasicRoute,
+  type SeaportDecoded,
+  type SeaportItemKind,
+  type SeaportOrderKind,
+  type SeaportSide,
+  type SeaportVariant,
+} from './evm/seaport';
+import {
   EIP7702_BROAD_DELEGATE_RISK,
   EIP7702_DELEGATION_RISK,
   hasEip7702BroadDelegate,
@@ -460,6 +470,43 @@ export type JsonReport =
       };
     })
   | (ReportMeta & {
+      type: 'seaport';
+      payload: {
+        variant: SeaportVariant;
+        signature: string;
+        offerer: string;
+        zone: string;
+        offer: SeaportOfferReport[];
+        consideration: SeaportConsiderationReport[];
+        orderType: number;
+        orderKind: SeaportOrderKind;
+        startTime: string;
+        endTime: string;
+        zoneHash: string;
+        salt: string;
+        conduitKey: string;
+        totalOriginalConsiderationItems: number;
+        fulfillerConduitKey: string | null;
+        orderSignature: string;
+        numerator: string | null;
+        denominator: string | null;
+        extraData: string;
+        recipient: string | null;
+        basicOrderType: number | null;
+        basicRoute: SeaportBasicRoute | null;
+        additionalRecipients: SeaportAdditionalRecipientReport[];
+        criteriaResolvers: SeaportCriteriaResolverReport[];
+        offererKind: AddressKind;
+        offererLabel: AddressLabel | null;
+        zoneKind: AddressKind;
+        zoneLabel: AddressLabel | null;
+        recipientKind: AddressKind | null;
+        recipientLabel: AddressLabel | null;
+        extraReport: JsonReport | null;
+        extraDepthLimited: boolean;
+      };
+    })
+  | (ReportMeta & {
       type: 'eip7702';
       payload: {
         chainId: string;
@@ -668,6 +715,44 @@ export type ZeroExFeeReport = {
   recipientLabel: AddressLabel | null;
 };
 
+/** One Seaport offer item. */
+export type SeaportOfferReport = {
+  index: number;
+  itemType: number;
+  itemKind: SeaportItemKind;
+  token: string;
+  identifier: string;
+  startAmount: string;
+  endAmount: string;
+  tokenLabel: AddressLabel | null;
+};
+
+/** One Seaport consideration item, including its recipient. */
+export type SeaportConsiderationReport = SeaportOfferReport & {
+  recipient: string;
+  recipientKind: AddressKind;
+  recipientLabel: AddressLabel | null;
+};
+
+/** One extra payout on a Seaport basic order. */
+export type SeaportAdditionalRecipientReport = {
+  index: number;
+  amount: string;
+  recipient: string;
+  recipientKind: AddressKind;
+  recipientLabel: AddressLabel | null;
+};
+
+/** One Seaport criteria resolver for a partial/criteria fill. */
+export type SeaportCriteriaResolverReport = {
+  index: number;
+  orderIndex: string;
+  side: SeaportSide;
+  itemIndex: string;
+  identifier: string;
+  criteriaProof: string[];
+};
+
 /** One inner call of a `multicall` report with its own nested report. */
 export type MulticallCallReport = {
   index: number;
@@ -821,6 +906,11 @@ function grantsAccess(report: JsonReport): boolean {
         report.payload.transformations.some(
           (item) => item.innerReport != null && grantsAccess(item.innerReport)
         )
+      );
+    case 'seaport':
+      return (
+        report.payload.extraReport != null &&
+        grantsAccess(report.payload.extraReport)
       );
     default:
       return false;
@@ -1366,6 +1456,135 @@ function zeroExReport(
       feeRecipientLabel: feeRecipient.label,
       callReport: callNested.report,
       callDepthLimited: callNested.depthLimited,
+    },
+    risks,
+    riskDetails: describeRisks(risks),
+    severity: highestSeverity(risks),
+    simulation,
+  };
+}
+
+function seaportReport(
+  decoded: SeaportDecoded,
+  options: ReportOptions | undefined,
+  depth: number
+): JsonReport {
+  const risks: string[] = [];
+  const simulation = emptySimulation();
+  const extraNested = nestedCalldataReport(decoded.extraData, options, depth);
+  if (extraNested.report) {
+    pushUnique(risks, extraNested.report.risks);
+    if (grantsAccess(extraNested.report)) {
+      pushUnique(risks, [SEAPORT_HIDDEN_GRANT_RISK]);
+    }
+    mergeSimulation(simulation, extraNested.report.simulation);
+  }
+  if (decoded.variant === 'fulfill_advanced_order') {
+    pushUnique(simulation.notes, [
+      'fulfillAdvancedOrder settles a signed Seaport order. Offer items leave the offerer; consideration items go to each named recipient. extraData is forwarded to the zone.',
+    ]);
+  } else if (
+    decoded.variant === 'fulfill_basic_order' ||
+    decoded.variant === 'fulfill_basic_order_efficient'
+  ) {
+    pushUnique(simulation.notes, [
+      'fulfillBasicOrder settles a restricted Seaport listing or offer using the compact basic-order path.',
+    ]);
+  } else {
+    pushUnique(simulation.notes, [
+      'fulfillOrder settles a signed Seaport order. Offer items leave the offerer; consideration items go to each named recipient.',
+    ]);
+  }
+  const offerer = labeledKind(decoded.offerer, options);
+  const zone = labeledKind(decoded.zone, options);
+  const recipient = labeledKind(decoded.recipient, options);
+  const offer = decoded.offer.map(
+    (item): SeaportOfferReport => ({
+      index: item.index,
+      itemType: item.itemType,
+      itemKind: item.itemKind,
+      token: item.token,
+      identifier: item.identifier.toString(),
+      startAmount: item.startAmount.toString(),
+      endAmount: item.endAmount.toString(),
+      tokenLabel: labelFor(item.token, options),
+    })
+  );
+  const consideration = decoded.consideration.map(
+    (item): SeaportConsiderationReport => {
+      const labeled = labeledKind(item.recipient, options);
+      return {
+        index: item.index,
+        itemType: item.itemType,
+        itemKind: item.itemKind,
+        token: item.token,
+        identifier: item.identifier.toString(),
+        startAmount: item.startAmount.toString(),
+        endAmount: item.endAmount.toString(),
+        tokenLabel: labelFor(item.token, options),
+        recipient: item.recipient,
+        recipientKind: labeled.kind ?? 'unknown',
+        recipientLabel: labeled.label,
+      };
+    }
+  );
+  const additionalRecipients = decoded.additionalRecipients.map(
+    (item): SeaportAdditionalRecipientReport => {
+      const labeled = labeledKind(item.recipient, options);
+      return {
+        index: item.index,
+        amount: item.amount.toString(),
+        recipient: item.recipient,
+        recipientKind: labeled.kind ?? 'unknown',
+        recipientLabel: labeled.label,
+      };
+    }
+  );
+  const criteriaResolvers = decoded.criteriaResolvers.map(
+    (item): SeaportCriteriaResolverReport => ({
+      index: item.index,
+      orderIndex: item.orderIndex.toString(),
+      side: item.side,
+      itemIndex: item.itemIndex.toString(),
+      identifier: item.identifier.toString(),
+      criteriaProof: item.criteriaProof,
+    })
+  );
+  return {
+    type: 'seaport',
+    payload: {
+      variant: decoded.variant,
+      signature: decoded.signature,
+      offerer: decoded.offerer,
+      zone: decoded.zone,
+      offer,
+      consideration,
+      orderType: decoded.orderType,
+      orderKind: decoded.orderKind,
+      startTime: decoded.startTime.toString(),
+      endTime: decoded.endTime.toString(),
+      zoneHash: decoded.zoneHash,
+      salt: decoded.salt.toString(),
+      conduitKey: decoded.conduitKey,
+      totalOriginalConsiderationItems: decoded.totalOriginalConsiderationItems,
+      fulfillerConduitKey: decoded.fulfillerConduitKey,
+      orderSignature: decoded.orderSignature,
+      numerator: stringifyNullable(decoded.numerator),
+      denominator: stringifyNullable(decoded.denominator),
+      extraData: decoded.extraData,
+      recipient: decoded.recipient,
+      basicOrderType: decoded.basicOrderType,
+      basicRoute: decoded.basicRoute,
+      additionalRecipients,
+      criteriaResolvers,
+      offererKind: offerer.kind ?? 'unknown',
+      offererLabel: offerer.label,
+      zoneKind: zone.kind ?? 'unknown',
+      zoneLabel: zone.label,
+      recipientKind: recipient.kind,
+      recipientLabel: recipient.label,
+      extraReport: extraNested.report,
+      extraDepthLimited: extraNested.depthLimited,
     },
     risks,
     riskDetails: describeRisks(risks),
@@ -1923,6 +2142,11 @@ function generateJsonReportAt(
     return zeroExReport(zeroEx, options, depth);
   }
 
+  const seaport = decodeSeaport(data);
+  if (seaport) {
+    return seaportReport(seaport, options, depth);
+  }
+
   // Calls without a dedicated risk rule (transferFrom, safeTransferFrom,
   // batch transfers, ...) still get decoded through the generic ABI path.
   const generic = decodeCommonAbi(data);
@@ -2093,6 +2317,9 @@ export function formatCowswapLines(
     if (item.innerReport?.type === 'zeroex') {
       lines.push(...formatZeroExLines(item.innerReport, `${indent}  `));
     }
+    if (item.innerReport?.type === 'seaport') {
+      lines.push(...formatSeaportLines(item.innerReport, `${indent}  `));
+    }
   }
   return lines;
 }
@@ -2150,6 +2377,11 @@ export function formatOneInchLines(
         ...formatZeroExLines(report.payload.executorReport, `${indent}  `)
       );
     }
+    if (report.payload.executorReport?.type === 'seaport') {
+      lines.push(
+        ...formatSeaportLines(report.payload.executorReport, `${indent}  `)
+      );
+    }
   }
   return lines;
 }
@@ -2192,6 +2424,9 @@ export function formatZeroExLines(
     if (item.innerReport?.type === 'zeroex') {
       lines.push(...formatZeroExLines(item.innerReport, `${indent}  `));
     }
+    if (item.innerReport?.type === 'seaport') {
+      lines.push(...formatSeaportLines(item.innerReport, `${indent}  `));
+    }
   }
   if (report.payload.callReport || report.payload.callDepthLimited) {
     const what = report.payload.callDepthLimited
@@ -2213,6 +2448,52 @@ export function formatZeroExLines(
     }
     if (report.payload.callReport?.type === 'zeroex') {
       lines.push(...formatZeroExLines(report.payload.callReport, `${indent}  `));
+    }
+    if (report.payload.callReport?.type === 'seaport') {
+      lines.push(...formatSeaportLines(report.payload.callReport, `${indent}  `));
+    }
+  }
+  return lines;
+}
+
+/** One line per nested Seaport extraData call and consideration recipient. */
+export function formatSeaportLines(
+  report: Extract<JsonReport, { type: 'seaport' }>,
+  indent: string
+): string[] {
+  const lines: string[] = [];
+  if (report.payload.recipient) {
+    const named = formatAddressLabel(report.payload.recipientLabel);
+    lines.push(
+      `${indent}Recipient: ${named ? `${report.payload.recipient} (${named})` : report.payload.recipient}`
+    );
+  }
+  for (const item of report.payload.consideration) {
+    const named = formatAddressLabel(item.recipientLabel);
+    const dest = named
+      ? `${item.recipient} (${named})`
+      : item.recipient;
+    lines.push(
+      `${indent}Consideration [${item.index}] ${item.itemKind} ${item.startAmount} -> ${dest}`
+    );
+  }
+  if (report.payload.extraReport || report.payload.extraDepthLimited) {
+    const what = report.payload.extraDepthLimited
+      ? 'nested call not analyzed (depth limit)'
+      : describeInnerReport(report.payload.extraReport);
+    lines.push(`${indent}Extra data: ${what}`);
+    if (report.payload.extraReport?.type === 'multicall') {
+      lines.push(
+        ...formatMulticallCallLines(
+          report.payload.extraReport.payload.calls,
+          `${indent}  `
+        )
+      );
+    }
+    if (report.payload.extraReport?.type === 'seaport') {
+      lines.push(
+        ...formatSeaportLines(report.payload.extraReport, `${indent}  `)
+      );
     }
   }
   return lines;
@@ -2307,6 +2588,9 @@ export function formatReportFooter(report: JsonReport): string[] {
       break;
     case 'zeroex':
       lines.push(...formatZeroExLines(report, ''));
+      break;
+    case 'seaport':
+      lines.push(...formatSeaportLines(report, ''));
       break;
     case 'safe_exec': {
       lines.push(`Target kind: ${report.payload.targetKind}`);

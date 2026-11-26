@@ -62,3 +62,10 @@ More nested envelopes after v0.2.0. Default analysis stays offline. Use existing
 - [x] Day 50: Flag 1inch grants hidden inside the envelope, and swaps targeting phishing-listed recipients
 - [x] Day 51: Decode 0x Exchange Proxy `transformERC20` / `executeMetaTransaction` (and V2) / `fillLimitOrder` / `fillRfqOrder` / `fillOtcOrder` and recursively analyze inner transformer data and meta-tx calldata
 - [x] Day 52: Flag 0x grants hidden inside the envelope, and fills targeting phishing-listed takers or fee recipients
+
+### Phase 4
+
+Marketplace fills after the aggregator envelopes. Default analysis stays offline. Use existing audited libraries (`viem`, `@solana/web3.js`) and do not hand-roll cryptography.
+
+- [ ] Day 53: Decode Seaport `fulfillOrder` / `fulfillAdvancedOrder` / `fulfillBasicOrder` (and the efficient basic-order selector) and recursively analyze advanced-order extraData
+- [ ] Day 54: Flag grants hidden inside extraData, and considerations / additional recipients targeting phishing-listed addresses

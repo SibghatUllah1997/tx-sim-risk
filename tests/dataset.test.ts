@@ -76,6 +76,7 @@ describe('example dataset file', () => {
       'cowswap_hidden_grant',
       'oneinch_hidden_grant',
       'zeroex_hidden_grant',
+      'seaport_hidden_grant',
     ]) {
       expect(risks, id).toContain(id);
     }

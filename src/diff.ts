@@ -116,6 +116,18 @@ function collectAddresses(report: JsonReport, out: DiffAddressHit[]): void {
         collectAddresses(report.payload.executorReport, out);
       }
       return;
+    case 'seaport':
+      pushAddress(out, report.payload.recipient, 'recipient');
+      for (const item of report.payload.consideration) {
+        pushAddress(out, item.recipient, 'recipient');
+      }
+      for (const item of report.payload.additionalRecipients) {
+        pushAddress(out, item.recipient, 'recipient');
+      }
+      if (report.payload.extraReport) {
+        collectAddresses(report.payload.extraReport, out);
+      }
+      return;
     case 'zeroex':
       pushAddress(out, report.payload.taker, 'recipient');
       pushAddress(out, report.payload.feeRecipient, 'recipient');
@@ -230,6 +242,17 @@ function collectAmounts(
       }
       if (report.payload.executorReport) {
         collectAmounts(report.payload.executorReport, out, field('executor'));
+      }
+      return;
+    case 'seaport':
+      report.payload.offer.forEach((item, index) => {
+        set(`offer[${index}].amount`, item.startAmount);
+      });
+      report.payload.consideration.forEach((item, index) => {
+        set(`consideration[${index}].amount`, item.startAmount);
+      });
+      if (report.payload.extraReport) {
+        collectAmounts(report.payload.extraReport, out, field('extra'));
       }
       return;
     case 'zeroex':

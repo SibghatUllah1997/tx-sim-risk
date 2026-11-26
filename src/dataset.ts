@@ -54,6 +54,7 @@ const REPORT_TYPES: readonly JsonReport['type'][] = [
   'cowswap',
   'oneinch',
   'zeroex',
+  'seaport',
   'eip7702',
   'native_transfer',
   'erc20_transfer',

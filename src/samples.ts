@@ -1,4 +1,10 @@
-import { encodeAbiParameters, encodeFunctionData, parseAbi, parseAbiParameters } from 'viem';
+import {
+  encodeAbiParameters,
+  encodeFunctionData,
+  parseAbi,
+  parseAbiParameters,
+  type Abi,
+} from 'viem';
 import { createAddressKindMap } from './evm/addressKind';
 import { generateJsonReport, type JsonReport, type ReportOptions } from './report';
 
@@ -62,6 +68,9 @@ const ONEINCH_SWAP_ABI = parseAbi([
 const ZEROEX_TRANSFORM_ABI = parseAbi([
   'function transformERC20(address inputToken, address outputToken, uint256 inputTokenAmount, uint256 minOutputTokenAmount, (uint32 deploymentNonce, bytes data)[] transformations)',
 ]);
+const SEAPORT_FULFILL_SIG: string =
+  'function fulfillAdvancedOrder(((address offerer, address zone, (uint8 itemType, address token, uint256 identifierOrCriteria, uint256 startAmount, uint256 endAmount)[] offer, (uint8 itemType, address token, uint256 identifierOrCriteria, uint256 startAmount, uint256 endAmount, address recipient)[] consideration, uint8 orderType, uint256 startTime, uint256 endTime, bytes32 zoneHash, uint256 salt, bytes32 conduitKey, uint256 totalOriginalConsiderationItems) parameters, uint120 numerator, uint120 denominator, bytes signature, bytes extraData) advancedOrder, (uint256 orderIndex, uint8 side, uint256 index, uint256 identifier, bytes32[] criteriaProof)[] criteriaResolvers, bytes32 fulfillerConduitKey, address recipient)';
+const SEAPORT_FULFILL_ABI = parseAbi([SEAPORT_FULFILL_SIG]) as Abi;
 const TOKEN_OUT = `0x${'dd'.repeat(20)}` as const;
 const TOKEN = `0x${'cc'.repeat(20)}` as const;
 const ZERO = `0x${'0'.repeat(40)}` as const;
@@ -300,6 +309,57 @@ export const SAMPLE_SPECS: readonly SampleSpec[] = Object.freeze([
             data: encodeApprove(UNISWAP_V2_ROUTER, 'f'.repeat(64)) as `0x${string}`,
           },
         ],
+      ],
+    }),
+  }),
+  Object.freeze({
+    id: 'seaport-hidden-approve',
+    title: 'Unlimited approve hidden in a Seaport advanced order',
+    summary:
+      'Seaport fulfillAdvancedOrder whose extraData is an unlimited ERC-20 approve.',
+    input: encodeFunctionData({
+      abi: SEAPORT_FULFILL_ABI,
+      functionName: 'fulfillAdvancedOrder',
+      args: [
+        {
+          parameters: {
+            offerer: `0x${'11'.repeat(20)}` as `0x${string}`,
+            zone: `0x${'22'.repeat(20)}` as `0x${string}`,
+            offer: [
+              {
+                itemType: 2,
+                token: TOKEN_OUT,
+                identifierOrCriteria: 7n,
+                startAmount: 1n,
+                endAmount: 1n,
+              },
+            ],
+            consideration: [
+              {
+                itemType: 0,
+                token: ZERO,
+                identifierOrCriteria: 0n,
+                startAmount: 10n,
+                endAmount: 10n,
+                recipient: `0x${RECIPIENT}` as `0x${string}`,
+              },
+            ],
+            orderType: 0,
+            startTime: 1_700_000_000n,
+            endTime: 1_900_000_000n,
+            zoneHash: `0x${'ab'.repeat(32)}` as `0x${string}`,
+            salt: 9n,
+            conduitKey: `0x${'cd'.repeat(32)}` as `0x${string}`,
+            totalOriginalConsiderationItems: 1n,
+          },
+          numerator: 1n,
+          denominator: 1n,
+          signature: `0x${'11'.repeat(65)}` as `0x${string}`,
+          extraData: encodeApprove(UNISWAP_V2_ROUTER, 'f'.repeat(64)) as `0x${string}`,
+        },
+        [],
+        `0x${'cd'.repeat(32)}` as `0x${string}`,
+        `0x${RECIPIENT}` as `0x${string}`,
       ],
     }),
   }),

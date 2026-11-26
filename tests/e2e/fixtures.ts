@@ -124,6 +124,65 @@ const ZEROEX_ABI = parseAbi([
 const ZEROEX_TOKEN: Hex = `0x${'cc'.repeat(20)}`;
 const ZEROEX_TOKEN_OUT: Hex = `0x${'dd'.repeat(20)}`;
 
+const SEAPORT_ABI = parseAbi([
+  'function fulfillAdvancedOrder(((address offerer, address zone, (uint8 itemType, address token, uint256 identifierOrCriteria, uint256 startAmount, uint256 endAmount)[] offer, (uint8 itemType, address token, uint256 identifierOrCriteria, uint256 startAmount, uint256 endAmount, address recipient)[] consideration, uint8 orderType, uint256 startTime, uint256 endTime, bytes32 zoneHash, uint256 salt, bytes32 conduitKey, uint256 totalOriginalConsiderationItems) parameters, uint120 numerator, uint120 denominator, bytes signature, bytes extraData) advancedOrder, (uint256 orderIndex, uint8 side, uint256 index, uint256 identifier, bytes32[] criteriaProof)[] criteriaResolvers, bytes32 fulfillerConduitKey, address recipient)',
+]);
+const SEAPORT_OFFERER: Hex = `0x${'11'.repeat(20)}`;
+const SEAPORT_ZONE: Hex = `0x${'22'.repeat(20)}`;
+const SEAPORT_CONDUIT: Hex = `0x${'cd'.repeat(32)}`;
+const SEAPORT_ZONE_HASH: Hex = `0x${'ab'.repeat(32)}`;
+const SEAPORT_SIG: Hex = `0x${'11'.repeat(65)}`;
+const SEAPORT_RECIPIENT: Hex = `0x${'aa'.repeat(20)}`;
+
+/** Seaport fulfillAdvancedOrder wrapping extraData. */
+export function seaportAdvancedCalldata(extraData: Hex): Hex {
+  return encodeFunctionData({
+    abi: SEAPORT_ABI,
+    functionName: 'fulfillAdvancedOrder',
+    args: [
+      {
+        parameters: {
+          offerer: SEAPORT_OFFERER,
+          zone: SEAPORT_ZONE,
+          offer: [
+            {
+              itemType: 2,
+              token: ZEROEX_TOKEN_OUT,
+              identifierOrCriteria: 7n,
+              startAmount: 1n,
+              endAmount: 1n,
+            },
+          ],
+          consideration: [
+            {
+              itemType: 0,
+              token: `0x${'0'.repeat(40)}`,
+              identifierOrCriteria: 0n,
+              startAmount: 10n,
+              endAmount: 10n,
+              recipient: SEAPORT_RECIPIENT,
+            },
+          ],
+          orderType: 0,
+          startTime: 1_700_000_000n,
+          endTime: 1_900_000_000n,
+          zoneHash: SEAPORT_ZONE_HASH,
+          salt: 9n,
+          conduitKey: SEAPORT_CONDUIT,
+          totalOriginalConsiderationItems: 1n,
+        },
+        numerator: 1n,
+        denominator: 1n,
+        signature: SEAPORT_SIG,
+        extraData,
+      },
+      [],
+      SEAPORT_CONDUIT,
+      SEAPORT_RECIPIENT,
+    ],
+  });
+}
+
 /** 0x Exchange Proxy transformERC20 wrapping transformer calldata. */
 export function zeroExTransformCalldata(callData: Hex): Hex {
   return encodeFunctionData({

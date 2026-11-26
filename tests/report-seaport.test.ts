@@ -5,6 +5,7 @@ import {
   SEAPORT_HIDDEN_GRANT_RISK,
   SEAPORT_SIGNATURES,
   UNLIMITED_APPROVAL_RISK,
+  diffReports,
   formatDetectedHeader,
   formatReportFooter,
   generateJsonReport,
@@ -187,6 +188,20 @@ describe('seaport reports', () => {
     ]);
     expect(report.risks).toEqual([]);
     expect(isValidReport(report)).toBe(true);
+  });
+
+  it('diffs a new inner spender when extraData adds a hidden approve', () => {
+    const baseline = generateJsonReport(fulfillAdvanced(transfer(RECIPIENT, 1n)))!;
+    const candidate = generateJsonReport(fulfillAdvanced(approve(ROUTER, 8n)))!;
+    const diff = diffReports(baseline, candidate);
+    expect(diff.candidate.type).toBe('seaport');
+    expect(diff.addedAddresses).toEqual([
+      { address: ROUTER, role: 'spender' },
+    ]);
+    expect(diff.addedRisks).toEqual([SEAPORT_HIDDEN_GRANT_RISK]);
+    expect(diff.amountChanges.some((c) => c.field === 'extra.amount')).toBe(
+      true
+    );
   });
 
   it('does not raise a hidden-grant warning for a revoke', () => {

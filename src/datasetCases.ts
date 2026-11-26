@@ -4,6 +4,7 @@ import {
   parseAbi,
   parseAbiParameters,
   serializeTransaction,
+  type Abi,
   type Hex,
 } from 'viem';
 import {
@@ -274,6 +275,88 @@ function zeroExTransform(callData: Hex = '0x'): Hex {
       10n,
       9n,
       [{ deploymentNonce: 3, data: callData }],
+    ],
+  });
+}
+
+const SEAPORT_OFFERER: Hex = `0x${'11'.repeat(20)}`;
+const SEAPORT_ZONE: Hex = `0x${'22'.repeat(20)}`;
+const SEAPORT_ZONE_HASH: Hex = `0x${'ab'.repeat(32)}`;
+const SEAPORT_CONDUIT: Hex = `0x${'cd'.repeat(32)}`;
+const SEAPORT_SIG: Hex = `0x${'11'.repeat(65)}`;
+const SEAPORT_FULFILL_ORDER_SIG: string =
+  'function fulfillOrder(((address offerer, address zone, (uint8 itemType, address token, uint256 identifierOrCriteria, uint256 startAmount, uint256 endAmount)[] offer, (uint8 itemType, address token, uint256 identifierOrCriteria, uint256 startAmount, uint256 endAmount, address recipient)[] consideration, uint8 orderType, uint256 startTime, uint256 endTime, bytes32 zoneHash, uint256 salt, bytes32 conduitKey, uint256 totalOriginalConsiderationItems) parameters, bytes signature) order, bytes32 fulfillerConduitKey)';
+const SEAPORT_FULFILL_ADVANCED_SIG: string =
+  'function fulfillAdvancedOrder(((address offerer, address zone, (uint8 itemType, address token, uint256 identifierOrCriteria, uint256 startAmount, uint256 endAmount)[] offer, (uint8 itemType, address token, uint256 identifierOrCriteria, uint256 startAmount, uint256 endAmount, address recipient)[] consideration, uint8 orderType, uint256 startTime, uint256 endTime, bytes32 zoneHash, uint256 salt, bytes32 conduitKey, uint256 totalOriginalConsiderationItems) parameters, uint120 numerator, uint120 denominator, bytes signature, bytes extraData) advancedOrder, (uint256 orderIndex, uint8 side, uint256 index, uint256 identifier, bytes32[] criteriaProof)[] criteriaResolvers, bytes32 fulfillerConduitKey, address recipient)';
+const SEAPORT_FULFILL_ORDER_ABI = parseAbi([
+  SEAPORT_FULFILL_ORDER_SIG,
+]) as Abi;
+const SEAPORT_FULFILL_ADVANCED_ABI = parseAbi([
+  SEAPORT_FULFILL_ADVANCED_SIG,
+]) as Abi;
+
+function seaportParams(considerationRecipient: string) {
+  return {
+    offerer: SEAPORT_OFFERER,
+    zone: SEAPORT_ZONE,
+    offer: [
+      {
+        itemType: 2,
+        token: TOKEN_OUT,
+        identifierOrCriteria: 7n,
+        startAmount: 1n,
+        endAmount: 1n,
+      },
+    ],
+    consideration: [
+      {
+        itemType: 0,
+        token: `0x${'0'.repeat(40)}` as Hex,
+        identifierOrCriteria: 0n,
+        startAmount: 10n,
+        endAmount: 10n,
+        recipient: `0x${considerationRecipient.toLowerCase()}` as Hex,
+      },
+    ],
+    orderType: 0,
+    startTime: 1_700_000_000n,
+    endTime: 1_900_000_000n,
+    zoneHash: SEAPORT_ZONE_HASH,
+    salt: 9n,
+    conduitKey: SEAPORT_CONDUIT,
+    totalOriginalConsiderationItems: 1n,
+  };
+}
+
+function seaportFulfillOrder(considerationRecipient: string = RECIPIENT): Hex {
+  return encodeFunctionData({
+    abi: SEAPORT_FULFILL_ORDER_ABI,
+    functionName: 'fulfillOrder',
+    args: [
+      {
+        parameters: seaportParams(considerationRecipient),
+        signature: SEAPORT_SIG,
+      },
+      SEAPORT_CONDUIT,
+    ],
+  });
+}
+
+function seaportFulfillAdvanced(extraData: Hex = '0x'): Hex {
+  return encodeFunctionData({
+    abi: SEAPORT_FULFILL_ADVANCED_ABI,
+    functionName: 'fulfillAdvancedOrder',
+    args: [
+      {
+        parameters: seaportParams(RECIPIENT),
+        numerator: 1n,
+        denominator: 1n,
+        signature: SEAPORT_SIG,
+        extraData,
+      },
+      [],
+      SEAPORT_CONDUIT,
+      `0x${RECIPIENT}`,
     ],
   });
 }
@@ -694,6 +777,15 @@ export function buildExampleDataset(): Dataset {
     evm('zeroex-fill-limit', '0x fillLimitOrder of 10 units to a normal exclusive taker.',
       zeroExFillLimit(),
       { type: 'zeroex', risks: [], severity: 'info' }),
+    evm('seaport-hidden-unlimited-approve', 'Seaport fulfillAdvancedOrder whose extraData is an unlimited approve.',
+      seaportFulfillAdvanced(approve(ROUTER, MAX_UINT)),
+      { type: 'seaport', risks: ['unlimited_approval', 'seaport_hidden_grant'], severity: 'high' }),
+    evm('seaport-phishing-recipient', 'Seaport fulfillOrder whose consideration recipient is on the phishing seed list.',
+      seaportFulfillOrder(PHISHING_DRAINER),
+      { type: 'seaport', risks: ['phishing_spender'], severity: 'high' }),
+    evm('seaport-fulfill-order', 'Seaport fulfillOrder of one ERC-721 for 10 wei to a normal recipient.',
+      seaportFulfillOrder(),
+      { type: 'seaport', risks: [], severity: 'info' }),
     evm('erc20-plain-transfer', 'transfer() of 255 units from a named sender.',
       transfer(RECIPIENT, 'ff'),
       { type: 'erc20_transfer', risks: [], severity: 'info' },

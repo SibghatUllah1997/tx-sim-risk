@@ -22,12 +22,13 @@ Features:
 - Decode Cow Protocol GPv2Settlement `settle`, recurse into interactions, and flag hidden grants (`cowswap_hidden_grant`)
 - Decode 1inch Aggregation Router `swap` / `unoswapTo` / `clipperSwapTo`, recurse into executor calldata and attached permits, and flag hidden grants (`oneinch_hidden_grant`)
 - Decode 0x Exchange Proxy `transformERC20` / `executeMetaTransaction` / `fillLimitOrder` (plus RFQ and OTC fills), recurse into transformer data and meta-tx calldata, and flag hidden grants (`zeroex_hidden_grant`)
+- Decode Seaport `fulfillOrder` / `fulfillAdvancedOrder` / `fulfillBasicOrder`, recurse into extraData, and flag hidden grants (`seaport_hidden_grant`)
 - Parse EIP-7702 type-4 authorization lists and flag delegate designations, including any-chain (`chain_id = 0`) grants
 - Report raw txs with empty calldata as native ETH transfers, and flag ETH attached to a non-payable token or wallet call (`native_value_nonpayable_call`)
 - Decode ERC-721 / ERC-1155 setApprovalForAll and flag operator grants
 - Flag unlimited approvals, burns to the zero address, phishing spenders, and grants to EOAs
 - Classify spenders/operators as EOA, contract, or unknown (bytecode or known-contract map)
-- Label well-known routers, bridges, and tokens in reports (Uniswap, Sushi, 1inch, 0x, WETH/USDC/USDT/DAI/WBTC, Permit2, common L1 bridges)
+- Label well-known routers, bridges, and tokens in reports (Uniswap, Sushi, 1inch, 0x, Seaport, WETH/USDC/USDT/DAI/WBTC, Permit2, common L1 bridges)
 - Human-readable reason strings for each risk id (JSON `riskDetails` and CLI footer)
 - Config-driven allow/block lists (`--config`) for trusted and banned spenders
 - info/warn/high severity on each risk and on the report as a whole
@@ -125,7 +126,7 @@ Sample HTML gallery
 - Pushes to `main` deploy that gallery with GitHub Pages (see `.github/workflows/pages.yml`)
 
 Example dataset
-- `examples/dataset/cases.json` holds 52 labelled inputs (ERC-20 incl. permits and Permit2, multicall, ERC-4337, EIP-7702, Gnosis Safe, Uniswap Universal Router, CowSwap, 1inch Aggregation Router, 0x Exchange Proxy, NFT, raw EVM txs incl. native ETH value, Solana SPL token) with the report type, risks, and severity each should produce
+- `examples/dataset/cases.json` holds 55 labelled inputs (ERC-20 incl. permits and Permit2, multicall, ERC-4337, EIP-7702, Gnosis Safe, Uniswap Universal Router, CowSwap, 1inch Aggregation Router, 0x Exchange Proxy, Seaport, NFT, raw EVM txs incl. native ETH value, Solana SPL token) with the report type, risks, and severity each should produce
 - Every case maps to CLI flags, e.g. `node dist/cli.js <input> --config examples/risk-lists.json --json`
 - `npm run dataset` rebuilds the file from `src/datasetCases.ts` and checks every case; tests fail if the file and the builder drift
 - Use it as a regression corpus or to compare another decoder: `checkDatasetFile('examples/dataset/cases.json')`

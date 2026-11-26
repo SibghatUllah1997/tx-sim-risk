@@ -69,6 +69,16 @@ const SEED_ENTRIES: readonly CatalogEntry[] = [
     kind: 'router',
   },
   {
+    address: '0x00000000000000adc04c56bf30ac9d3c0aaf14dc',
+    name: 'Seaport 1.5',
+    kind: 'router',
+  },
+  {
+    address: '0x0000000000000068f116a894984e2db1123eb395',
+    name: 'Seaport 1.6',
+    kind: 'router',
+  },
+  {
     address: '0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f',
     name: 'Arbitrum Delayed Inbox',
     kind: 'bridge',

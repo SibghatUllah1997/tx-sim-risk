@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { encodeFunctionData, parseAbi, type Hex } from 'viem';
 import {
+  PHISHING_SPENDER_RISK,
   SEAPORT_HIDDEN_GRANT_RISK,
   SEAPORT_SIGNATURES,
   UNLIMITED_APPROVAL_RISK,
@@ -8,6 +9,7 @@ import {
   formatReportFooter,
   generateJsonReport,
   isValidReport,
+  lookupAddressLabel,
   renderHtmlReport,
 } from '../src';
 
@@ -17,6 +19,8 @@ const ZONE: Hex = '0x2222222222222222222222222222222222222222';
 const RECIPIENT: Hex = '0x3333333333333333333333333333333333333333';
 const ZERO: Hex = '0x0000000000000000000000000000000000000000';
 const ROUTER: Hex = '0x7a250d5630b4cf539739df2c5dacb4c659f2488d';
+const PHISHING: Hex = '0xbad0000000000000000000000000000000000001';
+const SEAPORT_1_5: Hex = '0x00000000000000adc04c56bf30ac9d3c0aaf14dc';
 const ZONE_HASH: Hex = `0x${'ab'.repeat(32)}`;
 const CONDUIT: Hex = `0x${'cd'.repeat(32)}`;
 const ORDER_SIG: Hex = `0x${'11'.repeat(65)}`;
@@ -29,6 +33,7 @@ const ERC20_ABI = parseAbi([
 const SEAPORT_ABI = parseAbi([
   'function fulfillOrder(((address offerer, address zone, (uint8 itemType, address token, uint256 identifierOrCriteria, uint256 startAmount, uint256 endAmount)[] offer, (uint8 itemType, address token, uint256 identifierOrCriteria, uint256 startAmount, uint256 endAmount, address recipient)[] consideration, uint8 orderType, uint256 startTime, uint256 endTime, bytes32 zoneHash, uint256 salt, bytes32 conduitKey, uint256 totalOriginalConsiderationItems) parameters, bytes signature) order, bytes32 fulfillerConduitKey)',
   'function fulfillAdvancedOrder(((address offerer, address zone, (uint8 itemType, address token, uint256 identifierOrCriteria, uint256 startAmount, uint256 endAmount)[] offer, (uint8 itemType, address token, uint256 identifierOrCriteria, uint256 startAmount, uint256 endAmount, address recipient)[] consideration, uint8 orderType, uint256 startTime, uint256 endTime, bytes32 zoneHash, uint256 salt, bytes32 conduitKey, uint256 totalOriginalConsiderationItems) parameters, uint120 numerator, uint120 denominator, bytes signature, bytes extraData) advancedOrder, (uint256 orderIndex, uint8 side, uint256 index, uint256 identifier, bytes32[] criteriaProof)[] criteriaResolvers, bytes32 fulfillerConduitKey, address recipient)',
+  'function fulfillBasicOrder((address considerationToken, uint256 considerationIdentifier, uint256 considerationAmount, address offerer, address zone, address offerToken, uint256 offerIdentifier, uint256 offerAmount, uint8 basicOrderType, uint256 startTime, uint256 endTime, bytes32 zoneHash, uint256 salt, bytes32 offererConduitKey, bytes32 fulfillerConduitKey, uint256 totalOriginalAdditionalRecipients, (uint256 amount, address recipient)[] additionalRecipients, bytes signature) parameters)',
 ]);
 
 function approve(spender: Hex, value: bigint): Hex {
@@ -92,7 +97,33 @@ function fulfillOrder(): Hex {
   });
 }
 
-function fulfillAdvanced(extraData: Hex = '0x'): Hex {
+function fulfillOrderWithRecipient(recipient: Hex): Hex {
+  return encodeFunctionData({
+    abi: SEAPORT_ABI,
+    functionName: 'fulfillOrder',
+    args: [
+      {
+        parameters: {
+          ...parameters,
+          consideration: [
+            {
+              itemType: 0,
+              token: ZERO,
+              identifierOrCriteria: 0n,
+              startAmount: 10n,
+              endAmount: 10n,
+              recipient,
+            },
+          ],
+        },
+        signature: ORDER_SIG,
+      },
+      CONDUIT,
+    ],
+  });
+}
+
+function fulfillAdvanced(extraData: Hex = '0x', recipient: Hex = RECIPIENT): Hex {
   return encodeFunctionData({
     abi: SEAPORT_ABI,
     functionName: 'fulfillAdvancedOrder',
@@ -106,7 +137,7 @@ function fulfillAdvanced(extraData: Hex = '0x'): Hex {
       },
       [],
       CONDUIT,
-      RECIPIENT,
+      recipient,
     ],
   });
 }
@@ -162,6 +193,63 @@ describe('seaport reports', () => {
     const report = generateJsonReport(fulfillAdvanced(approve(ROUTER, 0n)))!;
     expect(report.risks).toEqual([]);
     expect(report.severity).toBe('info');
+  });
+
+  it('flags a phishing-listed consideration recipient', () => {
+    const report = generateJsonReport(fulfillOrderWithRecipient(PHISHING))!;
+    expect(report.type).toBe('seaport');
+    expect(report.risks).toEqual([PHISHING_SPENDER_RISK]);
+    expect(report.severity).toBe('high');
+    expect(isValidReport(report)).toBe(true);
+  });
+
+  it('flags a phishing-listed advanced-order leftover recipient', () => {
+    const report = generateJsonReport(fulfillAdvanced('0x', PHISHING))!;
+    expect(report.type).toBe('seaport');
+    if (report.type !== 'seaport') return;
+    expect(report.payload.recipient).toBe(PHISHING);
+    expect(report.risks).toEqual([PHISHING_SPENDER_RISK]);
+    expect(report.severity).toBe('high');
+    expect(isValidReport(report)).toBe(true);
+  });
+
+  it('flags a phishing-listed basic-order additional recipient', () => {
+    const report = generateJsonReport(
+      encodeFunctionData({
+        abi: SEAPORT_ABI,
+        functionName: 'fulfillBasicOrder',
+        args: [
+          {
+            considerationToken: ZERO,
+            considerationIdentifier: 0n,
+            considerationAmount: 10n,
+            offerer: OFFERER,
+            zone: ZONE,
+            offerToken: NFT,
+            offerIdentifier: 7n,
+            offerAmount: 1n,
+            basicOrderType: 0,
+            startTime: 1_700_000_000n,
+            endTime: 1_900_000_000n,
+            zoneHash: ZONE_HASH,
+            salt: 9n,
+            offererConduitKey: CONDUIT,
+            fulfillerConduitKey: CONDUIT,
+            totalOriginalAdditionalRecipients: 1n,
+            additionalRecipients: [{ amount: 1n, recipient: PHISHING }],
+            signature: ORDER_SIG,
+          },
+        ],
+      })
+    )!;
+    expect(report.type).toBe('seaport');
+    expect(report.risks).toEqual([PHISHING_SPENDER_RISK]);
+    expect(report.severity).toBe('high');
+    expect(lookupAddressLabel(SEAPORT_1_5)).toEqual({
+      name: 'Seaport 1.5',
+      kind: 'router',
+    });
+    expect(isValidReport(report)).toBe(true);
   });
 
   it('prints nested extraData details in the text footer and HTML table', () => {

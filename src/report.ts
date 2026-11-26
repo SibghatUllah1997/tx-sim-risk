@@ -73,6 +73,7 @@ import {
 import {
   SEAPORT_HIDDEN_GRANT_RISK,
   decodeSeaport,
+  isSeaportNamedRecipient,
   type SeaportBasicRoute,
   type SeaportDecoded,
   type SeaportItemKind,
@@ -1478,6 +1479,17 @@ function seaportReport(
       pushUnique(risks, [SEAPORT_HIDDEN_GRANT_RISK]);
     }
     mergeSimulation(simulation, extraNested.report.simulation);
+  }
+  for (const address of [
+    decoded.recipient,
+    ...decoded.consideration.map((item) => item.recipient),
+    ...decoded.additionalRecipients.map((item) => item.recipient),
+  ]) {
+    if (!isSeaportNamedRecipient(address)) continue;
+    pushUnique(risks, [
+      ...blocklistedSpenderRisks(address, options?.lists),
+      ...phishingSpenderRisks(address, options?.phishingIndex),
+    ]);
   }
   if (decoded.variant === 'fulfill_advanced_order') {
     pushUnique(simulation.notes, [

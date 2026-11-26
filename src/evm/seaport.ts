@@ -240,7 +240,7 @@ export function seaportBasicRoute(basicOrderType: number): SeaportBasicRoute {
 /** True when `address` is a named recipient, not the implicit msg.sender / zero. */
 export function isSeaportNamedRecipient(
   address: string | null | undefined
-): boolean {
+): address is string {
   if (!address) return false;
   return !isZeroAddress(address);
 }

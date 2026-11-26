@@ -67,5 +67,5 @@ More nested envelopes after v0.2.0. Default analysis stays offline. Use existing
 
 Marketplace fills after the aggregator envelopes. Default analysis stays offline. Use existing audited libraries (`viem`, `@solana/web3.js`) and do not hand-roll cryptography.
 
-- [ ] Day 53: Decode Seaport `fulfillOrder` / `fulfillAdvancedOrder` / `fulfillBasicOrder` (and the efficient basic-order selector) and recursively analyze advanced-order extraData
-- [ ] Day 54: Flag grants hidden inside extraData, and considerations / additional recipients targeting phishing-listed addresses
+- [x] Day 53: Decode Seaport `fulfillOrder` / `fulfillAdvancedOrder` / `fulfillBasicOrder` (and the efficient basic-order selector) and recursively analyze advanced-order extraData
+- [x] Day 54: Flag grants hidden inside extraData, and considerations / additional recipients targeting phishing-listed addresses

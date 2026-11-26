@@ -1,3 +1,8 @@
+## 2026-11-26
+
+- Decode Seaport `fulfillOrder`, `fulfillAdvancedOrder`, and `fulfillBasicOrder` (including the efficient basic-order selector) into `seaport` reports, and recursively analyze advanced-order extraData.
+- Flag an approval hidden inside extraData (`seaport_hidden_grant`) and reuse phishing/block-list checks on consideration recipients, leftover recipients, and additional payouts. Marked Days 53–54 done.
+
 ## 2026-11-25
 
 - Decode 0x Exchange Proxy `transformERC20`, `executeMetaTransaction` / `executeMetaTransactionV2`, and native `fillLimitOrder` / `fillRfqOrder` / `fillOtcOrder` into `zeroex` reports, and recursively analyze transformer data and meta-tx calldata.

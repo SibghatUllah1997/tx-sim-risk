@@ -21,6 +21,7 @@ export * from './evm/cowswap';
 export * from './evm/oneInch';
 export * from './evm/zeroEx';
 export * from './evm/seaport';
+export * from './evm/looksrare';
 export * from './evm/eip7702';
 export * from './evm/nativeValue';
 export * from './evm/liveCall';

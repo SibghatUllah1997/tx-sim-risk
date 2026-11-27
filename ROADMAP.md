@@ -69,3 +69,5 @@ Marketplace fills after the aggregator envelopes. Default analysis stays offline
 
 - [x] Day 53: Decode Seaport `fulfillOrder` / `fulfillAdvancedOrder` / `fulfillBasicOrder` (and the efficient basic-order selector) and recursively analyze advanced-order extraData
 - [x] Day 54: Flag grants hidden inside extraData, and considerations / additional recipients targeting phishing-listed addresses
+- [ ] Day 55: Decode LooksRare V2 `executeTakerAsk` / `executeTakerBid` / `executeMultipleTakerBids` and recursively analyze `additionalParameters`
+- [ ] Day 56: Flag grants hidden inside `additionalParameters`, and recipients / affiliates targeting phishing-listed addresses
